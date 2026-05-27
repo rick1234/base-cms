@@ -34,9 +34,10 @@ class PageController extends Controller
     {
         $page = $upsertPage->handle($request->validated(), $request->user());
 
+        flash(__('Page created.'))->success();
+
         return redirect()
-            ->route('admin.pages.edit', $page)
-            ->with('status', __('Page created.'));
+            ->route('admin.pages.edit', $page);
     }
 
     public function edit(Page $page): View
@@ -52,8 +53,9 @@ class PageController extends Controller
     {
         $upsertPage->handle($request->validated(), $request->user(), $page);
 
+        flash(__('Page updated.'))->success();
+
         return redirect()
-            ->route('admin.pages.edit', $page)
-            ->with('status', __('Page updated.'));
+            ->route('admin.pages.edit', $page);
     }
 }

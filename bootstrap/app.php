@@ -1,6 +1,8 @@
 <?php
 
+use App\Console\Commands\MigrateContentBlocksToStructuredBlocks;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,12 +16,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function (): void {
             Route::middleware('web')->group(base_path('routes/admin.php'));
-            Route::middleware('web')->group(base_path('routes/wms.php'));
+            Route::middleware('web')->group(base_path('routes/cms.php'));
             Route::middleware('web')->group(base_path('routes/site.php'));
         },
     )
+    ->withCommands([
+        MigrateContentBlocksToStructuredBlocks::class,
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            SetLocale::class,
             SecurityHeaders::class,
         ]);
 

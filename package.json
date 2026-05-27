@@ -1,18 +1,83 @@
 {
-    "$schema": "https://www.schemastore.org/package.json",
-    "private": true,
-    "type": "module",
-    "engines": {
-        "node": ">=20.19"
-    },
-    "scripts": {
-        "build": "vite build",
-        "dev": "vite"
-    },
-    "devDependencies": {
-        "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^3.1",
-        "sass": "^1.94.0",
-        "vite": "^8.0.0"
-    }
+  "$schema": "https://www.schemastore.org/package.json",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "@fontsource/finlandica-text": "^5.2.1",
+    "concurrently": "^9.0.1",
+    "flag-icons": "^7.5.0",
+    "laravel-vite-plugin": "^3.1",
+    "material-symbols": "^0.44.9",
+    "sass": "^1.94.0",
+    "vite": "^8.0.0"
+  },
+  "name": "base-cms",
+  "description": "Modern Laravel base rebuilt from the legacy `basiscms` PHP/CMS project.",
+  "version": "1.0.0",
+  "main": "vite.config.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "dependencies": {
+    "ansi-regex": "^5.0.1",
+    "chalk": "^4.1.2",
+    "ansi-styles": "^4.3.0",
+    "chokidar": "^5.0.0",
+    "color-convert": "^2.0.1",
+    "cliui": "^8.0.1",
+    "color-name": "^1.1.4",
+    "detect-libc": "^2.1.2",
+    "emoji-regex": "^8.0.0",
+    "escalade": "^3.2.0",
+    "get-caller-file": "^2.0.5",
+    "fdir": "^6.5.0",
+    "has-flag": "^4.0.0",
+    "immutable": "^5.1.5",
+    "is-fullwidth-code-point": "^3.0.0",
+    "is-extglob": "^2.1.1",
+    "lightningcss": "^1.32.0",
+    "is-glob": "^4.0.3",
+    "lightningcss-win32-x64-msvc": "^1.32.0",
+    "nanoid": "^3.3.12",
+    "node-addon-api": "^7.1.1",
+    "picocolors": "^1.1.1",
+    "postcss": "^8.5.15",
+    "picomatch": "^4.0.4",
+    "require-directory": "^2.1.1",
+    "readdirp": "^5.0.0",
+    "rolldown": "^1.0.2",
+    "rxjs": "^7.8.2",
+    "shell-quote": "^1.8.3",
+    "string-width": "^4.2.3",
+    "source-map-js": "^1.2.1",
+    "tinyglobby": "^0.2.16",
+    "tree-kill": "^1.2.2",
+    "tslib": "^2.8.1",
+    "vite-plugin-full-reload": "^1.2.0",
+    "supports-color": "^8.1.1",
+    "wrap-ansi": "^7.0.0",
+    "y18n": "^5.0.8",
+    "yargs": "^17.7.2",
+    "yargs-parser": "^21.1.1",
+    "strip-ansi": "^6.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rick1234/base-cms.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rick1234/base-cms/issues"
+  },
+  "homepage": "https://github.com/rick1234/base-cms#readme"
 }

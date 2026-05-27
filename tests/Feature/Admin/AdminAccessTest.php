@@ -32,7 +32,15 @@ class AdminAccessTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin')
             ->assertOk()
-            ->assertSee('Dashboard');
+            ->assertSee('Dashboard')
+            ->assertSee('dashboard-board', false)
+            ->assertSee('Content overview')
+            ->assertSee('Event category overview')
+            ->assertDontSee('Search keyword overview')
+            ->assertDontSee('Search Keywords')
+            ->assertDontSee('Radio')
+            ->assertDontSee('Mailing contact overview')
+            ->assertDontSee('Mailing Contacts');
     }
 
     public function test_admin_can_login_with_valid_credentials(): void

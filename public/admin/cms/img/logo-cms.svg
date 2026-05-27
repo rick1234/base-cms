@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="120" viewBox="0 0 360 120" role="img" aria-labelledby="title">
+    <title id="title">Base CMS</title>
+    <rect width="360" height="120" rx="18" fill="#f6f8fb"/>
+    <rect x="28" y="24" width="72" height="72" rx="16" fill="#2787bb"/>
+    <rect x="42" y="38" width="44" height="10" rx="5" fill="#ffffff"/>
+    <rect x="42" y="56" width="44" height="10" rx="5" fill="#ffffff" opacity=".78"/>
+    <rect x="42" y="74" width="30" height="10" rx="5" fill="#ffffff" opacity=".56"/>
+    <text x="122" y="57" fill="#202733" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700">Base CMS</text>
+    <text x="124" y="82" fill="#586171" font-family="Arial, Helvetica, sans-serif" font-size="15">Laravel content management</text>
+</svg>

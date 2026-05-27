@@ -1,41 +1,57 @@
-.button {
-  align-items: center;
-  background: var(--color-brand);
-  border: 1px solid var(--color-brand);
-  border-radius: var(--radius-small);
-  color: var(--color-surface);
-  cursor: pointer;
-  display: inline-flex;
-  font-weight: 700;
-  gap: var(--space-2);
-  justify-content: center;
-  min-height: 2.75rem;
-  padding: 0.65rem 1rem;
-  text-decoration: none;
-}
+@layer components {
+  .button,
+  .btn {
+    align-items: center;
+    background: var(--color-brand);
+    border: 1px solid var(--color-brand);
+    border-radius: var(--radius-small);
+    color: var(--color-surface);
+    cursor: pointer;
+    display: inline-flex;
+    font-weight: 700;
+    gap: var(--space-2);
+    justify-content: center;
+    min-height: 2.5rem;
+    padding: 0.6rem 0.9rem;
+    text-decoration: none;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
 
-.button:hover,
-.button:focus-visible {
-  background: var(--color-brand-strong);
-  border-color: var(--color-brand-strong);
-}
+  .button:hover,
+  .button:focus-visible,
+  .btn:hover,
+  .btn:focus-visible {
+    background: var(--color-brand-strong);
+    border-color: var(--color-brand-strong);
+    color: var(--color-surface);
+  }
 
-.button--secondary {
-  background: var(--color-surface);
-  color: var(--color-brand);
-}
+  .button-secondary,
+  .btn-cancel {
+    background: var(--color-surface);
+    color: var(--color-brand);
+  }
 
-.button--danger {
-  background: var(--color-danger);
-  border-color: var(--color-danger);
-}
+  .button-danger,
+  .btn-remove {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+  }
 
-.button-link {
-  background: transparent;
-  border: 0;
-  color: var(--color-danger);
-  cursor: pointer;
-  font: inherit;
-  padding: 0;
-  text-decoration: underline;
+  .btn-add,
+  .btn-save,
+  .btn-save-and-stay {
+    background: var(--color-success);
+    border-color: var(--color-success);
+  }
+
+  .button-link {
+    background: transparent;
+    border: 0;
+    color: var(--color-danger);
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    text-decoration: underline;
+  }
 }

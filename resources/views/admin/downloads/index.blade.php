@@ -1,0 +1,146 @@
+@extends('layouts.admin')
+
+@section('title', __('Downloads'))
+
+@section('body')
+    <div class="site-wrapper-container">
+        <div class="left">
+            @include('admin.partials.navigation')
+        </div>
+
+        <div class="main has-buttons">
+            <div class="buttons-container align-right">
+                <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
+                    <span class="flaticon-add-plus-button"></span>
+                    {{ __('Toevoegen') }}
+                </a>
+                <a class="btn" href="{{ route(request()->routeIs('cms.*') ? 'cms.downloads.categories.index' : 'admin.downloads.categories.index') }}">
+                    <span class="flaticon-folder-symbol"></span>
+                    {{ __('Categorieen') }}
+                </a>
+                @if ($selectedCategoryId)
+                    <a class="btn btn-toggle-child-categories" href="{{ route($routeNames['index'], array_merge(request()->except('showChild'), ['showChild' => $showChild ? 0 : 1])) }}">
+                        <span class="flaticon-visibility-button"></span>
+                        {{ $showChild ? __('Toon alleen downloads in deze categorie') : __('Toon alle onderliggende downloads') }}
+                    </a>
+                @endif
+            </div>
+
+            <div class="main-section">
+                @include('admin.downloads.partials.page-header', [
+                    'title' => __('Downloads'),
+                    'section' => __('Download overview'),
+                ])
+
+                <span class="content-admin-screen-label">{{ __('Download overview') }}</span>
+
+                <div class="overview-container downloads-overview-container">
+                    <div class="overview-row header">
+                        <div class="overview-item id">
+                            Id
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'desc'])) }}">
+                                <span class="flaticon-up-arrow-key"></span>
+                            </a>
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'asc'])) }}">
+                                <span class="flaticon-downwards-arrow-key"></span>
+                            </a>
+                        </div>
+                        <div class="overview-item name">
+                            {{ __('Naam') }}
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'desc'])) }}">
+                                <span class="flaticon-up-arrow-key"></span>
+                            </a>
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'asc'])) }}">
+                                <span class="flaticon-downwards-arrow-key"></span>
+                            </a>
+                        </div>
+                        <div class="overview-item category">{{ __('Categorie') }}</div>
+                        <div class="overview-item downloads">{{ __('Downloads') }}</div>
+                        <div class="overview-item file">{{ __('Bestand') }}</div>
+                        <div class="overview-item status">{{ __('Status') }}</div>
+                        <div class="overview-item options">{{ __('Opties') }}</div>
+                    </div>
+
+                    <form method="get" action="{{ route($routeNames['index']) }}">
+                        <div class="overview-row filters">
+                            <div class="overview-item id">
+                                <input name="id" type="text" value="{{ request('id') }}">
+                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                            </div>
+                            <div class="overview-item name">
+                                <input name="name" type="text" value="{{ request('name', request('naam')) }}">
+                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                            </div>
+                            <div class="overview-item category">
+                                <select name="categoryId">
+                                    <option value="0">{{ __('Selecteer') }}</option>
+                                    @foreach ($categories as $category)
+                                        <option value="{{ $category->id }}" @selected($selectedCategoryId === $category->id)>{{ $category->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="overview-item downloads"></div>
+                            <div class="overview-item file"></div>
+                            <div class="overview-item status">
+                                <select name="status">
+                                    <option value="">{{ __('Kies een status') }}</option>
+                                    <option value="active" @selected(in_array(request('status', request('actief')), ['active', '1'], true))>{{ __('Actief') }}</option>
+                                    <option value="inactive" @selected(in_array(request('status', request('actief')), ['inactive', '0'], true))>{{ __('Inactief') }}</option>
+                                </select>
+                            </div>
+                            <div class="overview-item options">
+                                <input type="hidden" name="showChild" value="{{ $showChild ? 1 : 0 }}">
+                                <button type="submit" title="{{ __('Zoeken') }}">
+                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    @forelse ($downloads as $download)
+                        <div class="overview-row">
+                            <div class="overview-item id">{{ $download->id }}</div>
+                            <div class="overview-item name">
+                                {{ $download->name }}
+                                @if ($download->is_password_protected)
+                                    <span class="admin-symbol admin-symbol-lock" aria-hidden="true"></span>
+                                @endif
+                            </div>
+                            <div class="overview-item category">
+                                {{ $download->categories->pluck('name')->join(', ') ?: '-' }}
+                            </div>
+                            <div class="overview-item downloads">{{ $download->download_count }}</div>
+                            <div class="overview-item file">{{ $download->original_filename ?: '-' }}</div>
+                            <div class="overview-item status">
+                                <span class="{{ $download->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                            </div>
+                            <div class="overview-item options">
+                                @if ($download->slug && $download->hasFile())
+                                    <a href="{{ route('frontend.downloads.show', ['download' => $download->publicRouteKey()]) }}" title="{{ __('Download bestand') }}" target="_blank">
+                                        <span class="admin-symbol admin-symbol-download" aria-hidden="true"></span>
+                                    </a>
+                                @endif
+                                <a href="{{ route($routeNames['edit'], ['id' => $download->id]) }}" title="{{ __('Bewerken') }}">
+                                    <span class="flaticon-create-new-pencil-button"></span>
+                                </a>
+                                <form method="post" action="{{ route($routeNames['destroy'], $download) }}">
+                                    @csrf
+                                    @method('delete')
+                                    <button type="submit" title="{{ __('Verwijderen') }}">
+                                        <span class="flaticon-rubbish-bin-delete-button"></span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="overview-row">
+                            <div class="overview-item name">{{ __('Geen downloads gevonden.') }}</div>
+                        </div>
+                    @endforelse
+                </div>
+
+                @include('admin.partials.pagination', ['paginator' => $downloads])
+            </div>
+        </div>
+    </div>
+@endsection

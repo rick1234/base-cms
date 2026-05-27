@@ -1,13 +1,27 @@
-.site-shell,
-.admin-shell {
-  min-height: 100vh;
-}
+@layer objects {
+  .site-shell,
+  .admin-shell {
+    min-height: 100vh;
+  }
 
-.site-container {
-  width: min(100% - 2rem, var(--content-width));
-  margin-inline: auto;
-}
+  .site-container {
+    width: min(100% - 2rem, var(--content-width));
+    margin-inline: auto;
+  }
 
-.content-stack > * + * {
-  margin-top: var(--space-5);
+  .content-stack > * + * {
+    margin-top: var(--space-5);
+  }
+
+  .section-stack {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .cluster {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
 }

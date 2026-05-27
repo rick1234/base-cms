@@ -4,16 +4,16 @@
     <article>
         <header class="page-hero">
             <div class="site-container content-stack">
-                <h1 class="page-hero__title">{{ $page->title }}</h1>
+                <h1 class="page-hero-title">{{ $page->title }}</h1>
                 @if ($page->excerpt)
-                    <p class="page-hero__intro">{{ $page->excerpt }}</p>
+                    <p class="page-hero-intro">{{ $page->excerpt }}</p>
                 @endif
             </div>
         </header>
 
         <section class="page-content">
             <div class="site-container">
-                <div class="page-content__body">{{ $page->body }}</div>
+                <div class="page-content-body">{{ $page->body }}</div>
             </div>
         </section>
     </article>

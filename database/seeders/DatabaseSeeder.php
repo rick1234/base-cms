@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Base CMS Admin',
                 'password' => Hash::make('password'),
                 'is_admin' => true,
+                'locale' => 'nl',
             ],
         );
 
@@ -45,7 +46,7 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
-        foreach (config('wms.modules') as $handle => $module) {
+        foreach (config('cms_modules.modules') as $handle => $module) {
             Module::query()->firstOrCreate(
                 ['handle' => $handle],
                 [
@@ -54,9 +55,22 @@ class DatabaseSeeder extends Seeder
                     'description' => $module['description'],
                     'base_owned' => true,
                     'enabled' => true,
-                    'sort_order' => array_search($handle, array_keys(config('wms.modules')), true) ?: 0,
+                    'sort_order' => array_search($handle, array_keys(config('cms_modules.modules')), true) ?: 0,
                 ],
             );
         }
+
+        $this->call(BannerModuleSeeder::class);
+        $this->call(ContentModuleSeeder::class);
+        $this->call(FormModuleSeeder::class);
+        $this->call(EventModuleSeeder::class);
+        $this->call(FaqModuleSeeder::class);
+        $this->call(DownloadModuleSeeder::class);
+        $this->call(LocationModuleSeeder::class);
+        $this->call(RedirectModuleSeeder::class);
+        $this->call(CatalogModuleSeeder::class);
+        $this->call(CountryLanguageSeeder::class);
+        $this->call(TranslationModuleSeeder::class);
+        $this->call(UserModuleSeeder::class);
     }
 }

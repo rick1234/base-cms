@@ -1,10 +1,15 @@
+@use "@fontsource/finlandica-text/latin";
+@use "@fontsource/finlandica-text/latin-italic";
 @use "settings/tokens";
 @use "generic/reset";
 @use "elements/document";
 @use "objects/shell";
 @use "components/site";
 @use "components/admin";
+@use "components/admin-compat";
 @use "components/forms";
 @use "components/buttons";
+@use "components/icons";
+@use "components/content-admin";
 @use "utilities/accessibility";
 @use "site/index";

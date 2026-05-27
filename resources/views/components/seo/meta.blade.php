@@ -3,6 +3,7 @@
     'title' => null,
     'description' => null,
     'canonical' => null,
+    'robots' => null,
 ])
 
 @php
@@ -15,6 +16,9 @@
 
 <title>{{ $resolvedTitle }}</title>
 <meta name="description" content="{{ $resolvedDescription }}">
+@if ($robots)
+    <meta name="robots" content="{{ $robots }}">
+@endif
 <link rel="canonical" href="{{ $resolvedCanonical }}">
 <meta property="og:title" content="{{ $resolvedOgTitle }}">
 <meta property="og:description" content="{{ $resolvedOgDescription }}">

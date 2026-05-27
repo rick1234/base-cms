@@ -1,25 +1,37 @@
-body {
-  background: var(--color-canvas);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  line-height: 1.6;
-}
+@layer elements {
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    line-height: 1.6;
+  }
 
-a {
-  color: var(--color-brand);
-  text-decoration-thickness: 0.08em;
-  text-underline-offset: 0.16em;
-}
+  a {
+    color: var(--color-brand);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.16em;
+  }
 
-h1,
-h2,
-h3 {
-  color: var(--color-ink);
-  font-family: var(--font-heading);
-  line-height: 1.1;
-  margin: 0;
-}
+  h1,
+  h2,
+  h3 {
+    color: var(--color-ink);
+    font-family: var(--font-heading);
+    line-height: 1.1;
+    margin: 0;
+  }
 
-p {
-  margin: 0;
+  p {
+    margin: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: var(--color-brand);
+    color: var(--color-surface);
+  }
 }

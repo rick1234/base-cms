@@ -3,38 +3,46 @@
 @section('title', __('Dashboard'))
 
 @section('body')
-    <div class="admin-layout">
-        @include('admin.partials.navigation')
+    <div class="site-wrapper-container">
+        <aside class="left" aria-label="{{ __('Admin navigation') }}">
+            @include('admin.partials.navigation')
+        </aside>
 
-        <main class="admin-main">
-            <div class="admin-page-header">
-                <div>
-                    <h1>{{ __('Dashboard') }}</h1>
-                    <p>{{ __('Base content, modules, and extension points.') }}</p>
+        <main class="main">
+            <section class="main-section dashboard-home-section" aria-labelledby="dashboard-title">
+                <h1 class="u-sr-only" id="dashboard-title">{{ __('Dashboard') }}</h1>
+
+                <div class="dashboard-board">
+                    @foreach ($dashboardGroups as $group)
+                        <section class="dashboard-card" aria-labelledby="dashboard-group-{{ $group['key'] }}">
+                            <h2 class="dashboard-card-title" id="dashboard-group-{{ $group['key'] }}">{{ __($group['title']) }}</h2>
+
+                            <div class="dashboard-module-list">
+                                @foreach ($group['modules'] as $module)
+                                    @php $moduleId = 'dashboard-module-'.$group['key'].'-'.$loop->iteration; @endphp
+                                    <section class="dashboard-module" aria-labelledby="{{ $moduleId }}">
+                                        <div class="dashboard-module-heading">
+                                            <span class="dashboard-module-icon dashboard-module-icon-{{ $module['theme'] }}" aria-hidden="true">
+                                                <x-admin.material-icon class="is-large" :name="$module['icon']" />
+                                            </span>
+                                            <h3 class="dashboard-module-title" id="{{ $moduleId }}">{{ __($module['title']) }}</h3>
+                                        </div>
+
+                                        <ul class="dashboard-link-list">
+                                            @foreach ($module['links'] as $link)
+                                                <li class="dashboard-link-item">
+                                                    <a class="dashboard-link" href="{{ $link['url'] }}" title="{{ __($link['title']) }}">
+                                                        {{ __($link['title']) }}
+                                                    </a>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </section>
+                                @endforeach
+                            </div>
+                        </section>
+                    @endforeach
                 </div>
-                <form method="post" action="{{ route('admin.logout') }}">
-                    @csrf
-                    <button class="button button--secondary" type="submit">{{ __('Log out') }}</button>
-                </form>
-            </div>
-
-            <section class="admin-stats" aria-label="{{ __('Content overview') }}">
-                <article class="admin-stat">
-                    <span class="admin-stat__value">{{ $publishedPageCount }}</span>
-                    <span>{{ __('Published pages') }}</span>
-                </article>
-                <article class="admin-stat">
-                    <span class="admin-stat__value">{{ $draftPageCount }}</span>
-                    <span>{{ __('Draft pages') }}</span>
-                </article>
-                <article class="admin-stat">
-                    <span class="admin-stat__value">{{ $enabledModuleCount }}</span>
-                    <span>{{ __('Enabled modules') }}</span>
-                </article>
-                <article class="admin-stat">
-                    <span class="admin-stat__value">{{ $wmsModuleCount }}</span>
-                    <span>{{ __('WMS modules') }}</span>
-                </article>
             </section>
         </main>
     </div>

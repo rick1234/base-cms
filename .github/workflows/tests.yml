@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php: [8.3, 8.4, 8.5]
+        php: [8.5]
 
     name: PHP ${{ matrix.php }}
 
@@ -31,11 +31,23 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, pdo_mysql
           coverage: none
+          tools: composer:v2
+
+      - name: Verify Composer is patched
+        run: |
+          composer --version
+          composer_version="$(composer --version --no-ansi | awk '{ print $3 }')"
+          php -r "exit(version_compare('$composer_version', '2.9.8', '>=') ? 0 : 1);"
 
       - name: Install Composer dependencies
+        env:
+          COMPOSER_AUTH: '{}'
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Audit Composer dependencies
+        run: composer audit --no-interaction
 
       - name: Copy environment file
         run: cp .env.example .env

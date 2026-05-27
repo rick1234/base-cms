@@ -34,6 +34,27 @@ class PageManagementTest extends TestCase
         ]);
     }
 
+    public function test_admin_feedback_messages_render_through_closable_flash_component(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->followingRedirects()
+            ->post('/admin/pages', [
+                'title' => 'Flash notes',
+                'slug' => 'flash-notes',
+                'body' => 'Documented flash content.',
+                'template' => 'default',
+                'status' => 'published',
+                'sort_order' => 10,
+                'published_at' => now()->toDateTimeString(),
+            ])
+            ->assertOk()
+            ->assertSee('Page created.')
+            ->assertSee('data-flash-message', false)
+            ->assertSee('data-flash-close', false);
+    }
+
     public function test_admin_page_validation_rejects_reserved_slugs(): void
     {
         $admin = User::factory()->admin()->create();

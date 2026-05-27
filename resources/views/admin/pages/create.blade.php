@@ -9,7 +9,7 @@
         <main class="admin-main">
             <div class="admin-page-header">
                 <h1>{{ __('Create page') }}</h1>
-                <a class="button button--secondary" href="{{ route('admin.pages.index') }}">{{ __('Back to pages') }}</a>
+                <a class="button button-secondary" href="{{ route('admin.pages.index') }}">{{ __('Back to pages') }}</a>
             </div>
 
             <section class="admin-panel">

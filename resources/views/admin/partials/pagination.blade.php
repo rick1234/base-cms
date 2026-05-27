@@ -1,19 +1,45 @@
 @if ($paginator->hasPages())
-    <nav class="admin-pagination" aria-label="{{ __('Pagination') }}">
-        <span>{{ __('Page :current of :last', ['current' => $paginator->currentPage(), 'last' => $paginator->lastPage()]) }}</span>
+    @php
+        $currentPage = $paginator->currentPage();
+        $lastPage = $paginator->lastPage();
+        $startPage = max(1, $currentPage - 1);
+        $endPage = min($lastPage, $currentPage + 1);
 
-        <span class="form-actions">
-            @if ($paginator->onFirstPage())
-                <span>{{ __('Previous') }}</span>
-            @else
-                <a href="{{ $paginator->previousPageUrl() }}" rel="prev">{{ __('Previous') }}</a>
+        if ($currentPage === 1) {
+            $endPage = min($lastPage, 3);
+        }
+
+        if ($currentPage === $lastPage) {
+            $startPage = max(1, $lastPage - 2);
+        }
+    @endphp
+
+    <nav class="admin-pagination" aria-label="{{ __('Pagination') }}">
+        <ul class="admin-pagination-list">
+            @for ($page = $startPage; $page <= $endPage; $page++)
+                <li>
+                    @if ($page === $currentPage)
+                        <span class="admin-pagination-current" aria-current="page">{{ $page }}</span>
+                    @else
+                        <a class="admin-pagination-link" href="{{ $paginator->url($page) }}">{{ $page }}</a>
+                    @endif
+                </li>
+            @endfor
+
+            @if ($endPage < $lastPage)
+                @if ($endPage < $lastPage - 1)
+                    <li><span class="admin-pagination-gap">&hellip;</span></li>
+                @endif
+                <li><a class="admin-pagination-link" href="{{ $paginator->url($lastPage) }}">{{ $lastPage }}</a></li>
             @endif
 
             @if ($paginator->hasMorePages())
-                <a href="{{ $paginator->nextPageUrl() }}" rel="next">{{ __('Next') }}</a>
+                <li><a class="admin-pagination-link" href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="{{ __('Next') }}">&rsaquo;</a></li>
+                <li><a class="admin-pagination-link" href="{{ $paginator->url($lastPage) }}" aria-label="{{ __('Last page') }}">&rarr;</a></li>
             @else
-                <span>{{ __('Next') }}</span>
+                <li><span class="admin-pagination-disabled" aria-hidden="true">&rsaquo;</span></li>
+                <li><span class="admin-pagination-disabled" aria-hidden="true">&rarr;</span></li>
             @endif
-        </span>
+        </ul>
     </nav>
 @endif

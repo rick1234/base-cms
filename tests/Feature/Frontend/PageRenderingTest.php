@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Frontend;
 
+use App\Models\Cms\ContentItem;
 use App\Models\Cms\Page;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,6 +16,36 @@ class PageRenderingTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('Base CMS');
+    }
+
+    public function test_frontend_feedback_messages_render_through_closable_flash_component(): void
+    {
+        $this->withSession([
+            'flash_notification' => [
+                [
+                    'message' => 'Frontend saved.',
+                    'level' => 'success',
+                    'title' => null,
+                    'overlay' => false,
+                    'important' => false,
+                ],
+            ],
+        ])
+            ->get('/')
+            ->assertOk()
+            ->assertSee('Frontend saved.')
+            ->assertSee('data-flash-message', false)
+            ->assertSee('data-flash-close', false);
+    }
+
+    public function test_common_laravel_session_status_messages_render_as_flash_messages(): void
+    {
+        $this->withSession(['status' => 'Profile updated.'])
+            ->get('/')
+            ->assertOk()
+            ->assertSee('Profile updated.')
+            ->assertSee('flash-message-success', false)
+            ->assertSee('data-flash-close', false);
     }
 
     public function test_published_page_renders_with_seo_metadata(): void
@@ -41,5 +72,24 @@ class PageRenderingTest extends TestCase
         ]);
 
         $this->get('/draft-page')->assertNotFound();
+    }
+
+    public function test_published_content_item_renders_from_public_slug(): void
+    {
+        ContentItem::query()->create([
+            'slug' => 'public-content-item',
+            'title' => 'Public content item',
+            'subtitle' => 'Useful subtitle',
+            'intro' => 'Reusable intro content.',
+            'body' => 'Reusable body content.',
+            'locale' => 'nl',
+            'status' => 'published',
+        ]);
+
+        $this->get('/public-content-item')
+            ->assertOk()
+            ->assertSee('Public content item')
+            ->assertSee('Useful subtitle')
+            ->assertSee('Reusable body content.');
     }
 }

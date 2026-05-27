@@ -1,13 +1,13 @@
 # Base CMS
 
-Modern Laravel base rebuilt from the legacy `basiswms` PHP/CMS project.
+Modern Laravel base rebuilt from the legacy `basiscms` PHP/CMS project.
 
 This repository is intentionally strict:
 
-- Laravel 13 with PHP 8.3+ requirements
+- Laravel 13 with PHP 8.5 requirements
 - rendered Blade frontend with project-owned Sass
 - authenticated backend/admin area
-- translated WMS module registry based on the legacy `wms/` folders and `basiswms.sql`
+- rebuilt admin module registry based on the legacy `cms/` folders
 - versioned JSON API
 - isolated site extension layer
 - no Bootstrap, Tailwind, inline CSS, or copied legacy PHP patterns
@@ -34,8 +34,9 @@ The seeded admin account is `admin@example.com` with password `password`.
 
 - Public rendered routes: `routes/web.php`
 - Backend/admin routes: `routes/admin.php`
-- WMS module registry: `config/wms.php`
-- Legacy-style WMS routes: `/wms/index.php`, `/wms/content/index.php`, `/wms/content/categorieen/index.php`, `/wms/catalogus/actiecodes/edit.php`, `/wms/orders/afleverdata/index.php`
+- Admin module registry: `config/cms.php`
+- Rebuilt admin routes: `/admin/modules`, `/admin/content`, `/admin/content/categorieen`, `/admin/catalogus/actiecodes/edit`, `/admin/orders/afleverdata`
+- Legacy compatibility routes: `/cms/index.php`, `/cms/content/index.php`, `/cms/content/categorieen/index.php`
 - Headless API routes: `routes/api.php`
 - Website-specific routes: `routes/site.php`
 - Base Sass: `resources/scss`
@@ -44,8 +45,8 @@ The seeded admin account is `admin@example.com` with password `password`.
 
 ## Legacy source
 
-The legacy source is expected at `C:\htdocs\basiswms`, with the SQL dump at `C:\htdocs\basiswms\basiswms.sql`.
+The legacy source is expected at `D:\htdocs\basiscms`, with CMS modules under `D:\htdocs\basiscms\cms`.
 
 See [docs/migration/legacy-audit.md](docs/migration/legacy-audit.md) for the migration map.
 
-The translated WMS module/table mapping lives in [docs/migration/wms-module-map.md](docs/migration/wms-module-map.md).
+The rebuilt admin module/table mapping lives in [docs/migration/cms-module-map.md](docs/migration/cms-module-map.md).
