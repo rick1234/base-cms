@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\CmsModuleController;
 use App\Http\Controllers\Admin\Content\ContentCategoryController;
 use App\Http\Controllers\Admin\Content\ContentItemController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\Domains\DomainController;
+use App\Http\Controllers\Admin\Domains\WebsiteTemplateController;
 use App\Http\Controllers\Admin\Downloads\DownloadCategoryController;
 use App\Http\Controllers\Admin\Downloads\DownloadController;
 use App\Http\Controllers\Admin\Events\EventCategoryController;
@@ -25,6 +27,7 @@ use App\Http\Controllers\Admin\Localization\CountryController;
 use App\Http\Controllers\Admin\Localization\LanguageController;
 use App\Http\Controllers\Admin\Locations\LocationCategoryController;
 use App\Http\Controllers\Admin\Locations\LocationController;
+use App\Http\Controllers\Admin\Navigation\NavigationMenuController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\Redirects\RedirectController;
 use App\Http\Controllers\Admin\Roles\RoleController;
@@ -46,6 +49,28 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::resource('pages', PageController::class)
             ->except(['show', 'destroy'])
             ->parameters(['pages' => 'page']);
+
+        Route::resource('domains', DomainController::class)
+            ->except(['show'])
+            ->parameters(['domains' => 'domain']);
+
+        Route::resource('templates', WebsiteTemplateController::class)
+            ->except(['show'])
+            ->parameters(['templates' => 'websiteTemplate']);
+        Route::post('templates/{websiteTemplate}/generate', [WebsiteTemplateController::class, 'generate'])
+            ->whereNumber('websiteTemplate')
+            ->name('templates.generate');
+
+        Route::prefix('navigation')->name('navigation.')->group(function (): void {
+            Route::get('link-types', [NavigationMenuController::class, 'linkTypes'])->name('link-types');
+            Route::get('link-options', [NavigationMenuController::class, 'linkOptions'])->name('link-options');
+            Route::get('/', [NavigationMenuController::class, 'index'])->name('index');
+            Route::get('create', [NavigationMenuController::class, 'create'])->name('create');
+            Route::post('/', [NavigationMenuController::class, 'store'])->name('store');
+            Route::get('{navigationMenu}/edit', [NavigationMenuController::class, 'edit'])->whereNumber('navigationMenu')->name('edit');
+            Route::put('{navigationMenu}', [NavigationMenuController::class, 'update'])->whereNumber('navigationMenu')->name('update');
+            Route::delete('{navigationMenu}', [NavigationMenuController::class, 'destroy'])->whereNumber('navigationMenu')->name('destroy');
+        });
 
         Route::prefix('banner')->name('banners.')->group(function (): void {
             Route::get('/', [BannerController::class, 'index'])->name('index');
@@ -579,7 +604,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/updateAfbeeldingnaam', [ContentItemController::class, 'updateImageName'])->name('image.update-name');
             Route::post('ajax/updateSortIndex', [ContentItemController::class, 'updateImageSort'])->name('image.update-sort');
             Route::post('ajax/uploadFotoalbumAfbeelding', [ContentItemController::class, 'uploadImage'])->name('image.upload');
-        Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            Route::prefix('categorieen')->name('categories.')->group(function (): void {
                 Route::get('/', [ContentCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [ContentCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [ContentCategoryController::class, 'store'])->name('store');

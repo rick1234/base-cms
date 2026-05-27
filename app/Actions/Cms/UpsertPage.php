@@ -17,6 +17,7 @@ class UpsertPage
         $page ??= new Page;
 
         $payload = Arr::only($data, [
+            'domain_id',
             'parent_id',
             'title',
             'navigation_label',

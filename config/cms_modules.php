@@ -179,6 +179,15 @@ $modules = [
         'description' => 'Guestbook messages and publication status.',
         'legacy_tables' => ['gastenboek'],
     ],
+    'navigation' => [
+        'name' => 'Navigation',
+        'legacy_path' => 'cms/navigation',
+        'group' => 'website',
+        'table' => 'navigation_menus',
+        'title_column' => 'name',
+        'description' => 'Reusable website navigation menus with module links and drag-and-drop nesting.',
+        'legacy_tables' => ['menu_categories'],
+    ],
 ];
 
 $screens = [
@@ -570,6 +579,20 @@ $screens = [
             'edit' => ['name' => 'Edit location category', 'type' => 'edit'],
         ],
     ],
+    'navigation' => [
+        'name' => 'Navigation',
+        'legacy_path' => 'cms/navigation',
+        'group' => 'website',
+        'table' => 'navigation_menus',
+        'title_column' => 'name',
+        'admin_route' => 'admin.navigation.index',
+        'description' => 'Website navigation builder with custom URLs, module targets, active states, and nested menus.',
+        'legacy_tables' => ['menu_categories'],
+        'pages' => [
+            'index' => ['name' => 'Navigation overview', 'type' => 'index'],
+            'edit' => ['name' => 'Edit navigation menu', 'type' => 'edit'],
+        ],
+    ],
     'redirects' => [
         'name' => 'Redirects',
         'legacy_path' => 'cms/redirect',
@@ -681,11 +704,26 @@ $screens = [
         'group' => 'configuration',
         'table' => 'domains',
         'title_column' => 'host',
+        'admin_route' => 'admin.domains.index',
         'description' => 'Legacy domain overview and editor.',
         'legacy_tables' => ['domein'],
         'pages' => [
             'index' => ['name' => 'Domain overview', 'type' => 'index'],
             'edit' => ['name' => 'Edit domain', 'type' => 'edit'],
+        ],
+    ],
+    'website_templates' => [
+        'name' => 'Website Templates',
+        'legacy_path' => 'cms/templates',
+        'group' => 'configuration',
+        'table' => 'website_templates',
+        'title_column' => 'name',
+        'admin_route' => 'admin.templates.index',
+        'description' => 'Reusable vanilla Sass website templates and their default domain settings.',
+        'legacy_tables' => [],
+        'pages' => [
+            'index' => ['name' => 'Template overview', 'type' => 'index'],
+            'edit' => ['name' => 'Edit template', 'type' => 'edit'],
         ],
     ],
     'countries' => [

@@ -45,11 +45,13 @@ return [
         'sliders' => 'view_carousel',
         'subdomains' => 'lan',
         'translations' => 'translate',
+        'templates' => 'dashboard_customize',
         'url' => 'link',
         'urlverwijzingen' => 'link',
         'users' => 'group',
         'vacatures' => 'work',
         'vestigingen' => 'store',
         'website' => 'language',
+        'website-templates' => 'dashboard_customize',
     ],
 ];

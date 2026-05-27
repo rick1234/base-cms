@@ -27,6 +27,7 @@ class PageRequest extends FormRequest
         $page = $this->route('page');
 
         return [
+            'domain_id' => ['nullable', 'integer', 'exists:domains,id'],
             'parent_id' => ['nullable', 'integer', 'exists:cms_pages,id'],
             'title' => ['required', 'string', 'max:255'],
             'slug' => [
@@ -35,7 +36,9 @@ class PageRequest extends FormRequest
                 'max:255',
                 'alpha_dash',
                 Rule::notIn(config('cms.reserved_slugs')),
-                Rule::unique('cms_pages', 'slug')->ignore($page?->id),
+                Rule::unique('cms_pages', 'slug')
+                    ->where(fn ($query) => $query->where('domain_id', $this->input('domain_id')))
+                    ->ignore($page?->id),
             ],
             'navigation_label' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string'],
@@ -51,5 +54,12 @@ class PageRequest extends FormRequest
             'sort_order' => ['required', 'integer', 'min:0'],
             'published_at' => ['nullable', 'date'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('domain_id') === '') {
+            $this->merge(['domain_id' => null]);
+        }
     }
 }

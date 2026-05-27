@@ -70,6 +70,7 @@ class DatabaseSeeder extends Seeder
         $this->call(RedirectModuleSeeder::class);
         $this->call(CatalogModuleSeeder::class);
         $this->call(CountryLanguageSeeder::class);
+        $this->call(DomainTemplateSeeder::class);
         $this->call(TranslationModuleSeeder::class);
         $this->call(UserModuleSeeder::class);
     }

@@ -44,13 +44,13 @@ class DashboardNavigationBuilder
             ['title' => 'Modules', 'icon' => 'module', 'screens' => ['downloads', 'download_categories']],
         ],
         'configuration' => [
-            ['title' => 'Configuration', 'icon' => 'settings', 'screens' => ['roles', 'domains', 'countries', 'module_manager', 'module_categories']],
+            ['title' => 'Configuration', 'icon' => 'settings', 'screens' => ['roles', 'domains', 'website_templates', 'countries', 'module_manager', 'module_categories']],
         ],
         'localization' => [
             ['title' => 'Translations', 'icon' => 'translations', 'screens' => ['translations']],
         ],
         'website' => [
-            ['title' => 'Website', 'icon' => 'website', 'screens' => ['guestbook']],
+            ['title' => 'Website', 'icon' => 'website', 'screens' => ['navigation', 'guestbook']],
         ],
     ];
 
@@ -126,6 +126,14 @@ class DashboardNavigationBuilder
             return null;
         }
 
+        if (! $legacyRoutes && isset($screen['admin_route']) && is_string($screen['admin_route'])) {
+            return [
+                'title' => (string) data_get($screen, 'pages.index.name', $screen['name']),
+                'url' => route($screen['admin_route']),
+                'icon' => $this->materialIcon($fallbackIcon),
+            ];
+        }
+
         $path = $this->adminPath((string) $screen['legacy_path']);
         $routeName = $legacyRoutes ? 'cms.modules.show' : 'admin.modules.show';
 
@@ -152,11 +160,11 @@ class DashboardNavigationBuilder
                     ->map(function (Collection $moduleScreens, string $segment) use ($legacyRoutes): array {
                         $icon = $this->materialIcon($segment);
 
-                          return [
-                              'title' => Str::headline($segment),
-                              'icon' => $icon,
-                              'theme' => $this->moduleTheme($segment),
-                              'links' => $moduleScreens
+                        return [
+                            'title' => Str::headline($segment),
+                            'icon' => $icon,
+                            'theme' => $this->moduleTheme($segment),
+                            'links' => $moduleScreens
                                 ->keys()
                                 ->map(fn (string $screenKey): ?array => $this->buildLink($screenKey, $moduleScreens, $legacyRoutes, $segment))
                                 ->filter()

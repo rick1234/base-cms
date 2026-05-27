@@ -61,9 +61,14 @@
                         </summary>
                         <ul class="navigation-submenu">
                             @foreach ($screens->sortBy('name') as $screen)
-                                @php $path = trim(str_replace('cms/', '', $screen['legacy_path']), '/'); @endphp
+                                @php
+                                    $path = trim(str_replace('cms/', '', $screen['legacy_path']), '/');
+                                    $url = ! $usesLegacyRoutes && isset($screen['admin_route'])
+                                        ? route($screen['admin_route'])
+                                        : route($moduleRoute, $path);
+                                @endphp
                                 <li>
-                                    <a class="navigation-submenu-link" href="{{ route($moduleRoute, $path) }}">
+                                    <a class="navigation-submenu-link" href="{{ $url }}">
                                         <span class="navigation-item-title">{{ __($screen['name']) }}</span>
                                     </a>
                                 </li>

@@ -80,7 +80,21 @@ class CmsModuleRecordRequest extends FormRequest
             return [...$rules, 'date'];
         }
 
-        if (in_array($column, ['metadata', 'settings', 'payload', 'billing_address', 'shipping_address', 'validation_rules'], true)) {
+        if (in_array($column, [
+            'metadata',
+            'settings',
+            'payload',
+            'billing_address',
+            'shipping_address',
+            'validation_rules',
+            'active_frontend_locales',
+            'active_backend_locales',
+            'template_settings',
+            'social_links',
+            'public_integrations',
+            'favicon_assets',
+            'default_settings',
+        ], true)) {
             return [...$rules, 'json'];
         }
 

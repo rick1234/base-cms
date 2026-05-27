@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\MigrateContentBlocksToStructuredBlocks;
+use App\Http\Middleware\ResolveDomain;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            ResolveDomain::class,
             SetLocale::class,
             SecurityHeaders::class,
         ]);

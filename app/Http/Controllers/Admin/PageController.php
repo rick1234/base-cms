@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Cms\UpsertPage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PageRequest;
+use App\Models\Cms\Domain;
 use App\Models\Cms\Page;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class PageController extends Controller
 
         return view('admin.pages.create', [
             'page' => new Page(['status' => 'draft', 'template' => 'default']),
+            'domains' => Domain::query()->active()->ordered()->get(),
         ]);
     }
 
@@ -46,6 +48,7 @@ class PageController extends Controller
 
         return view('admin.pages.edit', [
             'page' => $page,
+            'domains' => Domain::query()->active()->ordered()->get(),
         ]);
     }
 

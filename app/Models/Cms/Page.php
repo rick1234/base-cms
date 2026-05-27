@@ -23,6 +23,7 @@ class Page extends Model
 
     protected $fillable = [
         'uuid',
+        'domain_id',
         'parent_id',
         'slug',
         'title',
@@ -102,6 +103,11 @@ class Page extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function domain(): BelongsTo
+    {
+        return $this->belongsTo(Domain::class);
     }
 
     public function modules(): BelongsToMany

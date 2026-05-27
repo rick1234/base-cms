@@ -469,6 +469,13 @@ class CmsModuleRegistry
             'validation_rules',
             'configuration',
             'columns',
+            'active_frontend_locales',
+            'active_backend_locales',
+            'template_settings',
+            'social_links',
+            'public_integrations',
+            'favicon_assets',
+            'default_settings',
         ], true);
     }
 }

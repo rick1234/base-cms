@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\Frontend\ContentPreviewController;
+use App\Http\Controllers\Frontend\DomainAssetController;
+use App\Http\Controllers\Frontend\DomainPreviewController;
 use App\Http\Controllers\Frontend\DownloadController;
 use App\Http\Controllers\Frontend\FormSubmissionController;
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\PageController;
 use App\Http\Controllers\Frontend\RedirectController;
+use App\Http\Controllers\Frontend\SearchController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +17,13 @@ Route::redirect('/login', '/admin/login')->name('login');
 Route::post('/locale/{locale}', LocaleController::class)
     ->where('locale', '[A-Za-z]{2}(?:[-_][A-Za-z]{2})?')
     ->name('locale.update');
+
+Route::get('/__domain/theme.css', [DomainAssetController::class, 'theme'])->name('frontend.domains.theme');
+Route::post('/__domain-preview/{domain}', [DomainPreviewController::class, 'switch'])
+    ->whereNumber('domain')
+    ->name('frontend.domains.preview');
+Route::delete('/__domain-preview', [DomainPreviewController::class, 'clear'])
+    ->name('frontend.domains.preview.clear');
 
 Route::get('/', HomeController::class)->name('frontend.home');
 Route::get('/{locale}', HomeController::class)
@@ -26,6 +36,9 @@ Route::post('/forms/{form:slug}', [FormSubmissionController::class, 'store'])
 Route::get('/preview/content/{token}', [ContentPreviewController::class, 'show'])
     ->where('token', '[A-Fa-f0-9]{64}')
     ->name('frontend.content.preview');
+
+Route::get('/search', SearchController::class)
+    ->name('frontend.search');
 
 Route::get('/downloads/file/{token}', [DownloadController::class, 'file'])
     ->where('token', '[A-Za-z0-9]+')

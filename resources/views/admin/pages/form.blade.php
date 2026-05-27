@@ -6,6 +6,19 @@
 
     <div class="form-grid">
         <div class="field">
+            <label class="field-label" for="domain_id">{{ __('Domain') }}</label>
+            <select class="field-select" id="domain_id" name="domain_id">
+                <option value="">{{ __('All domains') }}</option>
+                @foreach (($domains ?? collect()) as $domain)
+                    <option value="{{ $domain->id }}" @selected((int) old('domain_id', $page->domain_id) === $domain->id)>{{ $domain->host }}</option>
+                @endforeach
+            </select>
+            @error('domain_id')
+                <p class="field-error">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <div class="field">
             <label class="field-label" for="title">{{ __('Title') }}</label>
             <input class="field-input" id="title" name="title" type="text" value="{{ old('title', $page->title) }}" required>
             @error('title')
