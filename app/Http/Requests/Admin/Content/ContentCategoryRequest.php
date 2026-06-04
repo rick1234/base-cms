@@ -15,15 +15,20 @@ class ContentCategoryRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(array_filter([
+        $data = array_filter([
             'parent_id' => $this->input('parent_id', $this->input('parent')),
             'name' => $this->input('name', $this->input('naam')),
             'description' => $this->input('description', $this->input('content')),
             'meta_description' => $this->input('meta_description', $this->input('metadescription')),
             'slider_category_id' => $this->input('slider_category_id', $this->input('slider')),
-            'is_hidden_from_navigation' => $this->boolean('is_hidden_from_navigation') || $this->boolean('navigatiehoofdcategorie'),
             'status' => $this->normalizeStatus($this->input('status', $this->input('actief'))),
-        ], fn (mixed $value): bool => $value !== null));
+        ], fn (mixed $value): bool => $value !== null);
+
+        if ($this->has('is_hidden_from_navigation') || $this->has('navigatiehoofdcategorie')) {
+            $data['is_hidden_from_navigation'] = $this->boolean('is_hidden_from_navigation') || $this->boolean('navigatiehoofdcategorie');
+        }
+
+        $this->merge($data);
     }
 
     /**

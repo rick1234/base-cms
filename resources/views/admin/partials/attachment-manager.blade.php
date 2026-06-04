@@ -22,7 +22,7 @@
                 type="file"
             >
             <label class="attachment-dropzone-label" for="{{ $inputId }}">
-                <span class="admin-symbol admin-symbol-attachment attachment-dropzone-icon" aria-hidden="true"></span>
+                <x-admin.material-icon name="attach_file" class="attachment-dropzone-icon" />
                 <span class="attachment-dropzone-title">{{ $dropzoneTitle }}</span>
                 <span class="attachment-dropzone-text">{{ $dropzoneText }}</span>
             </label>
@@ -53,7 +53,7 @@
 
                     <div class="attachment-sortable-item" data-attachment-item data-drag-item data-attachment-id="{{ $attachment->id }}">
                         <button class="attachment-drag-handle" data-attachment-handle draggable="true" type="button" aria-label="{{ __('Sleep om te sorteren') }}" title="{{ __('Sleep om te sorteren') }}">
-                            <span class="admin-symbol admin-symbol-reorder" aria-hidden="true"></span>
+                            <x-admin.material-icon name="drag_indicator" />
                         </button>
 
                         <div class="attachment-item-content">
@@ -76,7 +76,7 @@
 
                         <div class="attachment-item-actions">
                             <a class="attachment-item-button" href="{{ asset($attachment->url) }}" target="_blank" rel="noreferrer" title="{{ __('Bekijk de bijlage') }}">
-                                <span class="admin-symbol admin-symbol-attachment" aria-hidden="true"></span>
+                                <x-admin.material-icon name="attach_file" />
                             </a>
                             <label class="attachment-item-button attachment-delete-button" for="{{ $deleteInputId }}" title="{{ __('Verwijder de bijlage') }}">
                                 <input
@@ -88,7 +88,7 @@
                                     value="1"
                                     @checked(old('existing_attachments.'.$attachment->id.'.delete'))
                                 >
-                                <span class="admin-symbol admin-symbol-close" aria-hidden="true"></span>
+                                <x-admin.material-icon name="close" />
                             </label>
                         </div>
                     </div>
@@ -96,7 +96,7 @@
             </div>
         @else
             <div class="attachment-message">
-                <span class="flaticon-rounded-info-button"></span>
+                <x-admin.material-icon name="info" />
                 <em>{{ __('Er zijn (nog) geen bijlagen toegevoegd') }}.</em>
             </div>
         @endif

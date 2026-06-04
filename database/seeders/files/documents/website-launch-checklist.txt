@@ -1,0 +1,7 @@
+Website launch checklist
+========================
+
+- Confirm redirects
+- Check metadata
+- Review navigation
+- Test forms and downloads

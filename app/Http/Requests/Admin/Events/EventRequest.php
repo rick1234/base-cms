@@ -15,22 +15,82 @@ class EventRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(array_filter([
-            'title' => $this->input('title', $this->input('titel')),
-            'subtitle' => $this->input('subtitle', $this->input('subtitel')),
-            'body' => $this->input('body', $this->input('content')),
-            'meta_description' => $this->input('meta_description', $this->input('metadescription')),
-            'status' => $this->normalizeStatus($this->input('status', $this->input('actief'))),
-            'active_from' => $this->normalizeDate($this->input('active_from', $this->input('startdatum'))),
-            'active_until' => $this->normalizeDate($this->input('active_until', $this->input('einddatum'))),
-            'starts_at' => $this->normalizeDate($this->input('starts_at', $this->input('evenementstartdatum'))),
-            'ends_at' => $this->normalizeDate($this->input('ends_at', $this->input('evenementeinddatum'))),
-            'form_id' => $this->input('form_id', $this->input('formulier_id')),
-            'categories' => $this->input('categories', $this->input('categorie')),
-            'attachment_names' => $this->input('attachment_names', $this->input('attachmentNaam')),
-            'existing_parts' => $this->input('existing_parts', $this->legacyExistingParts()),
-            'new_parts' => $this->legacyParts(),
-        ], fn (mixed $value): bool => $value !== null));
+        $activeTab = $this->string('active_tab')->toString() ?: 'general';
+        $data = ['active_tab' => $activeTab];
+
+        if ($this->hasAny(['title', 'titel'])) {
+            $data['title'] = $this->input('title', $this->input('titel'));
+        }
+
+        if ($this->hasAny(['subtitle', 'subtitel'])) {
+            $data['subtitle'] = $this->input('subtitle', $this->input('subtitel'));
+        }
+
+        if ($this->has('slug')) {
+            $data['slug'] = $this->input('slug');
+        }
+
+        if ($this->hasAny(['locale', 'taalcode'])) {
+            $data['locale'] = $this->input('locale', $this->input('taalcode'));
+        }
+
+        if ($this->has('intro')) {
+            $data['intro'] = $this->input('intro');
+        }
+
+        if ($this->hasAny(['body', 'content'])) {
+            $data['body'] = $this->input('body', $this->input('content'));
+        }
+
+        if ($this->hasAny(['meta_description', 'metadescription'])) {
+            $data['meta_description'] = $this->input('meta_description', $this->input('metadescription'));
+        }
+
+        if ($this->hasAny(['status', 'actief'])) {
+            $data['status'] = $this->normalizeStatus($this->input('status', $this->input('actief')));
+        }
+
+        if ($this->hasAny(['active_from', 'startdatum'])) {
+            $data['active_from'] = $this->normalizeDate($this->input('active_from', $this->input('startdatum')));
+        }
+
+        if ($this->hasAny(['active_until', 'einddatum'])) {
+            $data['active_until'] = $this->normalizeDate($this->input('active_until', $this->input('einddatum')));
+        }
+
+        if ($this->hasAny(['starts_at', 'evenementstartdatum'])) {
+            $data['starts_at'] = $this->normalizeDate($this->input('starts_at', $this->input('evenementstartdatum')));
+        }
+
+        if ($this->hasAny(['ends_at', 'evenementeinddatum'])) {
+            $data['ends_at'] = $this->normalizeDate($this->input('ends_at', $this->input('evenementeinddatum')));
+        }
+
+        if ($this->hasAny(['form_id', 'formulier_id'])) {
+            $data['form_id'] = $this->input('form_id', $this->input('formulier_id'));
+        }
+
+        if ($this->hasAny(['categories', 'categorie'])) {
+            $data['categories'] = $this->input('categories', $this->input('categorie'));
+        }
+
+        if ($this->hasAny(['attachment_names', 'attachmentNaam'])) {
+            $data['attachment_names'] = $this->input('attachment_names', $this->input('attachmentNaam'));
+        }
+
+        if ($this->has('existing_parts') || $this->legacyExistingParts() !== null) {
+            $data['existing_parts'] = $this->input('existing_parts', $this->legacyExistingParts());
+        }
+
+        if ($this->has('new_parts') || $this->legacyParts() !== null) {
+            $data['new_parts'] = $this->input('new_parts', $this->legacyParts());
+        }
+
+        if ($event = $this->event()) {
+            $data = $this->preserveExistingTabValues($data, $event, $activeTab);
+        }
+
+        $this->merge(array_filter($data, fn (mixed $value): bool => $value !== null));
     }
 
     /**
@@ -85,6 +145,7 @@ class EventRequest extends FormRequest
             'new_parts.*.starts_at' => ['nullable', 'date_format:H:i'],
             'new_parts.*.ends_at' => ['nullable', 'date_format:H:i'],
             'new_parts.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'active_tab' => ['sometimes', Rule::in(['general', 'schedule', 'form', 'attachments', 'images', 'seo'])],
             'saveAndStay' => ['sometimes', 'boolean'],
         ];
     }
@@ -109,6 +170,50 @@ class EventRequest extends FormRequest
             '0', 'inactive', 'draft', '' => 'draft',
             'archived' => 'archived',
             default => is_string($status) ? $status : 'draft',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function preserveExistingTabValues(array $data, Event $event, string $activeTab): array
+    {
+        $preserved = [
+            'title' => $event->title,
+            'subtitle' => $event->subtitle,
+            'slug' => $event->slug,
+            'locale' => $event->locale,
+            'intro' => $event->intro,
+            'body' => $event->body,
+            'meta_description' => $event->meta_description,
+            'status' => $event->status,
+            'active_from' => optional($event->active_from)->format('Y-m-d'),
+            'active_until' => optional($event->active_until)->format('Y-m-d'),
+            'starts_at' => optional($event->starts_at)->format('Y-m-d'),
+            'ends_at' => optional($event->ends_at)->format('Y-m-d'),
+            'form_id' => $event->form_id,
+            'categories' => $event->categories()->pluck('event_categories.id')->all(),
+        ];
+
+        foreach ($preserved as $field => $value) {
+            if (array_key_exists($field, $data) || ! $this->shouldPreserveField($field, $activeTab)) {
+                continue;
+            }
+
+            $data[$field] = $value;
+        }
+
+        return $data;
+    }
+
+    private function shouldPreserveField(string $field, string $activeTab): bool
+    {
+        return match ($activeTab) {
+            'seo' => $field !== 'meta_description',
+            'form' => $field !== 'form_id',
+            'general' => in_array($field, ['intro', 'body', 'meta_description', 'form_id'], true),
+            default => true,
         };
     }
 

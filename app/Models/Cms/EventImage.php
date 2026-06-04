@@ -11,6 +11,14 @@ class EventImage extends CmsModel
 
     protected $table = 'event_images';
 
+    protected function casts(): array
+    {
+        return [
+            ...parent::casts(),
+            'is_decorative' => 'boolean',
+        ];
+    }
+
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);

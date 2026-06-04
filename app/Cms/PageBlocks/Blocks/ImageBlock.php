@@ -41,11 +41,9 @@ class ImageBlock extends BasePageBlock
                     '1:1',
                 ])
                 ->maxSize(10240)
-                ->required()
                 ->columnSpanFull(),
             TextInput::make('data.alt')
                 ->label(__('Alt text'))
-                ->required()
                 ->maxLength(255),
             TextInput::make('data.caption')
                 ->label(__('Caption'))

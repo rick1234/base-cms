@@ -30,7 +30,6 @@ class VideoBlock extends BasePageBlock
             TextInput::make('data.video_url')
                 ->label(__('Video URL'))
                 ->url()
-                ->required()
                 ->maxLength(255)
                 ->columnSpanFull(),
             Select::make('settings.provider')

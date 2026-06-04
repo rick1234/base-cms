@@ -2,14 +2,19 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Models\User;
+use App\Mail\DownloadInviteMail;
+use App\Models\Cms\CmsPermission;
+use App\Models\Cms\CmsRole;
 use App\Models\Cms\Download;
 use App\Models\Cms\DownloadAccessToken;
 use App\Models\Cms\DownloadCategory;
+use App\Models\User;
+use App\Support\Admin\Roles\ModulePermissionRegistry;
 use Database\Seeders\DownloadModuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -230,6 +235,152 @@ class DownloadModuleTest extends TestCase
         $this->assertNull($download->refresh()->file_path);
     }
 
+    public function test_download_edit_tabs_secure_storage_invites_qr_and_access_log(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $download = $this->download([
+            'name' => 'Private invite report',
+            'slug' => 'private-invite-report',
+            'file_path' => 'admin/downloads/tests/private-invite-report.txt',
+            'original_filename' => 'private-invite-report.txt',
+            'is_password_protected' => true,
+            'password_hash' => Hash::make('download-secret'),
+            'link_expires_after_minutes' => null,
+        ]);
+        Storage::disk('local')->put($download->file_path, 'Private invite body.');
+
+        $this->actingAs($admin)
+            ->get("/admin/download/{$download->id}/edit")
+            ->assertOk()
+            ->assertSee('class="tabmenu"', false)
+            ->assertSee('Bestandsbeveiliging')
+            ->assertSee('E-mail uitnodigingen')
+            ->assertSee('Downloadlog')
+            ->assertSee('QR-code')
+            ->assertDontSee('name="slug"', false)
+            ->assertDontSee('Verwijder bestand');
+
+        $this->actingAs($admin)
+            ->get("/admin/download/{$download->id}/edit?tab=invites")
+            ->assertRedirect("/admin/download/{$download->id}/edit/invites");
+
+        $this->actingAs($admin)
+            ->post("/admin/download/{$download->id}/storage-test")
+            ->assertRedirect("/admin/download/{$download->id}/edit/storage")
+            ->assertSessionHas('download_storage_test_result');
+
+        $this->assertFalse(file_exists(public_path($download->file_path)));
+        Storage::disk('public')->assertMissing($download->file_path);
+
+        $this->actingAs($admin)
+            ->get("/admin/download/{$download->id}/edit/storage")
+            ->assertOk()
+            ->assertSee('File uses private storage disk')
+            ->assertSee('Password protection can be used');
+
+        $this->actingAs($admin)
+            ->post("/admin/download/{$download->id}/invites", [
+                'emails' => "first@example.com\nsecond@example.com, first@example.com",
+                'message' => 'Here is your private report.',
+            ])
+            ->assertRedirect("/admin/download/{$download->id}/edit/invites");
+
+        Mail::assertSent(DownloadInviteMail::class, 2);
+
+        $tokens = DownloadAccessToken::query()
+            ->where('download_id', $download->id)
+            ->where('purpose', 'invite')
+            ->orderBy('email')
+            ->get();
+
+        $this->assertCount(2, $tokens);
+        $this->assertSame(['first@example.com', 'second@example.com'], $tokens->pluck('email')->all());
+        $this->assertTrue($tokens->every(fn (DownloadAccessToken $token): bool => $token->expires_at === null));
+
+        $sentMail = Mail::sent(DownloadInviteMail::class)->first();
+        $inviteUrl = $sentMail->url;
+        $plainToken = basename((string) parse_url($inviteUrl, PHP_URL_PATH));
+
+        $this->assertDatabaseHas('download_access_tokens', [
+            'token_hash' => hash('sha256', $plainToken),
+            'email' => 'first@example.com',
+            'purpose' => 'invite',
+        ]);
+        $this->assertDatabaseMissing('download_access_tokens', [
+            'token_hash' => $plainToken,
+        ]);
+
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.10',
+            'HTTP_USER_AGENT' => 'DownloadTestBrowser/1.0',
+        ])
+            ->get((string) parse_url($inviteUrl, PHP_URL_PATH))
+            ->assertOk()
+            ->assertHeader('x-content-type-options', 'nosniff');
+
+        $this->actingAs($admin)
+            ->get("/admin/download/{$download->id}/edit/log")
+            ->assertOk()
+            ->assertSee('first@example.com')
+            ->assertSee('203.0.113.10')
+            ->assertSee('Downloadlog');
+
+        $this->actingAs($admin)
+            ->get("/admin/download/{$download->id}/edit/qr")
+            ->assertOk()
+            ->assertSee('QR-code openen')
+            ->assertSee("/admin/download/{$download->id}/qr.svg");
+
+        $this->actingAs($admin)
+            ->get("/admin/download/{$download->id}/qr.svg")
+            ->assertOk()
+            ->assertHeader('content-type', 'image/svg+xml')
+            ->assertSee('<svg', false);
+
+        $download->refresh();
+        $this->assertSame(1, $download->download_count);
+        $this->assertNotNull($download->last_downloaded_at);
+    }
+
+    public function test_download_storage_tab_is_restricted_to_superusers(): void
+    {
+        Storage::fake('local');
+
+        $download = $this->download([
+            'name' => 'Restricted storage report',
+            'slug' => 'restricted-storage-report',
+            'file_path' => 'admin/downloads/tests/restricted-storage-report.txt',
+        ]);
+        Storage::disk('local')->put($download->file_path, 'Restricted body.');
+
+        $admin = $this->roleBasedAdminUser();
+
+        $this->actingAs($admin)
+            ->get("/admin/download/{$download->id}/edit")
+            ->assertOk()
+            ->assertSee('E-mail uitnodigingen')
+            ->assertDontSee('Bestandsbeveiliging');
+
+        $this->actingAs($admin)
+            ->get("/admin/download/{$download->id}/edit/storage")
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->post("/admin/download/{$download->id}/storage-test")
+            ->assertForbidden();
+
+        $superuser = User::factory()->admin()->create();
+
+        $this->actingAs($superuser)
+            ->get("/admin/download/{$download->id}/edit/storage")
+            ->assertOk()
+            ->assertSee('Bestandsbeveiliging');
+    }
+
     public function test_download_categories_support_legacy_fields_sorting_and_delete_routes(): void
     {
         $admin = User::factory()->admin()->create();
@@ -256,6 +407,31 @@ class DownloadModuleTest extends TestCase
         $this->assertSoftDeleted('download_categories', [
             'id' => $category->id,
         ]);
+    }
+
+    private function roleBasedAdminUser(): User
+    {
+        app(ModulePermissionRegistry::class)->syncPermissions();
+
+        $role = CmsRole::query()->create([
+            'name' => 'Download editor',
+            'slug' => 'download-editor',
+            'status' => 'active',
+        ]);
+        $role->syncPermissionIds(
+            CmsPermission::query()
+                ->where('permission_key', 'admin.access')
+                ->pluck('id')
+        );
+
+        $user = User::factory()->create([
+            'is_admin' => false,
+            'is_active' => true,
+            'role_id' => $role->id,
+        ]);
+        $user->roles()->sync([$role->id => ['is_primary' => true]]);
+
+        return $user;
     }
 
     /**

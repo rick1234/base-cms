@@ -65,6 +65,7 @@ class DatabaseSeeder extends Seeder
         $this->call(FormModuleSeeder::class);
         $this->call(EventModuleSeeder::class);
         $this->call(FaqModuleSeeder::class);
+        $this->call(VacancyModuleSeeder::class);
         $this->call(DownloadModuleSeeder::class);
         $this->call(LocationModuleSeeder::class);
         $this->call(RedirectModuleSeeder::class);
@@ -73,5 +74,7 @@ class DatabaseSeeder extends Seeder
         $this->call(DomainTemplateSeeder::class);
         $this->call(TranslationModuleSeeder::class);
         $this->call(UserModuleSeeder::class);
+        $this->call(DemoWebsiteSeeder::class);
+        $this->call(PlatformDemoSeeder::class);
     }
 }

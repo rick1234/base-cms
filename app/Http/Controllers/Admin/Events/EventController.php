@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin\Events;
 
-use App\Actions\Admin\Events\DuplicateEvent;
 use App\Actions\Admin\Events\UpsertEvent;
 use App\Http\Controllers\Admin\Concerns\UsesEditViewForCreate;
 use App\Http\Controllers\Controller;
@@ -26,6 +25,11 @@ use Illuminate\Support\Facades\DB;
 class EventController extends Controller
 {
     use UsesEditViewForCreate;
+
+    /**
+     * @var list<string>
+     */
+    private const EDIT_TABS = ['schedule', 'form', 'attachments', 'images', 'seo'];
 
     public function index(Request $request): View|RedirectResponse
     {
@@ -94,18 +98,25 @@ class EventController extends Controller
             ->route($this->routeName('edit'), ['id' => $event->id]);
     }
 
-    public function edit(Request $request): View
+    public function edit(Request $request): View|RedirectResponse
     {
+        if ($redirect = $this->redirectQueryTabToRoute($request)) {
+            return $redirect;
+        }
+
         $event = $this->eventFromRequest($request);
         $event?->load(['categories', 'attachments', 'images', 'parts']);
+        $editableEvent = $event ?? new Event([
+            'status' => 'draft',
+            'locale' => app()->getLocale(),
+            'active_from' => now(),
+            'starts_at' => now(),
+        ]);
+        $activeTab = $this->activeTab($request, $event);
 
         return view('admin.events.edit', [
-            'event' => $event ?? new Event([
-                'status' => 'draft',
-                'locale' => app()->getLocale(),
-                'active_from' => now(),
-                'starts_at' => now(),
-            ]),
+            'event' => $editableEvent,
+            'activeTab' => $activeTab,
             'categories' => $this->categories(),
             'forms' => Form::query()->orderBy('name')->get(),
             'routeNames' => $this->routeNames(),
@@ -127,8 +138,10 @@ class EventController extends Controller
 
         flash(__('Event saved.'))->success();
 
+        $activeTab = $request->validated('active_tab');
+
         return redirect()
-            ->route($this->routeName('edit'), ['id' => $event->id]);
+            ->route($this->editRouteName($activeTab), $this->editRedirectParameters($event, $activeTab));
     }
 
     public function update(Event $event, EventRequest $request, UpsertEvent $upsert): RedirectResponse
@@ -143,8 +156,10 @@ class EventController extends Controller
 
         flash(__('Event saved.'))->success();
 
+        $activeTab = $request->validated('active_tab');
+
         return redirect()
-            ->route($this->routeName('edit'), ['id' => $event->id]);
+            ->route($this->editRouteName($activeTab), $this->editRedirectParameters($event, $activeTab));
     }
 
     public function destroy(Event $event): RedirectResponse
@@ -160,23 +175,39 @@ class EventController extends Controller
     public function uploadImage(EventMediaRequest $request, EventMediaManager $mediaManager): JsonResponse|RedirectResponse
     {
         $event = Event::query()->findOrFail($request->integer('id'));
-        $file = $request->file('file') ?: $request->file('image');
+        $files = collect([$request->file('file'), $request->file('image')])
+            ->merge($request->file('images', []))
+            ->filter(fn (mixed $file): bool => $file instanceof UploadedFile)
+            ->values();
 
-        abort_unless($file instanceof UploadedFile, 422);
+        abort_unless($files->isNotEmpty(), 422);
 
-        $image = $mediaManager->storeImage($event, $file, $request->string('caption')->toString() ?: null, $request->user());
+        $images = $files->map(function (UploadedFile $file) use ($request, $event, $mediaManager): EventImage {
+            $caption = $request->string('caption')->toString() ?: $this->defaultCaptionForUpload($file);
+
+            return $mediaManager->storeImage($event, $file, $caption, $request->user(), [
+                'alt_text' => $request->string('alt_text')->toString() ?: $caption,
+                'title_text' => $request->string('title_text')->toString() ?: $caption,
+                'description' => $request->string('description')->toString() ?: null,
+                'credit' => $request->string('credit')->toString() ?: null,
+                'is_decorative' => $request->boolean('is_decorative'),
+            ]);
+        });
 
         if (! $request->expectsJson()) {
-            flash(__('Image uploaded.'))->success();
+            flash(trans_choice('{1} Image uploaded.|[2,*] Images uploaded.', $images->count()))->success();
 
             return back();
         }
+
+        $image = $images->first();
 
         return response()->json([
             'jsonrpc' => '2.0',
             'status' => 'success',
             'result' => $image->id,
             'id' => $image->id,
+            'count' => $images->count(),
         ]);
     }
 
@@ -233,26 +264,6 @@ class EventController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-    public function duplicate(EventActionRequest $request, DuplicateEvent $duplicate): JsonResponse|RedirectResponse
-    {
-        $id = $request->integer('itemId') ?: $request->integer('item_id') ?: $request->integer('id');
-        $event = Event::query()->with(['categories', 'attachments', 'images', 'parts'])->findOrFail($id);
-        $copy = $duplicate->handle($event, $request->user());
-
-        if (! $request->expectsJson()) {
-            flash(__('Event duplicated.'))->success();
-
-            return redirect()
-                ->route($this->routeName('edit'), ['id' => $copy->id]);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'id' => $copy->id,
-            'edit_url' => route($this->routeName('edit'), ['id' => $copy->id]),
-        ]);
-    }
-
     public function deletePart(EventActionRequest $request): JsonResponse|RedirectResponse
     {
         $id = $request->integer('part_id')
@@ -276,6 +287,17 @@ class EventController extends Controller
         $id = (int) ($request->route('id') ?: $request->integer('id'));
 
         return $id > 0 ? Event::query()->findOrFail($id) : null;
+    }
+
+    private function activeTab(Request $request, ?Event $event): string
+    {
+        $tab = $request->route('tab') ?: $request->query('tab');
+
+        if (! $event instanceof Event || ! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return 'general';
+        }
+
+        return $tab;
     }
 
     /**
@@ -380,9 +402,9 @@ class EventController extends Controller
             'store' => $this->routeName('store'),
             'create' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('create'),
             'edit' => $this->routeName('edit'),
+            'edit.tab' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('edit.tab'),
             'save' => $this->routeName('save'),
             'destroy' => $this->routeName('destroy'),
-            'duplicate' => $this->routeName('duplicate'),
             'image.delete' => $this->routeName('image.delete'),
             'image.update-name' => $this->routeName('image.update-name'),
             'image.update-sort' => $this->routeName('image.update-sort'),
@@ -394,6 +416,62 @@ class EventController extends Controller
     private function routeName(string $name): string
     {
         return (request()->routeIs('cms.*') ? 'cms.events.' : 'admin.events.').$name;
+    }
+
+    private function editRouteName(?string $activeTab = null): string
+    {
+        if (! request()->routeIs('cms.*') && in_array($activeTab, self::EDIT_TABS, true)) {
+            return $this->routeName('edit.tab');
+        }
+
+        return $this->routeName('edit');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function editRedirectParameters(Event $event, ?string $activeTab = null): array
+    {
+        $parameters = ['id' => $event->id];
+
+        if (in_array($activeTab, self::EDIT_TABS, true)) {
+            $parameters['tab'] = $activeTab;
+        }
+
+        return $parameters;
+    }
+
+    private function redirectQueryTabToRoute(Request $request): ?RedirectResponse
+    {
+        if (request()->routeIs('cms.*') || $request->route('tab')) {
+            return null;
+        }
+
+        $tab = $request->query('tab');
+
+        if (! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return null;
+        }
+
+        $id = (int) ($request->route('id') ?: $request->integer('id'));
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return redirect()->route($this->routeName('edit.tab'), [
+            'id' => $id,
+            'tab' => $tab,
+        ]);
+    }
+
+    private function defaultCaptionForUpload(UploadedFile $file): string
+    {
+        return str(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
+            ->replace(['-', '_'], ' ')
+            ->squish()
+            ->title()
+            ->toString();
     }
 
     /**

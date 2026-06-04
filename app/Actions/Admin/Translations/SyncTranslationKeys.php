@@ -3,7 +3,9 @@
 namespace App\Actions\Admin\Translations;
 
 use App\Models\Cms\TranslationKey;
+use App\Support\Domains\DomainWizard;
 use App\Support\Localization\TranslationRepository;
+use App\Support\Navigation\NavigationLinkRegistry;
 use Database\Seeders\TranslationModuleSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -54,6 +56,8 @@ class SyncTranslationKeys
                         'reviewed_at' => now(),
                     ],
                 );
+
+                $this->seedDefaultValues($translationKey, $defaults[$string] ?? [], $sourceText);
             }
         }
 
@@ -62,6 +66,33 @@ class SyncTranslationKeys
             'updated' => $updated,
             'scanned' => $scanned,
         ];
+    }
+
+    /**
+     * @param  array<string, string>  $values
+     */
+    private function seedDefaultValues(TranslationKey $translationKey, array $values, string $sourceText): void
+    {
+        foreach ($values as $locale => $value) {
+            $locale = $this->translations->normalizeLocale((string) $locale);
+            $translationValue = $translationKey->values()->firstOrNew(['locale' => $locale]);
+
+            if (
+                $translationValue->exists
+                && filled($translationValue->value)
+                && $translationValue->value !== $translationKey->key
+                && $translationValue->value !== $sourceText
+            ) {
+                continue;
+            }
+
+            $translationValue->forceFill([
+                'value' => $value,
+                'status' => 'active',
+                'is_reviewed' => true,
+                'reviewed_at' => now(),
+            ])->save();
+        }
     }
 
     /**
@@ -85,6 +116,18 @@ class SyncTranslationKeys
         }
 
         foreach ($this->cmsModuleStrings() as $string) {
+            $strings['admin'][] = $string;
+        }
+
+        foreach ($this->categoryConfigurationStrings() as $string) {
+            $strings['admin'][] = $string;
+        }
+
+        foreach ($this->domainConfigurationStrings() as $string) {
+            $strings['admin'][] = $string;
+        }
+
+        foreach ($this->navigationConfigurationStrings() as $string) {
             $strings['admin'][] = $string;
         }
 
@@ -135,12 +178,112 @@ class SyncTranslationKeys
     /**
      * @return list<string>
      */
+    private function categoryConfigurationStrings(): array
+    {
+        return collect(config('cms_categories', []))
+            ->pluck('linked_label')
+            ->filter(fn (mixed $value): bool => is_string($value) && trim($value) !== '')
+            ->map(fn (string $value): string => trim($value))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function navigationConfigurationStrings(): array
+    {
+        return collect(app(NavigationLinkRegistry::class)->definitionLabels())
+            ->merge([
+                'Active',
+                'Change link',
+                'Custom URL',
+                'Edit source',
+                'Linked item',
+                'Move item',
+                'Navigation title',
+                'No results found.',
+                'Remove item',
+                'Search failed.',
+                'Searching...',
+                'Select',
+                'Use subcategories as submenu',
+            ])
+            ->filter(fn (mixed $value): bool => is_string($value) && trim($value) !== '')
+            ->map(fn (string $value): string => trim($value))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function domainConfigurationStrings(): array
+    {
+        return collect(DomainWizard::steps())
+            ->pluck('label')
+            ->merge(config('cms_domains.button_styles', []))
+            ->merge(config('cms_domains.placement_options', []))
+            ->merge(config('cms_domains.social_platforms', []))
+            ->merge(config('cms_domains.public_integrations', []))
+            ->merge([
+                'Logo path',
+                'Hero image path',
+                'Show USP bar',
+                'Sticky header',
+                'Show hero',
+                'Show footer credit',
+                'Search enabled',
+                'Contact title',
+                'Contact text',
+                'Social title',
+                'Social text',
+                'Content title',
+                'Credit label',
+                'Credit URL',
+                'Primary color',
+                'Secondary color',
+                'Tertiary color',
+                'Accent color',
+                'Surface color',
+                'Canvas color',
+                'Light color',
+                'Grey color',
+                'Dark color',
+                'Ink color',
+                'Muted ink color',
+                'Base font family',
+                'Heading font family',
+                'Button radius',
+                'Content width',
+                'Wrapper width',
+                'Logo width',
+                'Logo height',
+                'Hero height',
+                'Strong',
+                'Quiet',
+                'Editorial',
+            ])
+            ->filter(fn (mixed $value): bool => is_string($value) && trim($value) !== '')
+            ->map(fn (string $value): string => trim($value))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
     private function filesToScan(): array
     {
         return collect([
             resource_path('views'),
+            app_path('Actions'),
             app_path('Http/Controllers'),
             app_path('Http/Requests'),
+            app_path('Livewire'),
             app_path('Mail'),
             base_path('routes'),
         ])
@@ -156,7 +299,7 @@ class SyncTranslationKeys
      */
     private function extractStrings(string $contents): array
     {
-        preg_match_all("/(?:__|@lang)\\(\\s*(['\"])((?:\\\\.|(?!\\1).)*)\\1/u", $contents, $matches);
+        preg_match_all("/(?:__|@lang|trans_choice)\\(\\s*(['\"])((?:\\\\.|(?!\\1).)*)\\1/u", $contents, $matches);
 
         return collect($matches[2] ?? [])
             ->map(fn (string $value): string => stripcslashes($value))

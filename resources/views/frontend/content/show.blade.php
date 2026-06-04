@@ -9,8 +9,6 @@
                         <h1 class="page-hero-title eyecatcher-caption-title">{{ $contentItem->title }}</h1>
                         @if ($contentItem->subtitle)
                             <p class="page-hero-intro eyecatcher-caption-text">{{ $contentItem->subtitle }}</p>
-                        @elseif ($contentItem->intro)
-                            <p class="page-hero-intro eyecatcher-caption-text">{{ $contentItem->intro }}</p>
                         @endif
                     </div>
                 </div>
@@ -31,14 +29,6 @@
                 @unless (filter_var(data_get($domainTemplateSettings ?? [], 'show_hero', true), FILTER_VALIDATE_BOOLEAN))
                     <h1 class="title">{{ $contentItem->title }}</h1>
                 @endunless
-
-                @if ($contentItem->intro && $contentItem->subtitle)
-                    <p class="page-content-intro">{{ $contentItem->intro }}</p>
-                @endif
-
-                @if ($contentItem->body)
-                    <div class="page-content-body">{{ $contentItem->body }}</div>
-                @endif
 
                 <x-page-blocks.renderer :blocks="$contentItem->structured_blocks" />
             </div>

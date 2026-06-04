@@ -2,10 +2,8 @@
 
 namespace App\Actions\Admin\Faq;
 
-use App\Models\Cms\FaqAttachment;
 use App\Models\Cms\FaqItem;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -13,9 +11,8 @@ class UpsertFaqItem
 {
     /**
      * @param  array<string, mixed>  $data
-     * @param  array<int, UploadedFile>  $attachments
      */
-    public function handle(array $data, ?Authenticatable $actor = null, ?FaqItem $faqItem = null, array $attachments = []): FaqItem
+    public function handle(array $data, ?Authenticatable $actor = null, ?FaqItem $faqItem = null): FaqItem
     {
         $faqItem ??= new FaqItem;
         $categoryIds = collect($data['categories'] ?? [])
@@ -37,9 +34,17 @@ class UpsertFaqItem
             'sort_order',
         ]);
 
+        $attributes['locale'] ??= app()->getLocale();
+        $attributes['intro'] = null;
+        $attributes['meta_description'] = null;
+        $attributes['active_from'] = null;
+        $attributes['active_until'] = null;
+
         if (blank($attributes['slug'] ?? null)) {
             $attributes['slug'] = Str::slug((string) $attributes['question']);
         }
+
+        $attributes['metadata'] = $this->metadataFor($faqItem, $data);
 
         if (! $faqItem->exists) {
             $attributes['created_by'] = $actor?->getAuthIdentifier();
@@ -53,61 +58,60 @@ class UpsertFaqItem
             $categoryIds->mapWithKeys(fn (int $id, int $index): array => [$id => ['sort_order' => $index + 1]])->all()
         );
 
-        $this->storeAttachments($faqItem, $attachments, (array) ($data['attachment_names'] ?? []), $actor);
-        $this->updateExistingAttachments($faqItem, (array) ($data['existing_attachments'] ?? []), $actor);
-
         return $faqItem->refresh();
     }
 
     /**
-     * @param  array<int, UploadedFile>  $attachments
-     * @param  array<int|string, string|null>  $names
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
      */
-    private function storeAttachments(FaqItem $faqItem, array $attachments, array $names, ?Authenticatable $actor): void
+    private function metadataFor(FaqItem $faqItem, array $data): ?array
     {
-        foreach ($attachments as $index => $file) {
-            $path = $file->storeAs(
-                'admin/uploads/faq/attachments',
-                (string) Str::uuid().'.'.($file->guessExtension() ?: $file->extension() ?: 'bin'),
-                'public',
-            );
+        $metadata = (array) ($faqItem->metadata ?? []);
+        $moreInfoLinks = $this->moreInfoLinks($data);
 
-            FaqAttachment::query()->create([
-                'faq_item_id' => $faqItem->id,
-                'name' => filled($names[$index] ?? null) ? $names[$index] : $file->getClientOriginalName(),
-                'type' => $file->getClientMimeType(),
-                'url' => 'storage/'.$path,
-                'sort_order' => ($faqItem->attachments()->max('sort_order') ?? 0) + 1,
-                'created_by' => $actor?->getAuthIdentifier(),
-                'updated_by' => $actor?->getAuthIdentifier(),
-            ]);
+        if ($moreInfoLinks === []) {
+            unset($metadata['more_info'], $metadata['more_info_links']);
+
+            return $metadata === [] ? null : $metadata;
         }
+
+        $metadata['more_info_links'] = $moreInfoLinks;
+        $metadata['more_info'] = $moreInfoLinks[0];
+
+        return $metadata;
     }
 
     /**
-     * @param  array<int|string, array<string, mixed>>  $attachments
+     * @param  array<string, mixed>  $data
+     * @return list<array{navigation_item_id: int, label?: string}>
      */
-    private function updateExistingAttachments(FaqItem $faqItem, array $attachments, ?Authenticatable $actor): void
+    private function moreInfoLinks(array $data): array
     {
-        foreach ($attachments as $id => $attachmentData) {
-            $attachment = $faqItem->attachments()->whereKey((int) $id)->first();
+        $links = is_array($data['more_info_links'] ?? null) ? $data['more_info_links'] : [];
 
-            if (! $attachment) {
-                continue;
-            }
-
-            if (! empty($attachmentData['delete'])) {
-                $attachment->forceFill(['updated_by' => $actor?->getAuthIdentifier()])->save();
-                $attachment->delete();
-
-                continue;
-            }
-
-            $attachment->fill([
-                'name' => $attachmentData['name'] ?? $attachment->name,
-                'sort_order' => (int) ($attachmentData['sort_order'] ?? $attachment->sort_order),
-                'updated_by' => $actor?->getAuthIdentifier(),
-            ])->save();
+        if ($links === [] && (filled($data['more_info_navigation_item_id'] ?? null) || filled($data['more_info_label'] ?? null))) {
+            $links[] = [
+                'navigation_item_id' => $data['more_info_navigation_item_id'] ?? null,
+                'label' => $data['more_info_label'] ?? null,
+            ];
         }
+
+        return collect($links)
+            ->filter(fn (mixed $link): bool => is_array($link) && filled($link['navigation_item_id'] ?? null))
+            ->map(function (array $link): array {
+                $normalized = [
+                    'navigation_item_id' => (int) $link['navigation_item_id'],
+                ];
+
+                if (filled($link['label'] ?? null)) {
+                    $normalized['label'] = trim((string) $link['label']);
+                }
+
+                return $normalized;
+            })
+            ->unique(fn (array $link): int => $link['navigation_item_id'])
+            ->values()
+            ->all();
     }
 }

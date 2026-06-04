@@ -38,8 +38,6 @@ class FormRequest extends BaseFormRequest
             'layout' => ['nullable', 'string', 'max:64'],
             'mail_template' => ['nullable', 'string', 'max:255'],
             'store_submissions' => ['boolean'],
-            'honeypot_enabled' => ['boolean'],
-            'honeypot_field' => ['nullable', 'string', 'max:64'],
             'confirmation_email_field' => ['nullable', 'string', 'max:64'],
             'redirect_url' => ['nullable', 'string', 'max:255'],
             'from_email' => ['nullable', 'email:rfc', 'max:255'],
@@ -61,24 +59,45 @@ class FormRequest extends BaseFormRequest
             'messages.*.is_active' => ['boolean'],
             'messages.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'messages.*.layout' => ['nullable', 'string', 'max:64'],
-            'messages.*.preheader' => ['nullable', 'string', 'max:255'],
             'messages.*.delete' => ['boolean'],
+            'active_tab' => ['sometimes', Rule::in(['edit', 'template', 'recipients', 'response'])],
+            'saveAndStay' => ['sometimes', 'boolean'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
+        $data = [
             'name' => $this->input('name', $this->input('title')),
-            'description' => $this->input('description', $this->input('omschrijving')),
-            'submit_text' => $this->input('submit_text', $this->input('submit_button_text', $this->input('button_text'))),
-            'recipient_email' => $this->input('recipient_email', $this->input('receiver')),
             'status' => $this->normalizedStatus($this->input('status', 'published')),
-            'categories' => $this->input('categories', $this->input('categorie', [])),
-            'show_title' => $this->normalizedBoolean('show_title', false),
-            'store_submissions' => $this->normalizedBoolean('store_submissions', true),
-            'honeypot_enabled' => $this->normalizedBoolean('honeypot_enabled', true),
-        ]);
+            'active_tab' => $this->string('active_tab')->toString() ?: 'edit',
+        ];
+
+        if ($this->has('description') || $this->has('omschrijving')) {
+            $data['description'] = $this->input('description', $this->input('omschrijving'));
+        }
+
+        if ($this->has('submit_text') || $this->has('submit_button_text') || $this->has('button_text')) {
+            $data['submit_text'] = $this->input('submit_text', $this->input('submit_button_text', $this->input('button_text')));
+        }
+
+        if ($this->has('recipient_email') || $this->has('receiver')) {
+            $data['recipient_email'] = $this->input('recipient_email', $this->input('receiver'));
+        }
+
+        if ($this->has('categories') || $this->has('categorie')) {
+            $data['categories'] = $this->input('categories', $this->input('categorie', []));
+        }
+
+        if ($this->has('show_title')) {
+            $data['show_title'] = $this->normalizedBoolean('show_title', false);
+        }
+
+        if ($this->has('store_submissions')) {
+            $data['store_submissions'] = $this->normalizedBoolean('store_submissions', true);
+        }
+
+        $this->merge($data);
     }
 
     public function formModel(): ?Form

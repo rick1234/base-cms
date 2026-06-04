@@ -79,7 +79,7 @@ class DomainController extends Controller
         $step = $this->submittedStep($data);
         $domain = $upsert->handle($data, $request->user(), $domain, $step);
 
-        flash($step === null ? __('Domain updated.') : __('Domain step saved.'))->success();
+        flash($step === null ? __('Domain saved.') : __('Domain step saved.'))->success();
 
         return $this->redirectToStep($domain, $this->targetStep($data, $step));
     }

@@ -1,0 +1,4 @@
+Protected project brief
+=======================
+
+This generated fixture is used for a password-protected seeded download.

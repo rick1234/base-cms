@@ -16,7 +16,7 @@
             <ul class="usp-listing">
                 @foreach ($items as $item)
                     <li class="usp-listing-item">
-                        <span class="site-material-icon admin-material-icon" aria-hidden="true">done</span>
+                        <span class="site-material-icon mso" aria-hidden="true">done</span>
                         <span>{{ $item }}</span>
                     </li>
                 @endforeach

@@ -167,6 +167,17 @@ class ListingOverview extends Component
         ]);
     }
 
+    public function localeLabel(string $locale): string
+    {
+        return match ($locale) {
+            'nl' => __('Dutch'),
+            'en' => __('English'),
+            'de' => __('German'),
+            'fr' => __('French'),
+            default => strtoupper($locale),
+        };
+    }
+
     private function syncDraftsFromFilters(): void
     {
         $this->draftId = $this->filterId;

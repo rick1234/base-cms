@@ -61,11 +61,6 @@ class Page extends Model
         });
     }
 
-    public function getRouteKeyName(): string
-    {
-        return 'slug';
-    }
-
     /**
      * @param  Builder<Page>  $query
      * @return Builder<Page>

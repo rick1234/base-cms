@@ -68,8 +68,7 @@ class SearchController extends Controller
             ->where(function (Builder $builder) use ($query): void {
                 $builder->where('title', 'like', "%{$query}%")
                     ->orWhere('subtitle', 'like', "%{$query}%")
-                    ->orWhere('intro', 'like', "%{$query}%")
-                    ->orWhere('body', 'like', "%{$query}%");
+                    ->orWhere('structured_blocks', 'like', "%{$query}%");
             })
             ->where(function (Builder $builder): void {
                 $builder->whereNull('locale')

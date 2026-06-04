@@ -12,7 +12,7 @@
             <div class="buttons-container">
                 <div class="buttons-container align-right">
                     <a class="btn btn-add" href="{{ route('admin.domains.create') }}">
-                        <span class="flaticon-add-plus-button"></span>
+                        <x-admin.material-icon name="add" />
                         {{ __('Start domain setup') }}
                     </a>
                     <a class="btn" href="{{ route('admin.templates.index') }}">
@@ -32,11 +32,6 @@
                     </div>
                 </div>
 
-                <div class="breadcrumbs">
-                    <a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a> &rsaquo;
-                    {{ __('Domains') }}
-                </div>
-
                 <div class="overview-container">
                     <div class="overview-row header">
                         <div class="overview-item">{{ __('Host') }}</div>
@@ -54,24 +49,26 @@
                             </div>
                             <div class="overview-item">{{ $domain->name }}</div>
                             <div class="overview-item">{{ $domain->template?->name ?? __('None') }}</div>
-                            <div class="overview-item">{{ strtoupper($domain->default_locale ?: config('app.locale')) }}</div>
+                            <div class="overview-item">
+                                <x-admin.language-flag :locale="$domain->default_locale ?: config('app.locale')" />
+                            </div>
                             <div class="overview-item">{{ $domain->is_active ? __('Active') : __('Inactive') }}</div>
                             <div class="overview-item options">
                                 <a href="{{ route('admin.domains.edit', $domain) }}" title="{{ __('Edit') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
                                 <form method="post" action="{{ route('admin.domains.destroy', $domain) }}">
                                     @csrf
                                     @method('delete')
                                     <button class="button-link" type="submit" title="{{ __('Delete') }}">
-                                        <span class="flaticon-delete-button"></span>
+                                        <x-admin.material-icon name="delete" />
                                     </button>
                                 </form>
                             </div>
                         </div>
                     @empty
                         <div class="overview-row">
-                            <div class="overview-item">{{ __('No domains have been configured yet.') }}</div>
+                            <div class="overview-item">{{ __('No domains found.') }}</div>
                         </div>
                     @endforelse
                 </div>

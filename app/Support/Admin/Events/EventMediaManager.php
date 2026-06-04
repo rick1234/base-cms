@@ -2,23 +2,34 @@
 
 namespace App\Support\Admin\Events;
 
-use App\Models\User;
 use App\Models\Cms\Event;
 use App\Models\Cms\EventAttachment;
 use App\Models\Cms\EventImage;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 class EventMediaManager
 {
-    public function storeImage(Event $event, UploadedFile $file, ?string $caption, ?User $user): EventImage
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function storeImage(Event $event, UploadedFile $file, ?string $caption, ?User $user, array $attributes = []): EventImage
     {
         return EventImage::query()->create([
             'event_id' => $event->id,
             'folder' => 'storage/events/images/',
             'image_path' => $this->store($file, 'events/images'),
             'caption' => $caption,
+            'alt_text' => $attributes['alt_text'] ?? null,
+            'title_text' => $attributes['title_text'] ?? null,
+            'description' => $attributes['description'] ?? null,
+            'credit' => $attributes['credit'] ?? null,
+            'is_decorative' => (bool) ($attributes['is_decorative'] ?? false),
+            'original_filename' => $file->getClientOriginalName(),
+            'mime_type' => $file->getClientMimeType(),
+            'file_size' => $file->getSize() ?: null,
             'sort_order' => $this->nextSortOrder(EventImage::class, 'event_id', $event->id),
             'created_by' => $user?->id,
             'updated_by' => $user?->id,

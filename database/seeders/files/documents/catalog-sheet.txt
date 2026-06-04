@@ -1,0 +1,4 @@
+Catalog sheet
+=============
+
+This generated fixture represents a product attachment for seeded catalog data.

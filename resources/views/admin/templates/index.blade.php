@@ -12,7 +12,7 @@
             <div class="buttons-container">
                 <div class="buttons-container align-right">
                     <a class="btn btn-add" href="{{ route('admin.templates.create') }}">
-                        <span class="flaticon-add-plus-button"></span>
+                        <x-admin.material-icon name="add" />
                         {{ __('Toevoegen') }}
                     </a>
                 </div>
@@ -26,11 +26,6 @@
                         </div>
                         <strong>{{ __('Website Templates') }}</strong>
                     </div>
-                </div>
-
-                <div class="breadcrumbs">
-                    <a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a> &rsaquo;
-                    {{ __('Website Templates') }}
                 </div>
 
                 <div class="overview-container">
@@ -52,20 +47,20 @@
                             <div class="overview-item">{{ $template->is_active ? __('Active') : __('Inactive') }}</div>
                             <div class="overview-item options">
                                 <a href="{{ route('admin.templates.edit', $template) }}" title="{{ __('Edit') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
                                 <form method="post" action="{{ route('admin.templates.destroy', $template) }}">
                                     @csrf
                                     @method('delete')
                                     <button class="button-link" type="submit" title="{{ __('Delete') }}">
-                                        <span class="flaticon-delete-button"></span>
+                                        <x-admin.material-icon name="delete" />
                                     </button>
                                 </form>
                             </div>
                         </div>
                     @empty
                         <div class="overview-row">
-                            <div class="overview-item">{{ __('No templates have been configured yet.') }}</div>
+                            <div class="overview-item">{{ __('No templates found.') }}</div>
                         </div>
                     @endforelse
                 </div>

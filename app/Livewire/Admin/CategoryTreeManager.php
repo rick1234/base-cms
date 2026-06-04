@@ -107,6 +107,7 @@ class CategoryTreeManager extends Component
             'linkedItems' => $selectedCategory ? $this->linkedItems($selectedCategory) : collect(),
             'linkedCount' => $selectedCategory ? $this->linkedCount($selectedCategory) : 0,
             'linkedLabel' => __($this->definition('linked_label')),
+            'showCategoryUrl' => $this->showCategoryUrl(),
             'rootCreateUrl' => $this->categoryCreateUrl(),
             'moduleItemsUrl' => $this->moduleItemsUrl(),
         ]);
@@ -240,6 +241,11 @@ class CategoryTreeManager extends Component
     private function definition(string $key): string
     {
         return (string) config("cms_categories.{$this->module}.{$key}");
+    }
+
+    private function showCategoryUrl(): bool
+    {
+        return (bool) config("cms_categories.{$this->module}.show_url", true);
     }
 
     /**

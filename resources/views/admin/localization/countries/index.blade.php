@@ -11,20 +11,13 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Toevoegen') }}
                 </a>
                 <a class="btn" href="{{ route($routeNames['languages']) }}">
-                    <span class="flaticon-earth-grid-select-language-button"></span>
+                    <x-admin.material-icon name="language" />
                     {{ __('Website languages') }}
                 </a>
-                <form method="post" action="{{ route($routeNames['sync']) }}">
-                    @csrf
-                    <button class="btn" type="submit">
-                        <span class="flaticon-refresh-button"></span>
-                        {{ __('Refresh package data') }}
-                    </button>
-                </form>
             </div>
 
             <div class="main-section">
@@ -40,13 +33,13 @@
                         <div class="overview-item id">
                             Id
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item name">
                             {{ __('Naam') }}
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item code">{{ __('Code') }}</div>
@@ -60,15 +53,15 @@
                         <div class="overview-row filters">
                             <div class="overview-item id">
                                 <input name="id" type="text" value="{{ request('id') }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item name">
                                 <input name="name" type="text" value="{{ request('name', request('naam')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item code">
                                 <input name="iso2" type="text" value="{{ request('iso2', request('code')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item currency"></div>
                             <div class="overview-item enabled">
@@ -87,7 +80,7 @@
                             </div>
                             <div class="overview-item options">
                                 <button type="submit" title="{{ __('Zoeken') }}">
-                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                    <x-admin.material-icon name="search" />
                                 </button>
                             </div>
                         </div>
@@ -112,13 +105,13 @@
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $country->id]) }}" title="{{ __('Bewerken') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
                                 <form method="post" action="{{ route($routeNames['destroy'], $country) }}">
                                     @csrf
                                     @method('delete')
                                     <button type="submit" title="{{ __('Verwijderen') }}">
-                                        <span class="flaticon-rubbish-bin-delete-button"></span>
+                                        <x-admin.material-icon name="delete" />
                                     </button>
                                 </form>
                             </div>

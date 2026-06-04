@@ -29,6 +29,8 @@ class ContentMediaRequest extends FormRequest
             'sort_index' => ['nullable', 'string', 'max:1000'],
             'file' => ['nullable', 'image', 'max:20480'],
             'image' => ['nullable', 'image', 'max:20480'],
+            'images' => ['nullable', 'array', 'max:20'],
+            'images.*' => ['image', 'max:20480'],
             'name' => ['nullable', 'string', 'max:255'],
         ];
     }

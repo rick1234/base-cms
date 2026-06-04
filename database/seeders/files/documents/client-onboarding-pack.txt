@@ -1,0 +1,4 @@
+Client onboarding pack
+======================
+
+This generated fixture represents a simple onboarding document for seeded downloads.

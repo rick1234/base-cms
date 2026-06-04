@@ -34,7 +34,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5">{{ __('No pages have been created yet.') }}</td>
+                                <td colspan="5">{{ __('No pages found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

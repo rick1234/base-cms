@@ -22,19 +22,9 @@ class FaqItem extends CmsModel
             ->orderBy('faq_categories.name');
     }
 
-    public function images(): HasMany
-    {
-        return $this->hasMany(FaqImage::class, 'faq_item_id')->orderBy('sort_order')->orderBy('id');
-    }
-
     public function attachments(): HasMany
     {
         return $this->hasMany(FaqAttachment::class, 'faq_item_id')->orderBy('sort_order')->orderBy('id');
-    }
-
-    public function videos(): HasMany
-    {
-        return $this->hasMany(FaqVideo::class, 'faq_item_id')->orderBy('sort_order')->orderBy('id');
     }
 
     public function scopePublished(Builder $query): Builder

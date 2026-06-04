@@ -93,6 +93,7 @@ The following are strictly forbidden:
 - Never place raw SQL in controllers.
 - Use Eloquent, query builders, migrations, seeders, factories, and repositories only where they improve clarity.
 - Use explicit route names.
+- Backend/admin tabbed screens must use named routes with path segments, such as `/admin/form/{id}/edit/response`, instead of query-string tab state such as `?tab=response`; reserve query strings for filters, search, pagination, and legacy compatibility redirects.
 - Keep rendered website routes, backend/admin routes, and API routes clearly separated.
 - Use versioned API routes.
 - API behavior must not depend on Blade rendering.
@@ -108,6 +109,15 @@ The following are strictly forbidden:
 - Use design tokens through CSS custom properties.
 - Use semantic class names based on component purpose, not visual shortcuts.
 - Keep accessibility, responsive behavior, and SEO in mind for every public template.
+
+## Localization rules
+
+- Every user-facing hardcoded string must be translatable.
+- Wrap UI text, labels, buttons, headings, empty states, flash messages, validation messages, mail text, accessibility labels, config-driven labels, and generated-template text with Laravel translation helpers such as `__()` or `@lang()`.
+- Add or update translation defaults when introducing new strings so the translation module can seed and sync both English source text and Dutch values.
+- Seeders for locale-aware content modules must include representative records for each supported frontend locale when practical, instead of seeding demo content in only one language.
+- Do not leave backend/admin, frontend, API-facing error, Livewire, mail, or JavaScript-visible UI text as untranslated hardcoded strings.
+- Brand names, technical identifiers, route names, CSS class names, file paths, and storage keys do not need translation unless they are shown to users as UI copy.
 
 ## SEO rules
 
@@ -151,6 +161,7 @@ The backend/admin area must:
 
 - be clearly separated from the public frontend
 - use its own route group, layout, navigation, controllers, requests, and policies
+- use the shared listing category picker/tree pattern for category selection in admin screens; do not introduce one-off category selects when a module needs a category picker
 - require authentication before access
 - use authorization for privileged actions
 - avoid leaking admin UI concerns into public frontend code
@@ -223,4 +234,3 @@ It is not a source of code to blindly copy.
 - Keep documentation close to the code it explains.
 - Prefer concise architecture notes over undocumented implicit decisions.
 - Update documentation when adding extension points, modules, migration tooling, or non-obvious conventions.
-

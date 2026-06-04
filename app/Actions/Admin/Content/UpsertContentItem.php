@@ -6,12 +6,15 @@ use App\Models\User;
 use App\Models\Cms\ContentAttachment;
 use App\Models\Cms\ContentItem;
 use App\Support\Admin\Content\ContentMediaManager;
+use App\Support\Routing\PublicSlugManager;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Str;
 
 class UpsertContentItem
 {
-    public function __construct(private readonly ContentMediaManager $mediaManager) {}
+    public function __construct(
+        private readonly ContentMediaManager $mediaManager,
+        private readonly PublicSlugManager $slugs,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -21,11 +24,13 @@ class UpsertContentItem
     {
         $contentItem ??= new ContentItem;
         $creating = ! $contentItem->exists;
+        $oldSlug = $contentItem->slug;
+        $oldLocale = $contentItem->locale;
 
         $contentItem->fill([
             'title' => $data['title'],
             'subtitle' => $data['subtitle'] ?? null,
-            'slug' => $this->slug($data['slug'] ?? null, $data['title'], $contentItem->id),
+            'slug' => $this->slugs->contentSlug($data['slug'] ?? null, $data['title'], $contentItem),
             'locale' => $data['locale'] ?? app()->getLocale(),
             'meta_description' => $data['meta_description'] ?? null,
             'status' => $data['status'] ?? 'draft',
@@ -41,6 +46,10 @@ class UpsertContentItem
         }
 
         $contentItem->save();
+
+        if (! $creating) {
+            $this->slugs->recordContentSlugChange($contentItem, $oldSlug, $oldLocale, $user);
+        }
 
         $this->syncCategories($contentItem, $data['categories'] ?? []);
         $this->syncAttachments($contentItem, $data, $attachments, $user);
@@ -95,21 +104,5 @@ class UpsertContentItem
                 $this->mediaManager->storeAttachment($contentItem, $file, $names[$index] ?? null, $user);
             }
         }
-    }
-
-    private function slug(?string $slug, string $title, ?int $ignoreId): string
-    {
-        $base = Str::slug($slug ?: $title) ?: 'content';
-        $candidate = $base;
-        $counter = 2;
-
-        while (ContentItem::query()
-            ->where('slug', $candidate)
-            ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
-            ->exists()) {
-            $candidate = $base.'-'.$counter++;
-        }
-
-        return $candidate;
     }
 }

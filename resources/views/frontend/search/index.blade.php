@@ -36,8 +36,8 @@
                                         {{ $result->title }}
                                     </a>
                                 </h2>
-                                @if ($result->intro)
-                                    <p>{{ $result->intro }}</p>
+                                @if ($result->subtitle)
+                                    <p>{{ $result->subtitle }}</p>
                                 @endif
                             </article>
                         @endforeach

@@ -9,6 +9,10 @@
         </div>
 
         <div class="main has-buttons">
+            <div class="buttons-container align-right">
+                @include('admin.catalog.partials.toolbar-links')
+                @include('admin.partials.category-related-items-button')
+            </div>
 
             <div class="main-section">
                 @include('admin.catalog.partials.page-header', [

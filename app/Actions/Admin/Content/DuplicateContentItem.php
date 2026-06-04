@@ -4,15 +4,18 @@ namespace App\Actions\Admin\Content;
 
 use App\Models\User;
 use App\Models\Cms\ContentItem;
+use App\Support\Routing\PublicSlugManager;
 use Illuminate\Support\Str;
 
 class DuplicateContentItem
 {
+    public function __construct(private readonly PublicSlugManager $slugs) {}
+
     public function handle(ContentItem $contentItem, ?User $user): ContentItem
     {
         $copy = $contentItem->replicate(['uuid', 'legacy_id', 'created_at', 'updated_at', 'deleted_at']);
         $copy->title = $contentItem->title.' - '.__('kopie').' - '.now()->format('d-m-Y H:i:s');
-        $copy->slug = $this->slug($contentItem->slug ?: $contentItem->title);
+        $copy->slug = $this->slugs->contentSlug(($contentItem->slug ?: $contentItem->title).'-copy', $copy->title);
         $copy->status = 'draft';
         $copy->structured_blocks = $this->cloneStructuredBlocks($contentItem->structured_blocks ?? []);
         $copy->created_by = $user?->id;
@@ -44,19 +47,6 @@ class DuplicateContentItem
         }
 
         return $copy;
-    }
-
-    private function slug(string $source): string
-    {
-        $base = Str::slug($source) ?: 'content';
-        $candidate = $base.'-copy';
-        $counter = 2;
-
-        while (ContentItem::query()->where('slug', $candidate)->exists()) {
-            $candidate = $base.'-copy-'.$counter++;
-        }
-
-        return $candidate;
     }
 
     /**

@@ -15,12 +15,12 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="catalog-combinations-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -65,8 +65,8 @@
                         </div>
                     @else
                         <div class="attachment-message">
-                            <span class="flaticon-rounded-info-button"></span>
-                            <em>{{ __('Er zijn nog geen andere producten beschikbaar.') }}</em>
+                            <x-admin.material-icon name="info" />
+                            <em>{{ __('No other products found.') }}</em>
                         </div>
                     @endif
                 </form>

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin\Localization;
 
-use App\Actions\Admin\Localization\SyncLocalizationData;
 use App\Http\Controllers\Admin\Concerns\UsesEditViewForCreate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Localization\CountryRequest;
@@ -105,18 +104,6 @@ class CountryController extends Controller
         return redirect()->route($this->routeName('index'));
     }
 
-    public function sync(SyncLocalizationData $syncLocalizationData): RedirectResponse
-    {
-        $result = $syncLocalizationData->handle();
-
-        flash(__('Localization data refreshed: :countries countries and :languages languages.', [
-            'countries' => $result['countries'],
-            'languages' => $result['languages'],
-        ]))->success();
-
-        return redirect()->route($this->routeName('index'));
-    }
-
     private function persist(Country $country, CountryRequest $request): Country
     {
         $data = $request->validated();
@@ -189,7 +176,6 @@ class CountryController extends Controller
                 'edit' => 'cms.countries.edit',
                 'save' => 'cms.countries.save',
                 'destroy' => 'cms.countries.destroy',
-                'sync' => 'cms.countries.sync',
                 'languages' => 'cms.countries.languages.index',
             ];
         }
@@ -201,7 +187,6 @@ class CountryController extends Controller
             'edit' => 'admin.countries.edit',
             'save' => 'admin.countries.save',
             'destroy' => 'admin.countries.destroy',
-            'sync' => 'admin.countries.sync',
             'languages' => 'admin.countries.languages.index',
         ];
     }

@@ -30,6 +30,8 @@ use App\Http\Controllers\Admin\Roles\RoleController;
 use App\Http\Controllers\Admin\Translations\TranslationController;
 use App\Http\Controllers\Admin\Users\UserCategoryController;
 use App\Http\Controllers\Admin\Users\UserController;
+use App\Http\Controllers\Admin\Vacancies\VacancyCategoryController;
+use App\Http\Controllers\Admin\Vacancies\VacancyController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('cms')->name('cms.')->group(function (): void {
@@ -186,17 +188,8 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
             Route::post('index.php', [FaqItemController::class, 'store'])->name('store');
             Route::get('edit.php', [FaqItemController::class, 'edit'])->name('edit');
             Route::post('edit.php', [FaqItemController::class, 'save'])->name('save');
-            Route::get('editAfbeeldingen.php', [FaqItemController::class, 'images'])->name('images');
-            Route::post('editAfbeeldingen.php', [FaqItemController::class, 'uploadImage'])->name('images.upload');
-            Route::get('editVideo.php', [FaqItemController::class, 'videos'])->name('videos');
-            Route::post('editVideo.php', [FaqItemController::class, 'saveVideos'])->name('videos.save');
 
             Route::post('ajax/duplicateItem.php', [FaqItemController::class, 'duplicate'])->name('duplicate');
-            Route::post('ajax/deleteAfbeelding.php', [FaqItemController::class, 'deleteImage'])->name('image.delete');
-            Route::post('ajax/updateAfbeeldingnaam.php', [FaqItemController::class, 'updateImageName'])->name('image.update-name');
-            Route::post('ajax/updateSortIndex.php', [FaqItemController::class, 'updateImageSort'])->name('image.update-sort');
-            Route::post('ajax/uploadFotoalbumAfbeelding.php', [FaqItemController::class, 'uploadImage'])->name('image.upload');
-            Route::post('ajax/deleteVideo.php', [FaqItemController::class, 'deleteVideo'])->name('video.delete');
 
             Route::prefix('categorieen')->name('categories.')->group(function (): void {
                 Route::get('index.php', [FaqCategoryController::class, 'index'])->name('index');
@@ -242,10 +235,37 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('isolanden')->name('countries.')->group(function (): void {
+        Route::prefix('vacatures')->name('vacancies.')->group(function (): void {
+            Route::get('index.php', [VacancyController::class, 'index'])->name('index');
+            Route::post('index.php', [VacancyController::class, 'store'])->name('store');
+            Route::get('edit.php', [VacancyController::class, 'edit'])->name('edit');
+            Route::post('edit.php', [VacancyController::class, 'save'])->name('save');
+            Route::get('{id}/edit/{tab}', [VacancyController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['seo', 'form'])
+                ->name('edit.tab');
+
+            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+                Route::get('index.php', [VacancyCategoryController::class, 'index'])->name('index');
+                Route::post('index.php', [VacancyCategoryController::class, 'store'])->name('store');
+                Route::get('edit.php', [VacancyCategoryController::class, 'edit'])->name('edit');
+                Route::post('edit.php', [VacancyCategoryController::class, 'save'])->name('save');
+            });
+
+            Route::delete('categorieen/{vacancyCategory}', [VacancyCategoryController::class, 'destroy'])
+                ->whereNumber('vacancyCategory')
+                ->name('categories.destroy');
+            Route::put('{vacancy}', [VacancyController::class, 'update'])
+                ->whereNumber('vacancy')
+                ->name('update');
+            Route::delete('{vacancy}', [VacancyController::class, 'destroy'])
+                ->whereNumber('vacancy')
+                ->name('destroy');
+        });
+
+        Route::prefix('landen')->name('countries.')->group(function (): void {
             Route::get('index.php', [CountryController::class, 'index'])->name('index');
             Route::post('index.php', [CountryController::class, 'store'])->name('store');
-            Route::post('sync.php', [CountryController::class, 'sync'])->name('sync');
             Route::get('edit.php', [CountryController::class, 'edit'])->name('edit');
             Route::post('edit.php', [CountryController::class, 'save'])->name('save');
 
@@ -270,6 +290,10 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
             Route::post('index.php', [LocationController::class, 'store'])->name('store');
             Route::get('edit.php', [LocationController::class, 'edit'])->name('edit');
             Route::post('edit.php', [LocationController::class, 'save'])->name('save');
+            Route::get('{id}/edit/{tab}', [LocationController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['location'])
+                ->name('edit.tab');
             Route::get('editAfbeeldingen.php', [LocationController::class, 'images'])->name('images');
             Route::post('editAfbeeldingen.php', [LocationController::class, 'uploadImage'])->name('images.upload');
             Route::get('editOpeningstijden.php', [LocationController::class, 'openingHours'])->name('opening-hours');
@@ -338,9 +362,6 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
                 Route::post('index.php', [ContentCategoryController::class, 'store'])->name('store');
                 Route::get('edit.php', [ContentCategoryController::class, 'edit'])->name('edit');
                 Route::post('edit.php', [ContentCategoryController::class, 'save'])->name('save');
-                Route::get('editSlider.php', [ContentCategoryController::class, 'slider'])->name('slider');
-                Route::post('editSlider.php', [ContentCategoryController::class, 'saveSlider'])->name('slider.save');
-
                 Route::post('ajax/deleteAfbeelding.php', [ContentCategoryController::class, 'deleteImage'])->name('image.delete');
                 Route::post('ajax/updateAfbeeldingnaam.php', [ContentCategoryController::class, 'updateImageName'])->name('image.update-name');
                 Route::post('ajax/updateSortIndex.php', [ContentCategoryController::class, 'updateImageSort'])->name('image.update-sort');
@@ -361,7 +382,6 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
             Route::get('edit.php', [EventController::class, 'edit'])->name('edit');
             Route::post('edit.php', [EventController::class, 'save'])->name('save');
 
-            Route::post('ajax/duplicateItem.php', [EventController::class, 'duplicate'])->name('duplicate');
             Route::post('ajax/deleteAfbeelding.php', [EventController::class, 'deleteImage'])->name('image.delete');
             Route::post('ajax/deleteImage.php', [EventController::class, 'deleteImage'])->name('image.delete-file');
             Route::post('ajax/updateAfbeeldingnaam.php', [EventController::class, 'updateImageName'])->name('image.update-name');

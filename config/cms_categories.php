@@ -9,6 +9,7 @@ use App\Models\Cms\FaqCategory;
 use App\Models\Cms\FormCategory;
 use App\Models\Cms\LocationCategory;
 use App\Models\Cms\UserCategory;
+use App\Models\Cms\VacancyCategory;
 
 return [
     'banners' => [
@@ -18,6 +19,7 @@ return [
         'relation' => 'banners',
         'item_title' => 'title',
         'linked_label' => 'Banners',
+        'show_url' => false,
     ],
     'catalog' => [
         'model' => CatalogCategory::class,
@@ -25,7 +27,8 @@ return [
         'item_route' => 'catalog.index',
         'relation' => 'products',
         'item_title' => 'name',
-        'linked_label' => 'Producten',
+        'linked_label' => 'Products',
+        'show_url' => false,
     ],
     'content' => [
         'model' => ContentCategory::class,
@@ -33,7 +36,8 @@ return [
         'item_route' => 'content.index',
         'relation' => 'contentItems',
         'item_title' => 'title',
-        'linked_label' => 'Berichten',
+        'linked_label' => 'Pages',
+        'show_url' => false,
     ],
     'downloads' => [
         'model' => DownloadCategory::class,
@@ -42,6 +46,16 @@ return [
         'relation' => 'downloads',
         'item_title' => 'name',
         'linked_label' => 'Downloads',
+        'show_url' => false,
+    ],
+    'vacancies' => [
+        'model' => VacancyCategory::class,
+        'category_route' => 'vacancies.categories.',
+        'item_route' => 'vacancies.index',
+        'relation' => 'vacancies',
+        'item_title' => 'title',
+        'linked_label' => 'Vacancies',
+        'show_url' => false,
     ],
     'events' => [
         'model' => EventCategory::class,
@@ -49,7 +63,8 @@ return [
         'item_route' => 'events.index',
         'relation' => 'events',
         'item_title' => 'title',
-        'linked_label' => 'Evenementen',
+        'linked_label' => 'Events',
+        'show_url' => false,
     ],
     'faq' => [
         'model' => FaqCategory::class,
@@ -58,6 +73,7 @@ return [
         'relation' => 'faqItems',
         'item_title' => 'question',
         'linked_label' => 'FAQ items',
+        'show_url' => false,
     ],
     'forms' => [
         'model' => FormCategory::class,
@@ -65,7 +81,8 @@ return [
         'item_route' => 'forms.index',
         'relation' => 'forms',
         'item_title' => 'name',
-        'linked_label' => 'Formulieren',
+        'linked_label' => 'Forms',
+        'show_url' => false,
     ],
     'locations' => [
         'model' => LocationCategory::class,
@@ -73,7 +90,8 @@ return [
         'item_route' => 'locations.index',
         'relation' => 'locations',
         'item_title' => 'name',
-        'linked_label' => 'Vestigingen',
+        'linked_label' => 'Locations',
+        'show_url' => false,
     ],
     'users' => [
         'model' => UserCategory::class,
@@ -81,6 +99,7 @@ return [
         'item_route' => 'users.index',
         'relation' => 'users',
         'item_title' => 'name',
-        'linked_label' => 'Gebruikers',
+        'linked_label' => 'Users',
+        'show_url' => false,
     ],
 ];

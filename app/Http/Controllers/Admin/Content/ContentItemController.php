@@ -29,6 +29,11 @@ class ContentItemController extends Controller
 {
     use UsesEditViewForCreate;
 
+    /**
+     * @var list<string>
+     */
+    private const EDIT_TABS = ['seo', 'form'];
+
     public function index(Request $request): View|RedirectResponse
     {
         if ($this->shouldMoveItem($request)) {
@@ -51,14 +56,18 @@ class ContentItemController extends Controller
             $request->file('attachment_files', []),
         );
 
-        flash(__('Content item created.'))->success();
+        flash(__('Page created.'))->success();
 
         return redirect()
             ->route($this->routeName('edit'), ['id' => $contentItem->id]);
     }
 
-    public function edit(Request $request, TranslationRepository $translations): View
+    public function edit(Request $request, TranslationRepository $translations): View|RedirectResponse
     {
+        if ($redirect = $this->redirectQueryTabToRoute($request)) {
+            return $redirect;
+        }
+
         $contentItem = $this->contentItemFromRequest($request);
 
         $contentItem?->load([
@@ -83,7 +92,7 @@ class ContentItemController extends Controller
             'forms' => Form::query()->orderBy('name')->get(),
             'sliderCategories' => SliderCategory::query()->orderBy('name')->get(),
             'routeNames' => $this->routeNames(),
-            'pageName' => __('Edit content item'),
+            'pageName' => __('Edit page'),
             'backUrl' => route($this->routeName('index')),
             'deleteAction' => $contentItem ? route($this->routeName('destroy'), $contentItem) : null,
         ]);
@@ -98,17 +107,19 @@ class ContentItemController extends Controller
             $request->file('attachment_files', []),
         );
 
-        flash(__('Content item saved.'))->success();
+        flash(__('Page saved.'))->success();
+
+        $activeTab = $request->validated('active_tab');
 
         return redirect()
-            ->route($this->routeName('edit'), ['id' => $contentItem->id]);
+            ->route($this->editRouteName($activeTab), $this->editRedirectParameters($contentItem, $activeTab));
     }
 
     public function destroy(ContentItem $contentItem): RedirectResponse
     {
         $contentItem->delete();
 
-        flash(__('Content item deleted.'))->success();
+        flash(__('Page deleted.'))->success();
 
         return redirect()
             ->route($this->routeName('index'));
@@ -131,7 +142,7 @@ class ContentItemController extends Controller
         return view('admin.content.images', [
             'contentItem' => $contentItem,
             'routeNames' => $this->routeNames(),
-            'pageName' => __('Content images'),
+            'pageName' => __('Page images'),
             'backUrl' => route($this->routeName('index')),
         ]);
     }
@@ -139,30 +150,39 @@ class ContentItemController extends Controller
     public function uploadImage(ContentMediaRequest $request, ContentMediaManager $mediaManager): JsonResponse|RedirectResponse
     {
         $contentItem = ContentItem::query()->findOrFail((int) ($request->route('id') ?: $request->integer('id')));
-        $file = $request->file('file') ?: $request->file('image');
+        $files = collect([$request->file('file'), $request->file('image')])
+            ->filter()
+            ->merge($request->file('images', []))
+            ->values();
 
-        abort_unless($file, 422);
+        abort_unless($files->isNotEmpty(), 422);
 
-        $caption = $request->string('caption')->toString() ?: null;
-        $image = $mediaManager->storeItemImage($contentItem, $file, $caption, $request->user(), [
-            'alt_text' => $request->string('alt_text')->toString() ?: $caption,
-            'title_text' => $request->string('title_text')->toString() ?: $caption,
-            'description' => $request->string('description')->toString() ?: null,
-            'credit' => $request->string('credit')->toString() ?: null,
-            'is_decorative' => $request->boolean('is_decorative'),
-        ]);
+        $images = $files->map(function ($file) use ($request, $contentItem, $mediaManager): ContentImage {
+            $caption = $request->string('caption')->toString() ?: $this->defaultCaptionForUpload($file);
+
+            return $mediaManager->storeItemImage($contentItem, $file, $caption, $request->user(), [
+                'alt_text' => $request->string('alt_text')->toString() ?: $caption,
+                'title_text' => $request->string('title_text')->toString() ?: $caption,
+                'description' => $request->string('description')->toString() ?: null,
+                'credit' => $request->string('credit')->toString() ?: null,
+                'is_decorative' => $request->boolean('is_decorative'),
+            ]);
+        });
 
         if (! $request->expectsJson()) {
-            flash(__('Image uploaded.'))->success();
+            flash(trans_choice('{1} Image uploaded.|[2,*] Images uploaded.', $images->count()))->success();
 
             return back();
         }
+
+        $image = $images->first();
 
         return response()->json([
             'jsonrpc' => '2.0',
             'status' => 'success',
             'result' => $image->id,
             'id' => $image->id,
+            'count' => $images->count(),
         ]);
     }
 
@@ -222,13 +242,12 @@ class ContentItemController extends Controller
     public function slider(Request $request): View
     {
         $contentItem = $this->contentItemFromRequest($request);
-        $contentItem?->load('categories');
 
         return view('admin.content.slider', [
             'contentItem' => $contentItem,
             'sliderCategories' => SliderCategory::query()->orderBy('name')->get(),
             'routeNames' => $this->routeNames(),
-            'pageName' => __('Content slider'),
+            'pageName' => __('Page slider'),
             'backUrl' => route($this->routeName('index')),
         ]);
     }
@@ -245,8 +264,6 @@ class ContentItemController extends Controller
                 'subtitle',
                 'slug',
                 'locale',
-                'intro',
-                'body',
                 'meta_description',
                 'status',
                 'active_from',
@@ -272,7 +289,7 @@ class ContentItemController extends Controller
         $copy = $duplicate->handle($contentItem, $request->user());
 
         if (! $request->expectsJson()) {
-            flash(__('Content item duplicated.'))->success();
+            flash(__('Page duplicated.'))->success();
 
             return redirect()
                 ->route($this->routeName('edit'), ['id' => $copy->id]);
@@ -371,6 +388,19 @@ class ContentItemController extends Controller
         return rtrim($baseUrl, '/').'/';
     }
 
+    private function defaultCaptionForUpload(mixed $file): ?string
+    {
+        if (! method_exists($file, 'getClientOriginalName')) {
+            return null;
+        }
+
+        return str(pathinfo((string) $file->getClientOriginalName(), PATHINFO_FILENAME))
+            ->replace(['-', '_'], ' ')
+            ->squish()
+            ->title()
+            ->toString();
+    }
+
     /**
      * @return array<string, string>
      */
@@ -381,6 +411,7 @@ class ContentItemController extends Controller
             'store' => $this->routeName('store'),
             'create' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('create'),
             'edit' => $this->routeName('edit'),
+            'edit.tab' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('edit.tab'),
             'save' => $this->routeName('save'),
             'destroy' => $this->routeName('destroy'),
             'images' => $this->routeName('images'),
@@ -398,5 +429,52 @@ class ContentItemController extends Controller
     private function routeName(string $name): string
     {
         return (request()->routeIs('cms.*') ? 'cms.content.' : 'admin.content.').$name;
+    }
+
+    private function editRouteName(?string $activeTab = null): string
+    {
+        if (! request()->routeIs('cms.*') && in_array($activeTab, self::EDIT_TABS, true)) {
+            return $this->routeName('edit.tab');
+        }
+
+        return $this->routeName('edit');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function editRedirectParameters(ContentItem $contentItem, ?string $activeTab = null): array
+    {
+        $parameters = ['id' => $contentItem->id];
+
+        if (in_array($activeTab, self::EDIT_TABS, true)) {
+            $parameters['tab'] = $activeTab;
+        }
+
+        return $parameters;
+    }
+
+    private function redirectQueryTabToRoute(Request $request): ?RedirectResponse
+    {
+        if (request()->routeIs('cms.*') || $request->route('tab')) {
+            return null;
+        }
+
+        $tab = $request->query('tab');
+
+        if (! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return null;
+        }
+
+        $id = (int) ($request->route('id') ?: $request->integer('id'));
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return redirect()->route($this->routeName('edit.tab'), [
+            'id' => $id,
+            'tab' => $tab,
+        ]);
     }
 }

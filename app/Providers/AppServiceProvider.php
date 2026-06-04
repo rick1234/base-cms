@@ -14,9 +14,12 @@ use App\Cms\PageBlocks\PageBlockRegistry;
 use App\Models\Cms\Page;
 use App\Models\User;
 use App\Policies\PagePolicy;
+use App\Support\Admin\Breadcrumbs\AdminBreadcrumbBuilder;
+use App\Support\Admin\Dashboard\DashboardRecentItems;
 use App\Support\Localization\DatabaseTranslationLoader;
 use App\Support\Localization\TranslationRepository;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -50,7 +53,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('access-admin', fn (User $user): bool => $user->hasAdminPermission('admin.access'));
+        Gate::define('access-superuser', fn (User $user): bool => $user->isSuperUser());
         Gate::define('admin-permission', fn (User $user, string $permissionKey): bool => $user->hasAdminPermission($permissionKey));
         Gate::policy(Page::class, PagePolicy::class);
+
+        View::composer('layouts.admin', function ($view): void {
+            app(DashboardRecentItems::class)->rememberViewedFromRequest(request());
+            $view->with('adminBreadcrumbs', app(AdminBreadcrumbBuilder::class)->forRequest(request()));
+        });
     }
 }

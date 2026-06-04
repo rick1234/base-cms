@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\View;
 
 class FormSubmissionNotification extends Mailable
 {
@@ -32,6 +33,8 @@ class FormSubmissionNotification extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'mail.forms.submission');
+        $view = (string) ($this->form->settings['mail_template'] ?? 'mail.forms.submission');
+
+        return new Content(view: View::exists($view) ? $view : 'mail.forms.submission');
     }
 }

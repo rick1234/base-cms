@@ -11,9 +11,10 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Toevoegen') }}
                 </a>
+                @include('admin.redirects.partials.toolbar-links', ['activeSeoModule' => 'redirect'])
             </div>
 
             <div class="main-section">
@@ -29,19 +30,19 @@
                         <div class="overview-item id">
                             Id
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item source">
                             {{ __('Van') }}
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'source_path', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'source_path', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item target">{{ __('Naar') }}</div>
@@ -55,15 +56,15 @@
                         <div class="overview-row filters">
                             <div class="overview-item id">
                                 <input name="id" type="text" value="{{ request('id') }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item source">
                                 <input name="source_path" type="text" value="{{ request('source_path', request('old_link')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item target">
                                 <input name="target_url" type="text" value="{{ request('target_url', request('link')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item code">
                                 <select name="status_code">
@@ -83,7 +84,7 @@
                             </div>
                             <div class="overview-item options">
                                 <button type="submit" title="{{ __('Zoeken') }}">
-                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                    <x-admin.material-icon name="search" />
                                 </button>
                             </div>
                         </div>
@@ -103,13 +104,13 @@
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $redirect->id]) }}" title="{{ __('Bewerken') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
                                 <form method="post" action="{{ route($routeNames['destroy'], $redirect) }}">
                                     @csrf
                                     @method('delete')
                                     <button type="submit" title="{{ __('Verwijderen') }}">
-                                        <span class="flaticon-rubbish-bin-delete-button"></span>
+                                        <x-admin.material-icon name="delete" />
                                     </button>
                                 </form>
                             </div>

@@ -28,7 +28,6 @@ class TitleBlock extends BasePageBlock
         return [
             TextInput::make('data.title')
                 ->label(__('Title'))
-                ->required()
                 ->maxLength(255)
                 ->live(onBlur: true)
                 ->columnSpanFull(),

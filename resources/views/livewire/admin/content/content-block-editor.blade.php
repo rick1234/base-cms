@@ -1,4 +1,8 @@
-<div class="content-block-editor">
+<div
+    class="content-block-editor"
+    data-content-block-editor
+    data-content-block-auto-save-error="{{ __('Content blocks could not be saved automatically. Save the blocks and try again.') }}"
+>
     @if ($message)
         <div class="flash-message flash-message-success" data-flash-message>
             <span>{{ $message }}</span>
@@ -15,7 +19,7 @@
     @endif
 
     <div class="content-block-editor-toolbar">
-        <button class="btn btn-save" type="button" wire:click="save" wire:loading.attr="disabled">
+        <button class="btn btn-save" type="button" wire:click="save" wire:loading.attr="disabled" data-content-block-editor-save>
             <x-admin.material-icon name="save" />
             {{ __('Save blocks') }}
         </button>

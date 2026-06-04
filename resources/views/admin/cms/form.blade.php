@@ -22,12 +22,12 @@
         <div class="main has-buttons">
             <div class="buttons-container">
                 <div class="buttons-container align-right">
-                    <button class="btn btn-add" form="record-form" type="submit">
-                        <span class="flaticon-save-file-option"></span>
+                    <button class="btn btn-save" form="record-form" type="submit">
+                        <x-admin.material-icon name="save" />
                         {{ __('Opslaan') }}
                     </button>
                     <a class="btn" href="{{ $backUrl }}">
-                        <span class="flaticon-back-arrow"></span>
+                        <x-admin.material-icon name="arrow_back" />
                         {{ __('Terug') }}
                     </a>
                     @if ($deleteAction)
@@ -35,7 +35,7 @@
                             @csrf
                             @method('delete')
                             <button class="btn btn-delete" type="submit">
-                                <span class="flaticon-delete-button"></span>
+                                <x-admin.material-icon name="delete" />
                                 {{ __('Verwijderen') }}
                             </button>
                         </form>
@@ -51,12 +51,6 @@
                         </div>
                         <strong>{{ $pageTitle }}</strong>
                     </div>
-                </div>
-
-                <div class="breadcrumbs">
-                    <a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a> &rsaquo;
-                    <a href="{{ $backUrl }}">{{ $formModuleName }}</a> &rsaquo;
-                    {{ $pageTitle }}
                 </div>
 
                 @if ($pages->isNotEmpty())

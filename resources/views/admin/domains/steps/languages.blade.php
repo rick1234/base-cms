@@ -7,6 +7,7 @@
             @foreach ($languages as $language)
                 <label>
                     <input name="active_frontend_locales[]" type="checkbox" value="{{ $language->code }}" @checked(in_array($language->code, $frontendLocales, true))>
+                    <x-admin.language-flag :locale="$language->code" :label="$language->label()" decorative />
                     {{ $language->label() }}
                 </label>
             @endforeach
@@ -20,6 +21,7 @@
             @foreach ($languages as $language)
                 <label>
                     <input name="active_backend_locales[]" type="checkbox" value="{{ $language->code }}" @checked(in_array($language->code, $backendLocales, true))>
+                    <x-admin.language-flag :locale="$language->code" :label="$language->label()" decorative />
                     {{ $language->label() }}
                 </label>
             @endforeach
@@ -41,7 +43,7 @@
             >
             <datalist id="domain-language-options">
                 @foreach ($languageOptions as $language)
-                    <option value="{{ $language->name }}">{{ strtoupper($language->code) }}{{ $language->native_name ? ' - '.$language->native_name : '' }}</option>
+                    <option value="{{ $language->name }}">{{ $language->label() }}</option>
                 @endforeach
             </datalist>
             <p class="form-item-description">{{ __('Saving this step activates the matching language in website languages.') }}</p>

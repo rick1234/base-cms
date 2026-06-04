@@ -11,16 +11,16 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Toevoegen') }}
                 </a>
                 <a class="btn" href="{{ route(request()->routeIs('cms.*') ? 'cms.forms.categories.index' : 'admin.forms.categories.index') }}">
-                    <span class="flaticon-folder-symbol"></span>
+                    <x-admin.material-icon name="folder" />
                     {{ __('Categorieen') }}
                 </a>
                 @if ($selectedCategoryId)
                     <a class="btn btn-toggle-child-categories" href="{{ route($routeNames['index'], array_merge(request()->except('showChild'), ['showChild' => $showChild ? 0 : 1])) }}">
-                        <span class="flaticon-visibility-button"></span>
+                        <x-admin.material-icon name="visibility" />
                         {{ $showChild ? __('Toon alleen formulieren in deze categorie') : __('Toon alle onderliggende formulieren') }}
                     </a>
                 @endif
@@ -37,21 +37,22 @@
                         <div class="overview-item id">
                             Id
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item name">
                             {{ __('Naam') }}
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
+                        <div class="overview-item language">{{ __('Taal') }}</div>
                         <div class="overview-item category">{{ __('Categorie') }}</div>
                         <div class="overview-item messages">{{ __('Berichten') }}</div>
                         <div class="overview-item status">{{ __('Status') }}</div>
@@ -62,11 +63,21 @@
                         <div class="overview-row filters">
                             <div class="overview-item id">
                                 <input name="id" type="text" value="{{ request('id') }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item name">
                                 <input name="name" type="text" value="{{ request('name', request('title')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
+                            </div>
+                            <div class="overview-item language">
+                                <select name="locale" aria-label="{{ __('Taal') }}">
+                                    <option value="">{{ __('Alle talen') }}</option>
+                                    @foreach ($localeOptions as $localeOption)
+                                        <option value="{{ $localeOption['code'] }}" @selected(request('locale') === $localeOption['code'])>
+                                            {{ $localeOption['label'] }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
                             <div class="overview-item category">
                                 <select name="categoryId">
@@ -88,7 +99,7 @@
                             <div class="overview-item options">
                                 <input type="hidden" name="showChild" value="{{ $showChild ? 1 : 0 }}">
                                 <button type="submit" title="{{ __('Zoeken') }}">
-                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                    <x-admin.material-icon name="search" />
                                 </button>
                             </div>
                         </div>
@@ -100,14 +111,17 @@
                                 {{ $form->id }}
                                 @if ($selectedCategoryId && ! $showChild)
                                     <a href="{{ route($routeNames['index'], array_merge(request()->query(), ['move' => $form->id, 'direction' => 'down'])) }}">
-                                        <span class="flaticon-downwards-arrow-key"></span>
+                                        <x-admin.material-icon name="keyboard_arrow_down" />
                                     </a>
                                     <a href="{{ route($routeNames['index'], array_merge(request()->query(), ['move' => $form->id, 'direction' => 'up'])) }}">
-                                        <span class="flaticon-up-arrow-key"></span>
+                                        <x-admin.material-icon name="keyboard_arrow_up" />
                                     </a>
                                 @endif
                             </div>
                             <div class="overview-item name">{{ $form->name }}</div>
+                            <div class="overview-item language">
+                                <x-admin.language-flag :locale="$form->locale ?? app()->getLocale()" />
+                            </div>
                             <div class="overview-item category">{{ $form->categories->pluck('name')->join(', ') ?: '-' }}</div>
                             <div class="overview-item messages">
                                 <a href="{{ route($routeNames['submissions'], ['id' => $form->id]) }}">{{ $form->submissions_count }}</a>
@@ -117,20 +131,13 @@
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $form->id]) }}" title="{{ __('Bewerken') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
-                                <form method="post" action="{{ route($routeNames['duplicate']) }}">
-                                    @csrf
-                                    <input type="hidden" name="itemId" value="{{ $form->id }}">
-                                    <button type="submit" title="{{ __('Dupliceren') }}">
-                                        <span class="flaticon-add-to-queue-button"></span>
-                                    </button>
-                                </form>
                                 <form method="post" action="{{ route($routeNames['destroy'], $form) }}">
                                     @csrf
                                     @method('delete')
                                     <button type="submit" title="{{ __('Verwijderen') }}">
-                                        <span class="flaticon-rubbish-bin-delete-button"></span>
+                                        <x-admin.material-icon name="delete" />
                                     </button>
                                 </form>
                             </div>

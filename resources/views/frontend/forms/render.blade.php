@@ -4,12 +4,10 @@
 
 <form class="form-builder-form" method="post" action="{{ route('frontend.forms.submit', $form->slug) }}" enctype="multipart/form-data">
     @csrf
-    @if (($settings['honeypot_enabled'] ?? true) === true)
-        <div class="form-builder-honeypot" aria-hidden="true">
-            <label for="form_{{ $form->id }}_honeypot">{{ __('Website') }}</label>
-            <input id="form_{{ $form->id }}_honeypot" name="{{ $settings['honeypot_field'] ?? 'website' }}" type="text" tabindex="-1" autocomplete="off">
-        </div>
-    @endif
+    <div class="form-builder-honeypot" aria-hidden="true">
+        <label for="form_{{ $form->id }}_honeypot">{{ __('Website') }}</label>
+        <input id="form_{{ $form->id }}_honeypot" name="website" type="text" tabindex="-1" autocomplete="off">
+    </div>
 
     @if (($settings['show_title'] ?? true) === true)
         <h2>{{ $form->name }}</h2>

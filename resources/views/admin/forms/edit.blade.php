@@ -18,28 +18,88 @@
     if ($recipientRows === [] && filled($form->recipient_email)) {
         $recipientRows[] = ['name' => __('Primary recipient'), 'email' => $form->recipient_email, 'type' => 'to', 'is_active' => true, 'sort_order' => 1];
     }
-    $recipientRows[] = ['name' => '', 'email' => '', 'type' => 'to', 'is_active' => true, 'sort_order' => count($recipientRows) + 1];
-    $messageRows = $isExisting
-        ? $form->messages->map(fn ($message) => [
-            'id' => $message->id,
-            'name' => $message->name,
-            'subject' => $message->subject,
-            'body' => $message->body,
-            'type' => $message->type,
-            'is_active' => $message->is_active,
-            'sort_order' => $message->sort_order,
-            'layout' => $message->settings['layout'] ?? null,
-            'preheader' => $message->settings['preheader'] ?? null,
-        ])->values()->all()
-        : [
-            ['name' => __('Admin notification'), 'subject' => __('New form submission: {form_name}'), 'body' => "{{summary}}", 'type' => 'notification', 'is_active' => true, 'sort_order' => 1, 'layout' => 'default'],
-            ['name' => __('Submitter confirmation'), 'subject' => __('We received your message'), 'body' => __('Thank you. We received your message.')."\n\n{{summary}}", 'type' => 'confirmation', 'is_active' => false, 'sort_order' => 2, 'layout' => 'default'],
-        ];
-    $messageRows[] = ['name' => '', 'subject' => '', 'body' => '', 'type' => 'notification', 'is_active' => true, 'sort_order' => count($messageRows) + 1, 'layout' => 'default'];
     $formFields = $isExisting
         ? $form->blocks->flatMap(fn ($block) => $block->rows)->flatMap(fn ($row) => $row->fields)
         : collect();
-    $activeTab = request('tab') === 'builder' ? 'builder' : 'edit';
+    $requestedTab = request()->route('tab') ?: request()->query('tab');
+    $activeTab = $isExisting && in_array($requestedTab, ['template', 'recipients', 'response', 'builder'], true) ? $requestedTab : 'edit';
+    $templateModuleUrl = route('admin.templates.index');
+    $mailTemplateOptions = [
+        'mail.forms.submission' => __('Form submission template'),
+    ];
+    $fieldElementIcons = [
+        'input' => 'short_text',
+        'textarea' => 'notes',
+        'email' => 'alternate_email',
+        'file' => 'upload_file',
+        'radio' => 'radio_button_checked',
+        'select' => 'arrow_drop_down_circle',
+        'checkbox' => 'check_box',
+        'image-set-choice' => 'image',
+        'title' => 'title',
+        'paragraph' => 'subject',
+        'horizontal-rule' => 'horizontal_rule',
+        'date' => 'calendar_month',
+        'number' => 'pin',
+        'phone' => 'call',
+    ];
+    $builderBlocks = $isExisting
+        ? $form->blocks->values()->map(fn ($block) => [
+            'id' => $block->id,
+            'title' => $block->title,
+            'sort_order' => $block->sort_order,
+            'css_class' => $block->settings['css_class'] ?? null,
+            'rows' => $block->rows->values()->map(fn ($row) => [
+                'id' => $row->id,
+                'sort_order' => $row->sort_order,
+                'width' => $row->settings['width'] ?? 100,
+                'css_class' => $row->settings['css_class'] ?? null,
+                'fields' => $row->fields->values()->map(fn ($field) => [
+                    'id' => $field->id,
+                    'name' => $field->name,
+                    'label' => $field->label,
+                    'type' => $field->type,
+                    'help_text' => $field->help_text,
+                    'is_required' => $field->is_required,
+                    'sort_order' => $field->sort_order,
+                    'validation_rules' => collect($field->validation_rules ?? [])->implode('|'),
+                    'placeholder' => $field->settings['placeholder'] ?? null,
+                    'default_value' => $field->settings['default_value'] ?? null,
+                    'label_visible' => $field->settings['label_visible'] ?? true,
+                    'width' => $field->settings['width'] ?? 100,
+                    'custom_error_message' => $field->settings['custom_error_message'] ?? null,
+                    'information' => $field->settings['information'] ?? null,
+                    'css_class' => $field->settings['css_class'] ?? null,
+                    'options' => $field->options->values()->map(fn ($option) => [
+                        'id' => $option->id,
+                        'label' => $option->label,
+                        'value' => $option->value,
+                        'sort_order' => $option->sort_order,
+                        'image_path' => $option->settings['image_path'] ?? null,
+                        'description' => $option->settings['description'] ?? null,
+                    ])->all(),
+                ])->all(),
+            ])->all(),
+        ])->all()
+        : [];
+    $builderLabels = [
+        'addField' => __('Veld toevoegen'),
+        'canvasTitle' => __('Formulieropbouw'),
+        'defaultBlockTitle' => __('Formulier'),
+        'defaultFieldLabel' => __('Nieuw veld'),
+        'deleteField' => __('Veld verwijderen'),
+        'decreaseFieldWidth' => __('Veld smaller'),
+        'dropFields' => __('Nog geen velden'),
+        'editField' => __('Veld bewerken'),
+        'fieldWidth' => __('Veldbreedte'),
+        'increaseFieldWidth' => __('Veld breder'),
+        'fieldSettings' => __('Veld instellingen'),
+        'moveField' => __('Veld verplaatsen'),
+        'optionOne' => __('Optie 1'),
+        'optionTwo' => __('Optie 2'),
+        'optionsPlaceholder' => __('Een optie per regel'),
+        'saveSettings' => __('Instellingen opslaan'),
+    ];
 @endphp
 
 @section('title', $title)
@@ -52,20 +112,32 @@
 
         <div class="main has-buttons">
             <div class="buttons-container align-right">
-                <button class="btn btn-save" form="form-general-form" type="submit">
-                    <span class="flaticon-save-button"></span>
-                    {{ __('Opslaan') }}
-                </button>
-                <button class="btn btn-save-and-stay" form="form-general-form" name="saveAndStay" type="submit" value="1">
-                    <span class="flaticon-save-button"></span>
-                    {{ __('Opslaan en blijven') }}
-                </button>
+                @if ($activeTab === 'builder' && $isExisting)
+                    <button class="btn btn-save" form="form-builder-form" type="submit">
+                        <x-admin.material-icon name="save" />
+                        {{ __('Formulier opslaan') }}
+                    </button>
+                @elseif ($activeTab === 'response' && $isExisting)
+                    <button class="btn btn-save" form="form-response-mail-builder-form" type="submit">
+                        <x-admin.material-icon name="save" />
+                        {{ __('Bevestigingsmail opslaan') }}
+                    </button>
+                @else
+                    <button class="btn btn-save" form="form-general-form" type="submit">
+                        <x-admin.material-icon name="save" />
+                        {{ __('Opslaan') }}
+                    </button>
+                    <button class="btn btn-save-and-stay" form="form-general-form" name="saveAndStay" type="submit" value="1">
+                        <x-admin.material-icon name="save" />
+                        {{ __('Opslaan en blijven') }}
+                    </button>
+                @endif
                 @if ($isExisting)
                     <form method="post" action="{{ route($routeNames['duplicate']) }}">
                         @csrf
                         <input type="hidden" name="itemId" value="{{ $form->id }}">
                         <button class="btn btn-duplicate" type="submit">
-                            <span class="flaticon-add-to-queue-button"></span>
+                            <x-admin.material-icon name="content_copy" />
                             {{ __('Dupliceren') }}
                         </button>
                     </form>
@@ -73,22 +145,31 @@
                         @csrf
                         @method('delete')
                         <button class="btn btn-remove" type="submit">
-                            <span class="flaticon-close-button"></span>
+                            <x-admin.material-icon name="delete" />
                             {{ __('Verwijderen') }}
                         </button>
                     </form>
                 @endif
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
-            <form id="form-general-form" name="edit-form" method="post" action="{{ route($routeNames['save'], array_filter(['id' => $form->id])) }}" accept-charset="UTF-8">
-                @csrf
-                <input type="hidden" name="id" value="{{ $form->id }}">
-                <input type="hidden" name="saveAndStay" value="0">
+            @if (! in_array($activeTab, ['builder', 'response'], true))
+                <form id="form-general-form" name="edit-form" method="post" action="{{ route($routeNames['save'], array_filter(['id' => $form->id])) }}" accept-charset="UTF-8">
+                    @csrf
+                    <input type="hidden" name="id" value="{{ $form->id }}">
+                    <input type="hidden" name="saveAndStay" value="0">
+                    <input type="hidden" name="active_tab" value="{{ $activeTab }}">
+                    <input type="hidden" name="slug" value="{{ old('slug', $form->slug) }}">
+                    @if ($activeTab !== 'edit')
+                        <input type="hidden" name="name" value="{{ old('name', $form->name) }}">
+                        <input type="hidden" name="locale" value="{{ old('locale', $form->locale) }}">
+                        <input type="hidden" name="status" value="{{ old('status', $form->status ?: 'published') }}">
+                    @endif
 
+                @if ($activeTab === 'edit')
                 <div class="main-section">
                     @include('admin.forms.partials.page-header', [
                         'title' => $title,
@@ -107,8 +188,6 @@
                         <div class="grid-row">
                             <div class="col-8">
                                 <div class="content-section">
-                                    <h2 class="title">{{ __('Algemeen') }}</h2>
-
                                     <div class="form-item">
                                         <div class="form-item-label">
                                             <label for="name">{{ __('Naam') }}</label>
@@ -121,24 +200,10 @@
 
                                     <div class="form-item">
                                         <div class="form-item-label">
-                                            <label for="slug">{{ __('Slug') }}</label>
-                                        </div>
-                                        <div class="form-item-input">
-                                            <input id="slug" name="slug" type="text" value="{{ old('slug', $form->slug) }}">
-                                            @include('admin.content.partials.field-error', ['field' => 'slug'])
-                                        </div>
-                                    </div>
-
-                                    <div class="form-item">
-                                        <div class="form-item-label">
                                             <label for="locale">{{ __('Taal') }}</label>
                                         </div>
                                         <div class="form-item-input">
-                                            <select id="locale" name="locale">
-                                                @foreach (['nl', 'en', 'de', 'fr'] as $locale)
-                                                    <option value="{{ $locale }}" @selected(old('locale', $form->locale) === $locale)>{{ strtoupper($locale) }}</option>
-                                                @endforeach
-                                            </select>
+                                            <x-admin.locale-radio-group name="locale" :selected="old('locale', $form->locale)" id-prefix="locale" />
                                         </div>
                                     </div>
 
@@ -166,7 +231,7 @@
 
                                     <div class="form-item">
                                         <div class="form-item-label">
-                                            <label for="submit_text">{{ __('Verzend knop') }}</label>
+                                            <label for="submit_text">{{ __('Tekst op verzendknop') }}</label>
                                         </div>
                                         <div class="form-item-input">
                                             <input id="submit_text" name="submit_text" type="text" value="{{ old('submit_text', $form->submit_text ?: __('Versturen')) }}">
@@ -175,7 +240,7 @@
 
                                     <div class="form-item">
                                         <div class="form-item-label">
-                                            <label for="success_message">{{ __('Succes bericht') }}</label>
+                                            <label for="success_message">{{ __('Bericht na succesvol verzenden formulier') }}</label>
                                         </div>
                                         <div class="form-item-input">
                                             <textarea id="success_message" name="success_message">{{ old('success_message', $form->success_message) }}</textarea>
@@ -201,8 +266,23 @@
                     </div>
                 </div>
 
+                @endif
+
+                @if ($activeTab === 'template')
                 <div class="main-section">
-                    <h2 class="title">{{ __('Instellingen') }}</h2>
+                    @include('admin.forms.partials.page-header', [
+                        'title' => $title,
+                        'section' => $pageName,
+                    ])
+
+                    @include('admin.forms.partials.tabs', [
+                        'form' => $form,
+                        'routeNames' => $routeNames,
+                        'activeTab' => $activeTab,
+                    ])
+
+                    <span class="content-admin-screen-label">{{ $pageName }}</span>
+
                     <div class="grid">
                         <div class="grid-row">
                             <div class="col-6">
@@ -224,9 +304,20 @@
                                         <label for="mail_template">{{ __('Mail template') }}</label>
                                     </div>
                                     <div class="form-item-input">
-                                        <input id="mail_template" name="mail_template" type="text" value="{{ old('mail_template', $settings['mail_template'] ?? 'forms.default') }}">
+                                        <select id="mail_template" name="mail_template">
+                                            @foreach ($mailTemplateOptions as $template => $label)
+                                                <option value="{{ $template }}" @selected(old('mail_template', $settings['mail_template'] ?? 'mail.forms.submission') === $template)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                 </div>
+
+                                <p class="form-help-text">
+                                    <a class="btn btn-duplicate" href="{{ $templateModuleUrl }}">
+                                        <x-admin.material-icon name="dashboard_customize" />
+                                        {{ __('Template module openen') }}
+                                    </a>
+                                </p>
 
                                 <div class="form-item">
                                     <div class="form-item-label">
@@ -284,419 +375,177 @@
                                         <span class="checkbox"></span>
                                         {{ __('Berichten bewaren') }}
                                     </label>
-                                    <input type="hidden" name="honeypot_enabled" value="0">
-                                    <label>
-                                        <input name="honeypot_enabled" type="checkbox" value="1" @checked(old('honeypot_enabled', $settings['honeypot_enabled'] ?? true))>
-                                        <span class="checkbox"></span>
-                                        {{ __('Spam honeypot') }}
-                                    </label>
-                                    <input type="hidden" name="honeypot_field" value="{{ old('honeypot_field', $settings['honeypot_field'] ?? 'website') }}">
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                @endif
 
+                @if ($activeTab === 'recipients')
                 <div class="main-section">
-                    <h2 class="title">{{ __('Ontvangers') }}</h2>
+                    @include('admin.forms.partials.page-header', [
+                        'title' => $title,
+                        'section' => $pageName,
+                    ])
+
+                    @include('admin.forms.partials.tabs', [
+                        'form' => $form,
+                        'routeNames' => $routeNames,
+                        'activeTab' => $activeTab,
+                    ])
+
+                    <span class="content-admin-screen-label">{{ $pageName }}</span>
+
+                    <div class="form-section-toolbar form-section-toolbar-actions-only">
+                        <div class="form-section-actions">
+                            <button class="btn btn-save" form="form-general-form" type="submit">
+                                <x-admin.material-icon name="save" />
+                                {{ __('Opslaan') }}
+                            </button>
+                            <button class="btn btn-add" type="button" data-form-managed-list-add="recipients">
+                                <x-admin.material-icon name="add" />
+                                {{ __('Regel toevoegen') }}
+                            </button>
+                        </div>
+                    </div>
                     <input type="hidden" name="recipient_email" value="{{ old('recipient_email', $form->recipient_email) }}">
-                    <div class="form-recipient-list">
+                    <div class="overview-container form-listing-container" data-form-managed-list="recipients" data-form-managed-list-next-index="{{ count($recipientRows) }}">
+                        <div class="overview-row header">
+                            <div class="overview-item name">{{ __('Naam') }}</div>
+                            <div class="overview-item email">{{ __('E-mail') }}</div>
+                            <div class="overview-item type">{{ __('Type') }}</div>
+                            <div class="overview-item status">{{ __('Actief') }}</div>
+                            <div class="overview-item options">{{ __('Opties') }}</div>
+                        </div>
                         @foreach ($recipientRows as $index => $recipient)
-                            <div class="form-recipient-row">
+                            <div class="overview-row form-listing-row" data-form-managed-list-row>
                                 <input type="hidden" name="recipients[{{ $index }}][id]" value="{{ $recipient['id'] ?? '' }}">
                                 <input type="hidden" name="recipients[{{ $index }}][sort_order]" value="{{ $recipient['sort_order'] ?? $index + 1 }}">
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="recipient_name_{{ $index }}">{{ __('Naam') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="recipient_name_{{ $index }}" name="recipients[{{ $index }}][name]" type="text" value="{{ $recipient['name'] ?? '' }}">
-                                    </div>
+                                <input type="hidden" name="recipients[{{ $index }}][delete]" value="0" data-form-managed-list-delete-input>
+                                <div class="overview-item name">
+                                    <label class="u-sr-only" for="recipient_name_{{ $index }}">{{ __('Naam') }}</label>
+                                    <input id="recipient_name_{{ $index }}" name="recipients[{{ $index }}][name]" type="text" value="{{ $recipient['name'] ?? '' }}">
                                 </div>
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="recipient_email_{{ $index }}">{{ __('E-mail') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="recipient_email_{{ $index }}" name="recipients[{{ $index }}][email]" type="email" value="{{ $recipient['email'] ?? '' }}">
-                                    </div>
+                                <div class="overview-item email">
+                                    <label class="u-sr-only" for="recipient_email_{{ $index }}">{{ __('E-mail') }}</label>
+                                    <input id="recipient_email_{{ $index }}" name="recipients[{{ $index }}][email]" type="email" value="{{ $recipient['email'] ?? '' }}">
                                 </div>
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="recipient_type_{{ $index }}">{{ __('Type') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <select id="recipient_type_{{ $index }}" name="recipients[{{ $index }}][type]">
-                                            @foreach (['to' => 'To', 'cc' => 'CC', 'bcc' => 'BCC', 'reply-to' => 'Reply-to'] as $type => $label)
-                                                <option value="{{ $type }}" @selected(($recipient['type'] ?? 'to') === $type)>{{ $label }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
+                                <div class="overview-item type">
+                                    <label class="u-sr-only" for="recipient_type_{{ $index }}">{{ __('Type') }}</label>
+                                    <select id="recipient_type_{{ $index }}" name="recipients[{{ $index }}][type]">
+                                        @foreach (['to' => 'To', 'cc' => 'CC', 'bcc' => 'BCC', 'reply-to' => 'Reply-to'] as $type => $label)
+                                            <option value="{{ $type }}" @selected(($recipient['type'] ?? 'to') === $type)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
-                                <div class="form-recipient-options">
+                                <div class="overview-item status">
                                     <input type="hidden" name="recipients[{{ $index }}][is_active]" value="0">
                                     <label>
                                         <input name="recipients[{{ $index }}][is_active]" type="checkbox" value="1" @checked($recipient['is_active'] ?? true)>
                                         <span class="checkbox"></span>
                                         {{ __('Actief') }}
                                     </label>
-                                    @if (! empty($recipient['id']))
-                                        <label>
-                                            <input name="recipients[{{ $index }}][delete]" type="checkbox" value="1">
-                                            <span class="checkbox"></span>
-                                            {{ __('Verwijderen') }}
-                                        </label>
-                                    @endif
+                                </div>
+                                <div class="overview-item options">
+                                    <button class="btn btn-remove btn-icon-only" type="button" title="{{ __('Verwijderen') }}" data-form-managed-list-delete>
+                                        <x-admin.material-icon name="delete" />
+                                    </button>
                                 </div>
                             </div>
                         @endforeach
-                    </div>
-                    @include('admin.content.partials.field-error', ['field' => 'recipients'])
-                </div>
-
-                <div class="main-section">
-                    <h2 class="title">{{ __('Mail layout builder') }}</h2>
-                    <div class="form-placeholder-list">
-                        <strong>{{ __('Placeholders') }}:</strong>
-                        <span>{{ '{form_name}' }}</span>
-                        <span>{{ '{summary}' }}</span>
-                        @foreach ($formFields as $field)
-                            <span>{{ '{'.$field->name.'}' }}</span>
-                        @endforeach
-                    </div>
-                    <div class="form-message-list">
-                        @foreach ($messageRows as $index => $message)
-                            <div class="form-message-row">
-                                <input type="hidden" name="messages[{{ $index }}][id]" value="{{ $message['id'] ?? '' }}">
-                                <input type="hidden" name="messages[{{ $index }}][sort_order]" value="{{ $message['sort_order'] ?? $index + 1 }}">
-                                <div class="grid">
-                                    <div class="grid-row">
-                                        <div class="col-4">
-                                            <div class="form-item">
-                                                <div class="form-item-label">
-                                                    <label for="message_name_{{ $index }}">{{ __('Naam') }}</label>
-                                                </div>
-                                                <div class="form-item-input">
-                                                    <input id="message_name_{{ $index }}" name="messages[{{ $index }}][name]" type="text" value="{{ $message['name'] ?? '' }}">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-4">
-                                            <div class="form-item">
-                                                <div class="form-item-label">
-                                                    <label for="message_type_{{ $index }}">{{ __('Type') }}</label>
-                                                </div>
-                                                <div class="form-item-input">
-                                                    <select id="message_type_{{ $index }}" name="messages[{{ $index }}][type]">
-                                                        @foreach (['notification' => __('Notificatie'), 'confirmation' => __('Bevestiging'), 'internal' => __('Intern')] as $type => $label)
-                                                            <option value="{{ $type }}" @selected(($message['type'] ?? 'notification') === $type)>{{ $label }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-4">
-                                            <div class="form-item">
-                                                <div class="form-item-label">
-                                                    <label for="message_layout_{{ $index }}">{{ __('Layout') }}</label>
-                                                </div>
-                                                <div class="form-item-input">
-                                                    <select id="message_layout_{{ $index }}" name="messages[{{ $index }}][layout]">
-                                                        @foreach (['default' => __('Default'), 'compact' => __('Compact'), 'plain' => __('Plain text')] as $layout => $label)
-                                                            <option value="{{ $layout }}" @selected(($message['layout'] ?? 'default') === $layout)>{{ $label }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                        <template data-form-managed-list-template="recipients">
+                            <div class="overview-row form-listing-row" data-form-managed-list-row>
+                                <input type="hidden" name="recipients[__INDEX__][sort_order]" value="__SORT__">
+                                <input type="hidden" name="recipients[__INDEX__][delete]" value="0" data-form-managed-list-delete-input>
+                                <div class="overview-item name">
+                                    <label class="u-sr-only" for="recipient_name___INDEX__">{{ __('Naam') }}</label>
+                                    <input id="recipient_name___INDEX__" name="recipients[__INDEX__][name]" type="text">
                                 </div>
-
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="message_subject_{{ $index }}">{{ __('Onderwerp') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="message_subject_{{ $index }}" name="messages[{{ $index }}][subject]" type="text" value="{{ $message['subject'] ?? '' }}">
-                                    </div>
+                                <div class="overview-item email">
+                                    <label class="u-sr-only" for="recipient_email___INDEX__">{{ __('E-mail') }}</label>
+                                    <input id="recipient_email___INDEX__" name="recipients[__INDEX__][email]" type="email">
                                 </div>
-
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="message_preheader_{{ $index }}">{{ __('Preheader') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="message_preheader_{{ $index }}" name="messages[{{ $index }}][preheader]" type="text" value="{{ $message['preheader'] ?? '' }}">
-                                    </div>
+                                <div class="overview-item type">
+                                    <label class="u-sr-only" for="recipient_type___INDEX__">{{ __('Type') }}</label>
+                                    <select id="recipient_type___INDEX__" name="recipients[__INDEX__][type]">
+                                        @foreach (['to' => 'To', 'cc' => 'CC', 'bcc' => 'BCC', 'reply-to' => 'Reply-to'] as $type => $label)
+                                            <option value="{{ $type }}">{{ $label }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
-
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="message_body_{{ $index }}">{{ __('Bericht') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <textarea id="message_body_{{ $index }}" name="messages[{{ $index }}][body]">{{ $message['body'] ?? '' }}</textarea>
-                                    </div>
-                                </div>
-
-                                <div class="form-message-options">
-                                    <input type="hidden" name="messages[{{ $index }}][is_active]" value="0">
+                                <div class="overview-item status">
+                                    <input type="hidden" name="recipients[__INDEX__][is_active]" value="0">
                                     <label>
-                                        <input name="messages[{{ $index }}][is_active]" type="checkbox" value="1" @checked($message['is_active'] ?? true)>
+                                        <input name="recipients[__INDEX__][is_active]" type="checkbox" value="1" checked>
                                         <span class="checkbox"></span>
                                         {{ __('Actief') }}
                                     </label>
-                                    @if (! empty($message['id']))
-                                        <label>
-                                            <input name="messages[{{ $index }}][delete]" type="checkbox" value="1">
-                                            <span class="checkbox"></span>
-                                            {{ __('Verwijderen') }}
-                                        </label>
-                                    @endif
+                                </div>
+                                <div class="overview-item options">
+                                    <button class="btn btn-remove btn-icon-only" type="button" title="{{ __('Verwijderen') }}" data-form-managed-list-delete>
+                                        <x-admin.material-icon name="delete" />
+                                    </button>
                                 </div>
                             </div>
-                        @endforeach
+                        </template>
                     </div>
+                    @include('admin.content.partials.field-error', ['field' => 'recipients'])
                 </div>
-            </form>
-
-            <div class="main-section" id="form-builder">
-                <div class="form-builder-header">
-                    <h2 class="title">{{ __('Form builder') }}</h2>
-                    @if ($isExisting)
-                        <button class="btn btn-save" form="form-builder-form" type="submit">
-                            <span class="flaticon-save-button"></span>
-                            {{ __('Builder opslaan') }}
-                        </button>
-                    @endif
-                </div>
-
-                @if (! $isExisting)
-                    <div class="attachment-message">
-                        <span class="flaticon-rounded-info-button"></span>
-                        <em>{{ __('Sla het formulier eerst op. Daarna kun je blokken, rijen, velden en opties beheren.') }}</em>
-                    </div>
-                @else
-                    <form id="form-builder-form" method="post" action="{{ route($routeNames['builder.save'], ['id' => $form->id]) }}">
-                        @csrf
-                        <input type="hidden" name="id" value="{{ $form->id }}">
-
-                        <div class="form-builder-block-list">
-                            @foreach ($form->blocks as $blockIndex => $block)
-                                <div class="form-builder-block">
-                                    <input type="hidden" name="blocks[{{ $blockIndex }}][id]" value="{{ $block->id }}">
-                                    <div class="form-builder-block-heading">
-                                        <div class="form-item">
-                                            <div class="form-item-label">
-                                                <label for="block_title_{{ $blockIndex }}">{{ __('Blok titel') }}</label>
-                                            </div>
-                                            <div class="form-item-input">
-                                                <input id="block_title_{{ $blockIndex }}" name="blocks[{{ $blockIndex }}][title]" type="text" value="{{ $block->title }}">
-                                            </div>
-                                        </div>
-                                        <input name="blocks[{{ $blockIndex }}][sort_order]" type="number" value="{{ $block->sort_order }}">
-                                        <label>
-                                            <input name="blocks[{{ $blockIndex }}][delete]" type="checkbox" value="1">
-                                            <span class="checkbox"></span>
-                                            {{ __('Verwijderen') }}
-                                        </label>
-                                    </div>
-
-                                    @foreach ($block->rows as $rowIndex => $row)
-                                        <div class="form-builder-row">
-                                            <input type="hidden" name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][id]" value="{{ $row->id }}">
-                                            <div class="form-builder-row-heading">
-                                                <strong>{{ __('Rij') }} {{ $rowIndex + 1 }}</strong>
-                                                <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][sort_order]" type="number" value="{{ $row->sort_order }}">
-                                                <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][width]" type="number" min="10" max="100" value="{{ $row->settings['width'] ?? 100 }}">
-                                                <label>
-                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][delete]" type="checkbox" value="1">
-                                                    <span class="checkbox"></span>
-                                                    {{ __('Verwijderen') }}
-                                                </label>
-                                            </div>
-
-                                            <div class="form-builder-field-list">
-                                                @foreach ($row->fields as $fieldIndex => $field)
-                                                    @php $fieldSettings = $field->settings ?? []; @endphp
-                                                    <div class="form-builder-field">
-                                                        <input type="hidden" name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][id]" value="{{ $field->id }}">
-                                                        <div class="grid">
-                                                            <div class="grid-row">
-                                                                <div class="col-4">
-                                                                    <div class="form-item">
-                                                                        <div class="form-item-label">
-                                                                            <label>{{ __('Naam') }}</label>
-                                                                        </div>
-                                                                        <div class="form-item-input">
-                                                                            <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][name]" type="text" value="{{ $field->name }}">
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="col-4">
-                                                                    <div class="form-item">
-                                                                        <div class="form-item-label">
-                                                                            <label>{{ __('Label') }}</label>
-                                                                        </div>
-                                                                        <div class="form-item-input">
-                                                                            <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][label]" type="text" value="{{ $field->label }}">
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="col-4">
-                                                                    <div class="form-item">
-                                                                        <div class="form-item-label">
-                                                                            <label>{{ __('Type') }}</label>
-                                                                        </div>
-                                                                        <div class="form-item-input">
-                                                                            <select name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][type]">
-                                                                                @foreach ($fieldTypes as $type => $label)
-                                                                                    <option value="{{ $type }}" @selected($field->type === $type)>{{ $label }}</option>
-                                                                                @endforeach
-                                                                            </select>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="grid">
-                                                            <div class="grid-row">
-                                                                <div class="col-3">
-                                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][sort_order]" type="number" value="{{ $field->sort_order }}">
-                                                                </div>
-                                                                <div class="col-3">
-                                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][width]" type="number" min="10" max="100" value="{{ $fieldSettings['width'] ?? 100 }}">
-                                                                </div>
-                                                                <div class="col-3">
-                                                                    <label>
-                                                                        <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][is_required]" type="checkbox" value="1" @checked($field->is_required)>
-                                                                        <span class="checkbox"></span>
-                                                                        {{ __('Verplicht') }}
-                                                                    </label>
-                                                                </div>
-                                                                <div class="col-3">
-                                                                    <label>
-                                                                        <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][delete]" type="checkbox" value="1">
-                                                                        <span class="checkbox"></span>
-                                                                        {{ __('Verwijderen') }}
-                                                                    </label>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="form-item">
-                                                            <div class="form-item-label">
-                                                                <label>{{ __('Placeholder') }}</label>
-                                                            </div>
-                                                            <div class="form-item-input">
-                                                                <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][placeholder]" type="text" value="{{ $fieldSettings['placeholder'] ?? '' }}">
-                                                            </div>
-                                                        </div>
-                                                        <div class="form-item">
-                                                            <div class="form-item-label">
-                                                                <label>{{ __('Helptekst') }}</label>
-                                                            </div>
-                                                            <div class="form-item-input">
-                                                                <textarea name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][help_text]">{{ $field->help_text }}</textarea>
-                                                            </div>
-                                                        </div>
-                                                        <div class="form-item">
-                                                            <div class="form-item-label">
-                                                                <label>{{ __('Validatie') }}</label>
-                                                            </div>
-                                                            <div class="form-item-input">
-                                                                <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][validation_rules]" type="text" value="{{ collect($field->validation_rules ?? [])->implode('|') }}">
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="form-builder-option-list">
-                                                            @foreach ($field->options as $optionIndex => $option)
-                                                                <div class="form-builder-option">
-                                                                    <input type="hidden" name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][options][{{ $optionIndex }}][id]" value="{{ $option->id }}">
-                                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][options][{{ $optionIndex }}][label]" type="text" value="{{ $option->label }}" placeholder="{{ __('Optie label') }}">
-                                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][options][{{ $optionIndex }}][value]" type="text" value="{{ $option->value }}" placeholder="{{ __('Waarde') }}">
-                                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][options][{{ $optionIndex }}][image_path]" type="text" value="{{ $option->settings['image_path'] ?? '' }}" placeholder="{{ __('Afbeelding pad') }}">
-                                                                    <label>
-                                                                        <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][options][{{ $optionIndex }}][delete]" type="checkbox" value="1">
-                                                                        <span class="checkbox"></span>
-                                                                        {{ __('Verwijderen') }}
-                                                                    </label>
-                                                                </div>
-                                                            @endforeach
-                                                            @for ($optionIndex = $field->options->count(); $optionIndex < $field->options->count() + 2; $optionIndex++)
-                                                                <div class="form-builder-option">
-                                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][options][{{ $optionIndex }}][label]" type="text" placeholder="{{ __('Nieuwe optie') }}">
-                                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][options][{{ $optionIndex }}][value]" type="text" placeholder="{{ __('Waarde') }}">
-                                                                    <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $fieldIndex }}][options][{{ $optionIndex }}][image_path]" type="text" placeholder="{{ __('Afbeelding pad') }}">
-                                                                </div>
-                                                            @endfor
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-
-                                                @php $newFieldIndex = $row->fields->count(); @endphp
-                                                <div class="form-builder-field is-new">
-                                                    <div class="grid">
-                                                        <div class="grid-row">
-                                                            <div class="col-4">
-                                                                <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $newFieldIndex }}][name]" type="text" placeholder="{{ __('Nieuwe veldnaam') }}">
-                                                            </div>
-                                                            <div class="col-4">
-                                                                <input name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $newFieldIndex }}][label]" type="text" placeholder="{{ __('Nieuw veld label') }}">
-                                                            </div>
-                                                            <div class="col-4">
-                                                                <select name="blocks[{{ $blockIndex }}][rows][{{ $rowIndex }}][fields][{{ $newFieldIndex }}][type]">
-                                                                    @foreach ($fieldTypes as $type => $label)
-                                                                        <option value="{{ $type }}">{{ $label }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-
-                                    @php $newRowIndex = $block->rows->count(); @endphp
-                                    <div class="form-builder-row is-new">
-                                        <div class="form-builder-row-heading">
-                                            <strong>{{ __('Nieuwe rij') }}</strong>
-                                            <input name="blocks[{{ $blockIndex }}][rows][{{ $newRowIndex }}][sort_order]" type="number" value="{{ $newRowIndex + 1 }}">
-                                            <input name="blocks[{{ $blockIndex }}][rows][{{ $newRowIndex }}][width]" type="number" min="10" max="100" value="100">
-                                        </div>
-                                        <input name="blocks[{{ $blockIndex }}][rows][{{ $newRowIndex }}][fields][0][label]" type="text" placeholder="{{ __('Eerste veld label') }}">
-                                        <select name="blocks[{{ $blockIndex }}][rows][{{ $newRowIndex }}][fields][0][type]">
-                                            @foreach ($fieldTypes as $type => $label)
-                                                <option value="{{ $type }}">{{ $label }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                            @endforeach
-
-                            @php $newBlockIndex = $form->blocks->count(); @endphp
-                            <div class="form-builder-block is-new">
-                                <div class="form-builder-block-heading">
-                                    <input name="blocks[{{ $newBlockIndex }}][title]" type="text" placeholder="{{ __('Nieuw blok') }}">
-                                    <input name="blocks[{{ $newBlockIndex }}][sort_order]" type="number" value="{{ $newBlockIndex + 1 }}">
-                                </div>
-                                <input name="blocks[{{ $newBlockIndex }}][rows][0][fields][0][label]" type="text" placeholder="{{ __('Eerste veld label') }}">
-                                <select name="blocks[{{ $newBlockIndex }}][rows][0][fields][0][type]">
-                                    @foreach ($fieldTypes as $type => $label)
-                                        <option value="{{ $type }}">{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </form>
                 @endif
-            </div>
+
+                </form>
+            @endif
+
+            @if ($activeTab === 'response' && $isExisting)
+                <div class="main-section" id="response-mail-builder">
+                    @include('admin.forms.partials.page-header', [
+                        'title' => $title,
+                        'section' => $pageName,
+                    ])
+
+                    @include('admin.forms.partials.tabs', [
+                        'form' => $form,
+                        'routeNames' => $routeNames,
+                        'activeTab' => $activeTab,
+                    ])
+
+                    <span class="content-admin-screen-label">{{ $pageName }}</span>
+
+                    <livewire:admin.forms.response-mail-builder :form-id="$form->id" />
+                </div>
+            @endif
+
+            @if ($activeTab === 'builder')
+                <div class="main-section" id="form-builder">
+                    @include('admin.forms.partials.page-header', [
+                        'title' => $title,
+                        'section' => $pageName,
+                    ])
+
+                    @include('admin.forms.partials.tabs', [
+                        'form' => $form,
+                        'routeNames' => $routeNames,
+                        'activeTab' => $activeTab,
+                    ])
+
+                    <span class="content-admin-screen-label">{{ $pageName }}</span>
+
+                    @include('admin.forms.partials.builder', [
+                        'builderBlocks' => $builderBlocks,
+                        'builderLabels' => $builderLabels,
+                        'fieldElementIcons' => $fieldElementIcons,
+                        'fieldTypes' => $fieldTypes,
+                        'form' => $form,
+                        'isExisting' => $isExisting,
+                        'routeNames' => $routeNames,
+                    ])
+                </div>
+            @endif
 
             @if ($isExisting)
                 <div class="author-container">
-                    <span><strong>{{ __('Auteur') }}:</strong> {{ $form->created_by ?? '-' }}</span>
+                    <span><strong>{{ __('Gemaakt door') }}:</strong> {{ $form->creator?->fullName() ?? '-' }}</span>
                     <span><strong>{{ __('Gemaakt op') }}:</strong> {{ optional($form->created_at)->format('d-m-Y H:i') }}</span>
                 </div>
             @endif

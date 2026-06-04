@@ -23,11 +23,6 @@
                     </div>
                 </div>
 
-                <div class="breadcrumbs">
-                    <a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a> &rsaquo;
-                    {{ __('Admin Modules') }}
-                </div>
-
                 @foreach ($modulesByGroup as $group => $modules)
                     <h2 class="title">{{ $groups[$group] ?? ucfirst($group) }}</h2>
 
@@ -50,7 +45,7 @@
                                 <div class="overview-item">{{ $module['count'] }}</div>
                                 <div class="overview-item options">
                                     <a href="{{ route($routeNames['show'], $usesFolderRoutes ? $module['folder'] : $module['handle']) }}" title="{{ __('Open') }}">
-                                        <span class="flaticon-visibility-button"></span>
+                                        <x-admin.material-icon name="visibility" />
                                     </a>
                                 </div>
                             </div>

@@ -36,8 +36,8 @@ class CatalogModuleTest extends TestCase
         $this->assertSame(2, CatalogProduct::query()->count());
         $this->assertSame(1, CatalogProductImage::query()->count());
         $this->assertSame(1, CatalogProductAttachment::query()->count());
-        $this->assertSame(1, CatalogProductOption::query()->count());
-        $this->assertSame(1, CatalogProductTranslation::query()->count());
+        $this->assertSame(4, CatalogProductOption::query()->count());
+        $this->assertSame(4, CatalogProductTranslation::query()->count());
         $this->assertSame(1, CatalogProductVideo::query()->count());
         $this->assertSame(1, CatalogStock::query()->count());
         $this->assertSame(1, CatalogReview::query()->count());
@@ -46,6 +46,14 @@ class CatalogModuleTest extends TestCase
         $this->assertDatabaseHas('catalog_products', [
             'sku' => 'BASE-001',
             'name' => 'Seeded catalog product',
+        ]);
+        $this->assertDatabaseHas('catalog_product_translations', [
+            'locale' => 'nl',
+            'title' => 'Voorbeeld catalogusproduct',
+        ]);
+        $this->assertDatabaseHas('catalog_product_translations', [
+            'locale' => 'en',
+            'title' => 'Seeded catalog product',
         ]);
         $this->assertDatabaseHas('catalog_coupons', [
             'code' => 'BASE10',
@@ -116,7 +124,9 @@ class CatalogModuleTest extends TestCase
             ->get('/admin/catalogus')
             ->assertOk()
             ->assertSee('Modern catalog product')
-            ->assertSee('Webshop');
+            ->assertSee('Webshop')
+            ->assertDontSee('ajax/duplicateItem', false)
+            ->assertDontSee('Dupliceren');
     }
 
     public function test_catalog_product_utility_screens_save_media_options_translations_videos_stock_and_combinations(): void

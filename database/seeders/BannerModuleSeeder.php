@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Cms\Banner;
 use App\Models\Cms\BannerCategory;
 use App\Models\Cms\BannerTranslation;
+use Database\Seeders\Support\SeederFiles;
 use Illuminate\Database\Seeder;
 
 class BannerModuleSeeder extends Seeder
@@ -38,10 +39,12 @@ class BannerModuleSeeder extends Seeder
             ],
         );
 
-        $banner = Banner::query()->firstOrCreate(
+        $bannerImagePath = SeederFiles::publicImage('seed-image-01.jpg', 'admin/uploads/banner', 'seeded-banner.jpg');
+
+        $banner = Banner::query()->updateOrCreate(
             ['title' => 'Seeded banner'],
             [
-                'image_path' => 'admin/cms/img/icons/modules/banner.svg',
+                'image_path' => $bannerImagePath,
                 'link_url' => '/contact',
                 'button_text' => 'Contact',
                 'text' => 'A seeded banner for the rebuilt banner module.',
@@ -64,8 +67,20 @@ class BannerModuleSeeder extends Seeder
         ]);
 
         foreach ([
-            'nl' => ['title' => 'Seeded banner', 'subtitle' => 'Laravel rebuild', 'button_text' => 'Contact'],
-            'en' => ['title' => 'Seeded banner', 'subtitle' => 'Laravel rebuild', 'button_text' => 'Contact'],
+            'nl' => [
+                'title' => 'Voorbeeldbanner',
+                'subtitle' => 'Laravel herbouw',
+                'button_text' => 'Contact',
+                'content' => 'Een voorbeeldvertaling voor de vernieuwde bannermodule.',
+                'alt_text' => 'Voorbeeldafbeelding banner',
+            ],
+            'en' => [
+                'title' => 'Seeded banner',
+                'subtitle' => 'Laravel rebuild',
+                'button_text' => 'Contact',
+                'content' => 'A seeded translation for the rebuilt banner module.',
+                'alt_text' => 'Seeded banner image',
+            ],
         ] as $locale => $translation) {
             BannerTranslation::query()->updateOrCreate(
                 [
@@ -77,8 +92,8 @@ class BannerModuleSeeder extends Seeder
                     'subtitle' => $translation['subtitle'],
                     'link_url' => '/contact',
                     'button_text' => $translation['button_text'],
-                    'content' => 'A seeded translation for the rebuilt banner module.',
-                    'metadata' => ['alt_text' => 'Seeded banner image'],
+                    'content' => $translation['content'],
+                    'metadata' => ['alt_text' => $translation['alt_text']],
                     'created_by' => $adminId,
                     'updated_by' => $adminId,
                 ],

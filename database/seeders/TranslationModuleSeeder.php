@@ -18,6 +18,12 @@ class TranslationModuleSeeder extends Seeder
         $this->seedKnownTranslations($sourceLocale);
         $this->seedDutchValuesForAllKeys($sourceLocale);
         $this->removeLegacyAccessTerms();
+        $this->removeObsoleteFlashTerms();
+        $this->removeObsoleteContentLabelTerms();
+        $this->removeObsoleteModuleManagerTerms();
+        $this->removeObsoleteCountryShippingTerms();
+        $this->removeObsoleteCountryPackageRefreshTerms();
+        $this->removeObsoleteTechnicalEmptyStateTerms();
     }
 
     private function seedKnownTranslations(string $sourceLocale): void
@@ -53,8 +59,9 @@ class TranslationModuleSeeder extends Seeder
                     'last_seen_at' => now(),
                 ])->save();
 
-                $this->upsertValue($translationKey, 'en', $values['en']);
-                $this->upsertValue($translationKey, 'nl', $values['nl']);
+                foreach ($values as $locale => $value) {
+                    $this->upsertValue($translationKey, (string) $locale, $value);
+                }
             });
         }
     }
@@ -114,12 +121,133 @@ class TranslationModuleSeeder extends Seeder
             });
     }
 
+    private function removeObsoleteFlashTerms(): void
+    {
+        TranslationKey::query()
+            ->whereIn('key', [
+                'Domain updated.',
+                'Event duplicated.',
+                'Page updated.',
+                'Record updated.',
+                'Template updated.',
+            ])
+            ->get()
+            ->each(function (TranslationKey $translationKey): void {
+                $translationKey->values()->delete();
+                $translationKey->delete();
+            });
+    }
+
+    private function removeObsoleteContentLabelTerms(): void
+    {
+        TranslationKey::query()
+            ->whereIn('key', [
+                'Berichten overzicht',
+                'Content Categories',
+                'Content category',
+                'Content images',
+                'Content item',
+                'Content item created.',
+                'Content item deleted.',
+                'Content item duplicated.',
+                'Content item saved.',
+                'Content overview',
+                'Content slider',
+                'Dit content item is nog niet aan categorieen gekoppeld.',
+                'Edit content category',
+                'Edit content item',
+                'Legacy content category tree and editor.',
+                'Legacy content item overview and editor.',
+                'Pages, content categories, blocks, images, and attachments.',
+                'Sla het content item eerst op voordat u afbeeldingen toevoegt.',
+                'Sla het content item eerst op voordat u een slider koppelt.',
+            ])
+            ->get()
+            ->each(function (TranslationKey $translationKey): void {
+                $translationKey->values()->delete();
+                $translationKey->delete();
+            });
+    }
+
+    private function removeObsoleteModuleManagerTerms(): void
+    {
+        TranslationKey::query()
+            ->whereIn('key', [
+                'Edit module',
+                'Edit module category',
+                'Module Categories',
+                'Module Manager',
+                'Module category overview',
+                'Module overview',
+                'ModuleCategorie',
+            ])
+            ->get()
+            ->each(function (TranslationKey $translationKey): void {
+                $translationKey->values()->delete();
+                $translationKey->delete();
+            });
+    }
+
+    private function removeObsoleteCountryShippingTerms(): void
+    {
+        TranslationKey::query()
+            ->whereIn('key', [
+                'Bigbox',
+                'Envelope',
+                'Smallbox',
+                'Verzendkosten',
+            ])
+            ->get()
+            ->each(function (TranslationKey $translationKey): void {
+                $translationKey->values()->delete();
+                $translationKey->delete();
+            });
+    }
+
+    private function removeObsoleteCountryPackageRefreshTerms(): void
+    {
+        TranslationKey::query()
+            ->whereIn('key', [
+                'Localization data refreshed: :countries countries and :languages languages.',
+                'Refresh package data',
+            ])
+            ->get()
+            ->each(function (TranslationKey $translationKey): void {
+                $translationKey->values()->delete();
+                $translationKey->delete();
+            });
+    }
+
+    private function removeObsoleteTechnicalEmptyStateTerms(): void
+    {
+        TranslationKey::query()
+            ->whereIn('key', [
+                'Er zijn nog geen andere producten beschikbaar.',
+                'Er zijn nog geen berichten ontvangen.',
+                'Er zijn nog geen categorieen toegevoegd.',
+                'Er zijn nog geen formulieren beschikbaar voeg eerst een formulier toe',
+                'No domains have been configured yet.',
+                'No navigation menus have been created yet.',
+                'No pages have been created yet.',
+                'No records have been migrated or created for this screen yet.',
+                'No templates have been configured yet.',
+                'No website languages enabled yet.',
+            ])
+            ->get()
+            ->each(function (TranslationKey $translationKey): void {
+                $translationKey->values()->delete();
+                $translationKey->delete();
+            });
+    }
+
     /**
-     * @return array<string, array{en: string, nl: string}>
+     * @return array<string, array<string, string>>
      */
     public static function defaults(): array
     {
-        return [
+        $defaults = [
+            '{0} Geen items|{1} :count item|[2,*] :count items' => ['en' => '{0} No items|{1} :count item|[2,*] :count items', 'nl' => '{0} Geen items|{1} :count item|[2,*] :count items'],
+            '{0} Geen sets|{1} :count set|[2,*] :count sets' => ['en' => '{0} No sets|{1} :count set|[2,*] :count sets', 'nl' => '{0} Geen sets|{1} :count set|[2,*] :count sets'],
             '301 redirects' => ['en' => '301 redirects', 'nl' => '301 verwijzingen'],
             'Aangepast op' => ['en' => 'Updated at', 'nl' => 'Aangepast op'],
             'Actief' => ['en' => 'Active', 'nl' => 'Actief'],
@@ -149,6 +277,7 @@ class TranslationModuleSeeder extends Seeder
             'Banners overview' => ['en' => 'Banners overview', 'nl' => 'Banners overzicht'],
             'Bekijken' => ['en' => 'View', 'nl' => 'Bekijken'],
             'Bestanden voorbereiden' => ['en' => 'Preparing files', 'nl' => 'Bestanden voorbereiden'],
+            'Breadcrumbs' => ['en' => 'Breadcrumbs', 'nl' => 'Broodkruimels'],
             'Bestandsgrootte' => ['en' => 'File size', 'nl' => 'Bestandsgrootte'],
             'Bestandstypes' => ['en' => 'File types', 'nl' => 'Bestandstypes'],
             'Bekijk gekoppelde items' => ['en' => 'View linked items', 'nl' => 'Bekijk gekoppelde items'],
@@ -186,14 +315,9 @@ class TranslationModuleSeeder extends Seeder
             'Commerce' => ['en' => 'Commerce', 'nl' => 'Webshop'],
             'Configuration' => ['en' => 'Configuration', 'nl' => 'Configuratie'],
             'Content' => ['en' => 'Content', 'nl' => 'Inhoud'],
-            'Content Categories' => ['en' => 'Content Categories', 'nl' => 'Content categorieen'],
             'Content blocks' => ['en' => 'Content blocks', 'nl' => 'Contentblokken'],
             'Content blocks saved.' => ['en' => 'Content blocks saved.', 'nl' => 'Contentblokken opgeslagen.'],
-            'Content item' => ['en' => 'Content item', 'nl' => 'Bericht'],
-            'Content images' => ['en' => 'Content images', 'nl' => 'Content afbeeldingen'],
-            'Content overview' => ['en' => 'Content overview', 'nl' => 'Berichten overzicht'],
-            'Content slider' => ['en' => 'Content slider', 'nl' => 'Content slider'],
-            'ContentItem' => ['en' => 'Content item', 'nl' => 'Bericht'],
+            'ContentItem' => ['en' => 'Page', 'nl' => 'Pagina'],
             'Add block' => ['en' => 'Add block', 'nl' => 'Blok toevoegen'],
             'Alignment' => ['en' => 'Alignment', 'nl' => 'Uitlijning'],
             'Alt text' => ['en' => 'Alt text', 'nl' => 'Alt-tekst'],
@@ -210,8 +334,12 @@ class TranslationModuleSeeder extends Seeder
             'Caption notes' => ['en' => 'Caption notes', 'nl' => 'Bijschrift-notities'],
             'Carousel ready' => ['en' => 'Carousel ready', 'nl' => 'Carousel voorbereid'],
             'Center' => ['en' => 'Center', 'nl' => 'Midden'],
+            'Change language' => ['en' => 'Change language', 'nl' => 'Taal wijzigen', 'fr' => 'Changer de langue'],
+            'Choose language' => ['en' => 'Choose language', 'nl' => 'Kies taal', 'fr' => 'Choisir la langue'],
             'Choose a width from 0 to 100 percent. Blocks form a grid when their widths fit next to each other.' => ['en' => 'Choose a width from 0 to 100 percent. Blocks form a grid when their widths fit next to each other.', 'nl' => 'Kies een breedte van 0 tot 100 procent. Blokken vormen een grid wanneer hun breedtes naast elkaar passen.'],
+            'Close' => ['en' => 'Close', 'nl' => 'Sluiten', 'fr' => 'Fermer'],
             'Collapse all' => ['en' => 'Collapse all', 'nl' => 'Alles inklappen'],
+            'Current language' => ['en' => 'Current language', 'nl' => 'Huidige taal', 'fr' => 'Langue actuelle'],
             'Default' => ['en' => 'Default', 'nl' => 'Standaard'],
             'Delete block' => ['en' => 'Delete block', 'nl' => 'Blok verwijderen'],
             'Display title' => ['en' => 'Display title', 'nl' => 'Weergavetitel'],
@@ -260,6 +388,7 @@ class TranslationModuleSeeder extends Seeder
             'Right' => ['en' => 'Right', 'nl' => 'Rechts'],
             'Save blocks' => ['en' => 'Save blocks', 'nl' => 'Blokken opslaan'],
             'Save changes' => ['en' => 'Save changes', 'nl' => 'Wijzigingen opslaan'],
+            'Samenvatting van inzending' => ['en' => 'Submission summary', 'nl' => 'Samenvatting van inzending'],
             'Saving...' => ['en' => 'Saving...', 'nl' => 'Opslaan...'],
             'Secondary' => ['en' => 'Secondary', 'nl' => 'Secundair'],
             'Style' => ['en' => 'Style', 'nl' => 'Stijl'],
@@ -288,6 +417,7 @@ class TranslationModuleSeeder extends Seeder
             'Download category overview' => ['en' => 'Download category overview', 'nl' => 'Download categorieen overzicht'],
             'Download overview' => ['en' => 'Download overview', 'nl' => 'Downloads overzicht'],
             'Downloads' => ['en' => 'Downloads', 'nl' => 'Downloads'],
+            'Dutch' => ['en' => 'Dutch', 'nl' => 'Nederlands'],
             'Edit' => ['en' => 'Edit', 'nl' => 'Bewerken'],
             'Edit FAQ category' => ['en' => 'Edit FAQ category', 'nl' => 'FAQ categorie bewerken'],
             'Edit FAQ item' => ['en' => 'Edit FAQ item', 'nl' => 'FAQ item bewerken'],
@@ -299,8 +429,6 @@ class TranslationModuleSeeder extends Seeder
             'Edit catalog product' => ['en' => 'Edit catalog product', 'nl' => 'Artikel bewerken'],
             'Edit catalog promotion' => ['en' => 'Edit catalog promotion', 'nl' => 'Promotie bewerken'],
             'Edit catalog review' => ['en' => 'Edit catalog review', 'nl' => 'Review bewerken'],
-            'Edit content category' => ['en' => 'Edit content category', 'nl' => 'Content categorie bewerken'],
-            'Edit content item' => ['en' => 'Edit content item', 'nl' => 'Bericht bewerken'],
             'Edit country' => ['en' => 'Edit country', 'nl' => 'Land bewerken'],
             'Edit delivery date' => ['en' => 'Edit delivery date', 'nl' => 'Afleverdatum bewerken'],
             'Edit domain' => ['en' => 'Edit domain', 'nl' => 'Domein bewerken'],
@@ -313,8 +441,6 @@ class TranslationModuleSeeder extends Seeder
             'Edit language' => ['en' => 'Edit language', 'nl' => 'Taal bewerken'],
             'Edit location' => ['en' => 'Edit location', 'nl' => 'Vestiging bewerken'],
             'Edit location category' => ['en' => 'Edit location category', 'nl' => 'Vestiging categorie bewerken'],
-            'Edit module' => ['en' => 'Edit module', 'nl' => 'Module bewerken'],
-            'Edit module category' => ['en' => 'Edit module category', 'nl' => 'Module categorie bewerken'],
             'Edit order' => ['en' => 'Edit order', 'nl' => 'Order bewerken'],
             'Edit redirect' => ['en' => 'Edit redirect', 'nl' => 'Redirect bewerken'],
             'Edit role' => ['en' => 'Edit role', 'nl' => 'Rol bewerken'],
@@ -335,31 +461,39 @@ class TranslationModuleSeeder extends Seeder
             'First login' => ['en' => 'First login', 'nl' => 'Eerste login'],
             'FAQ' => ['en' => 'FAQ', 'nl' => 'FAQ'],
             'FAQ Categories' => ['en' => 'FAQ Categories', 'nl' => 'FAQ categorieen'],
-            'FAQ images' => ['en' => 'FAQ images', 'nl' => 'FAQ afbeeldingen'],
+            'FAQ items' => ['en' => 'FAQ items', 'nl' => 'FAQ items'],
             'FAQ category overview' => ['en' => 'FAQ category overview', 'nl' => 'FAQ categorieen overzicht'],
             'FAQ overview' => ['en' => 'FAQ overview', 'nl' => 'FAQ overzicht'],
-            'FAQ videos' => ['en' => 'FAQ videos', 'nl' => 'FAQ videos'],
+            'Fallback' => ['en' => 'Fallback', 'nl' => 'Fallback'],
             'Faq' => ['en' => 'FAQ', 'nl' => 'FAQ'],
             'FaqCategorie' => ['en' => 'FAQ category', 'nl' => 'FAQ categorie'],
             'File' => ['en' => 'File', 'nl' => 'Bestand'],
+            'Bevestigingsmail opslaan' => ['en' => 'Save confirmation email', 'nl' => 'Bevestigingsmail opslaan'],
             'Form Categories' => ['en' => 'Form Categories', 'nl' => 'Formulier categorieen'],
-            'Form builder' => ['en' => 'Form builder', 'nl' => 'Form builder'],
             'Form builder blocks, rows, fields, options, messages, and submissions.' => ['en' => 'Form builder blocks, rows, fields, options, messages, and submissions.', 'nl' => 'Form builder blokken, rijen, velden, opties, berichten en inzendingen.'],
             'Form category overview' => ['en' => 'Form category overview', 'nl' => 'Formulier categorieen overzicht'],
             'Form messages' => ['en' => 'Form messages', 'nl' => 'Formulier berichten'],
+            'Formulier opgeslagen' => ['en' => 'Form saved.', 'nl' => 'Formulier opgeslagen'],
+            'Formulier opslaan' => ['en' => 'Save form', 'nl' => 'Formulier opslaan'],
+            'Formuliernaam' => ['en' => 'Form name', 'nl' => 'Formuliernaam'],
+            'Formuliervelden' => ['en' => 'Form fields', 'nl' => 'Formuliervelden'],
             'Forms' => ['en' => 'Forms', 'nl' => 'Formulieren'],
             'Forms overview' => ['en' => 'Forms overview', 'nl' => 'Formulieren overzicht'],
             'Forgotten password' => ['en' => 'Forgotten password', 'nl' => 'Wachtwoord vergeten'],
             'Frontend' => ['en' => 'Frontend', 'nl' => 'Frontend'],
+            'French' => ['en' => 'French', 'nl' => 'Frans'],
             'Gemaakt op' => ['en' => 'Created at', 'nl' => 'Gemaakt op'],
             'Geen blokken' => ['en' => 'No blocks', 'nl' => 'Geen blokken'],
             'Geen gekoppelde items gevonden.' => ['en' => 'No linked items found.', 'nl' => 'Geen gekoppelde items gevonden.'],
+            'Geen items in deze set.' => ['en' => 'No items in this set.', 'nl' => 'Geen items in deze set.'],
             'Geen rollen gevonden.' => ['en' => 'No roles found.', 'nl' => 'Geen rollen gevonden.'],
+            'Geen tijdschema sets gevonden.' => ['en' => 'No schedule sets found.', 'nl' => 'Geen tijdschema sets gevonden.'],
             'Geen translations gevonden.' => ['en' => 'No translations found.', 'nl' => 'Geen vertalingen gevonden.'],
             'Gebruikers' => ['en' => 'Users', 'nl' => 'Gebruikers'],
             'Gebruikersnaam' => ['en' => 'Username', 'nl' => 'Gebruikersnaam'],
             'Generate address sticker' => ['en' => 'Generate address sticker', 'nl' => 'Adressticker maken'],
             'Generate order export' => ['en' => 'Generate order export', 'nl' => 'Order export maken'],
+            'German' => ['en' => 'German', 'nl' => 'Duits'],
             'Group' => ['en' => 'Group', 'nl' => 'Groep'],
             'Guestbook' => ['en' => 'Guestbook', 'nl' => 'Gastenboek'],
             'Home' => ['en' => 'Home', 'nl' => 'Home'],
@@ -373,11 +507,14 @@ class TranslationModuleSeeder extends Seeder
             'Images uploaded.' => ['en' => 'Images uploaded.', 'nl' => 'Afbeeldingen geupload.'],
             'Inactief' => ['en' => 'Inactive', 'nl' => 'Inactief'],
             'Ingelogd als: ' => ['en' => 'Logged in as: ', 'nl' => 'Ingelogd als: '],
+            'Inklappen' => ['en' => 'Collapse', 'nl' => 'Inklappen'],
+            'Item toevoegen' => ['en' => 'Add item', 'nl' => 'Item toevoegen'],
+            'Item verwijderen' => ['en' => 'Remove item', 'nl' => 'Item verwijderen'],
             'Ja' => ['en' => 'Yes', 'nl' => 'Ja'],
             'JPG, PNG, GIF en WebP' => ['en' => 'JPG, PNG, GIF, and WebP', 'nl' => 'JPG, PNG, GIF en WebP'],
             'Key' => ['en' => 'Key', 'nl' => 'Sleutel'],
             'Kies een optie' => ['en' => 'Choose an option', 'nl' => 'Kies een optie'],
-            'Language' => ['en' => 'Language', 'nl' => 'Taal'],
+            'Language' => ['en' => 'Language', 'nl' => 'Taal', 'fr' => 'Langue'],
             'Localization' => ['en' => 'Localization', 'nl' => 'Vertalingen'],
             'Locations' => ['en' => 'Locations', 'nl' => 'Vestigingen'],
             'Location Categories' => ['en' => 'Location Categories', 'nl' => 'Vestiging categorieen'],
@@ -393,16 +530,13 @@ class TranslationModuleSeeder extends Seeder
             'Metadata' => ['en' => 'Metadata', 'nl' => 'Metadata'],
             'Meta Description' => ['en' => 'Meta Description', 'nl' => 'Meta omschrijving'],
             'Module' => ['en' => 'Module', 'nl' => 'Module'],
-            'Module Categories' => ['en' => 'Module Categories', 'nl' => 'Module categorieen'],
-            'Module Manager' => ['en' => 'Module Manager', 'nl' => 'Modulebeheer'],
-            'Module category overview' => ['en' => 'Module category overview', 'nl' => 'Module categorieen overzicht'],
-            'Module overview' => ['en' => 'Module overview', 'nl' => 'Modules overzicht'],
             'Module rechten' => ['en' => 'Module permissions', 'nl' => 'Module rechten'],
             'Modules' => ['en' => 'Modules', 'nl' => 'Modules'],
             'Name' => ['en' => 'Name', 'nl' => 'Naam'],
             'Naam' => ['en' => 'Name', 'nl' => 'Naam'],
             'Naamloos item' => ['en' => 'Untitled item', 'nl' => 'Naamloos item'],
             'Nee' => ['en' => 'No', 'nl' => 'Nee'],
+            'Nieuwe set' => ['en' => 'New set', 'nl' => 'Nieuwe set'],
             'Nog :count extra gekoppelde items.' => ['en' => ':count more linked items.', 'nl' => 'Nog :count extra gekoppelde items.'],
             'No translations found.' => ['en' => 'No translations found.', 'nl' => 'Geen vertalingen gevonden.'],
             'Offline' => ['en' => 'Offline', 'nl' => 'Offline'],
@@ -421,7 +555,14 @@ class TranslationModuleSeeder extends Seeder
             'Order totals' => ['en' => 'Order totals', 'nl' => 'Order totalen'],
             'Orders' => ['en' => 'Orders', 'nl' => 'Orders'],
             'Page' => ['en' => 'Page', 'nl' => 'Pagina'],
-            'Pages, content categories, blocks, images, and attachments.' => ['en' => 'Pages, content categories, blocks, images, and attachments.', 'nl' => 'Pagina\'s, content categorieen, blokken, afbeeldingen en bijlagen.'],
+            'Page Categories' => ['en' => 'Page Categories', 'nl' => 'Paginacategorieen'],
+            'Page category' => ['en' => 'Page category', 'nl' => 'Paginacategorie'],
+            'Page category overview' => ['en' => 'Page category overview', 'nl' => 'Paginacategorieen overzicht'],
+            'Page images' => ['en' => 'Page images', 'nl' => 'Pagina afbeeldingen'],
+            'Page slider' => ['en' => 'Page slider', 'nl' => 'Pagina slider'],
+            'Pages' => ['en' => 'Pages', 'nl' => 'Pagina\'s'],
+            'Pages overview' => ['en' => 'Pages overview', 'nl' => 'Pagina\'s overzicht'],
+            'Pages, page categories, blocks, images, and attachments.' => ['en' => 'Pages, page categories, blocks, images, and attachments.', 'nl' => 'Pagina\'s, paginacategorieen, blokken, afbeeldingen en bijlagen.'],
             'Payment Methods' => ['en' => 'Payment Methods', 'nl' => 'Betaalmethoden'],
             'Payment method overview' => ['en' => 'Payment method overview', 'nl' => 'Betaalmethoden overzicht'],
             'Platform' => ['en' => 'Platform', 'nl' => 'Platform'],
@@ -432,13 +573,14 @@ class TranslationModuleSeeder extends Seeder
             'Product stock' => ['en' => 'Product stock', 'nl' => 'Product voorraad'],
             'Product translations' => ['en' => 'Product translations', 'nl' => 'Product vertalingen'],
             'Product videos' => ['en' => 'Product videos', 'nl' => 'Product videos'],
+            'Products' => ['en' => 'Products', 'nl' => 'Producten'],
             'Products, categories, brands, promotions, discounts, media, stock, reviews, and product options.' => ['en' => 'Products, categories, brands, promotions, discounts, media, stock, reviews, and product options.', 'nl' => 'Producten, categorieen, merken, promoties, kortingen, media, voorraad, reviews en product opties.'],
             'Promotion' => ['en' => 'Promotion', 'nl' => 'Promotie'],
             'Querystring' => ['en' => 'Querystring', 'nl' => 'Querystring'],
             'Record' => ['en' => 'Record', 'nl' => 'Record'],
             'Record created.' => ['en' => 'Record created.', 'nl' => 'Record aangemaakt.'],
             'Record deleted.' => ['en' => 'Record deleted.', 'nl' => 'Record verwijderd.'],
-            'Record updated.' => ['en' => 'Record updated.', 'nl' => 'Record bijgewerkt.'],
+            'Record saved.' => ['en' => 'Record saved.', 'nl' => 'Record opgeslagen.'],
             'Redirect overview' => ['en' => 'Redirect overview', 'nl' => 'Redirects overzicht'],
             'Redirects' => ['en' => 'Redirects', 'nl' => 'Redirects'],
             'Reset password' => ['en' => 'Reset password', 'nl' => 'Wachtwoord resetten'],
@@ -456,12 +598,16 @@ class TranslationModuleSeeder extends Seeder
             'Security' => ['en' => 'Security', 'nl' => 'Beveiliging'],
             'Selecteer' => ['en' => 'Select', 'nl' => 'Selecteer'],
             'Selecteer een categorie om de URL en gekoppelde items te bekijken.' => ['en' => 'Select a category to view the URL and linked items.', 'nl' => 'Selecteer een categorie om de URL en gekoppelde items te bekijken.'],
+            'Set naam' => ['en' => 'Set name', 'nl' => 'Set naam'],
+            'Set toevoegen' => ['en' => 'Add set', 'nl' => 'Set toevoegen'],
+            'Set verwijderen' => ['en' => 'Remove set', 'nl' => 'Set verwijderen'],
             'Shared' => ['en' => 'Shared', 'nl' => 'Gedeeld'],
             'Settings' => ['en' => 'Settings', 'nl' => 'Instellingen'],
             'Slider Categories' => ['en' => 'Slider Categories', 'nl' => 'Slider categorieen'],
             'Slider category overview' => ['en' => 'Slider category overview', 'nl' => 'Slider categorieen overzicht'],
             'Slider overview' => ['en' => 'Slider overview', 'nl' => 'Sliders overzicht'],
             'Sliders' => ['en' => 'Sliders', 'nl' => 'Sliders'],
+            'Sla het evenement eerst op voordat u het tijdschema opbouwt.' => ['en' => 'Save the event before building the schedule.', 'nl' => 'Sla het evenement eerst op voordat u het tijdschema opbouwt.'],
             'Sluiten' => ['en' => 'Close', 'nl' => 'Sluiten'],
             'Slug' => ['en' => 'Slug', 'nl' => 'Slug'],
             'Source' => ['en' => 'Source', 'nl' => 'Bron'],
@@ -475,11 +621,15 @@ class TranslationModuleSeeder extends Seeder
             'Synchroniseren' => ['en' => 'Synchronize', 'nl' => 'Synchroniseren'],
             'Synchroniseren...' => ['en' => 'Synchronizing...', 'nl' => 'Synchroniseren...'],
             'System managed' => ['en' => 'System managed', 'nl' => 'Systeembeheer'],
+            'Systeemtags' => ['en' => 'System tags', 'nl' => 'Systeemtags'],
             'Taal' => ['en' => 'Language', 'nl' => 'Taal'],
             'Target' => ['en' => 'Target', 'nl' => 'Doel'],
             'Target Url' => ['en' => 'Target URL', 'nl' => 'Doel URL'],
             'Terug' => ['en' => 'Back', 'nl' => 'Terug'],
             'Terug naar overzicht' => ['en' => 'Back to overview', 'nl' => 'Terug naar overzicht'],
+            'Tijdschema opgeslagen.' => ['en' => 'Schedule saved.', 'nl' => 'Tijdschema opgeslagen.'],
+            'Tijdschema opslaan' => ['en' => 'Save schedule', 'nl' => 'Tijdschema opslaan'],
+            'Tijdschema sets' => ['en' => 'Schedule sets', 'nl' => 'Tijdschema sets'],
             'Tijdvenster' => ['en' => 'Time window', 'nl' => 'Tijdvenster'],
             'Titel' => ['en' => 'Title', 'nl' => 'Titel'],
             'Title' => ['en' => 'Title', 'nl' => 'Titel'],
@@ -496,6 +646,7 @@ class TranslationModuleSeeder extends Seeder
             'Translations' => ['en' => 'Translations', 'nl' => 'Vertalingen'],
             'Translations saved.' => ['en' => 'Translations saved.', 'nl' => 'Vertalingen opgeslagen.'],
             'Translations synchronized: :created created, :updated updated.' => ['en' => 'Translations synchronized: :created created, :updated updated.', 'nl' => 'Vertalingen gesynchroniseerd: :created aangemaakt, :updated bijgewerkt.'],
+            'Uitklappen' => ['en' => 'Expand', 'nl' => 'Uitklappen'],
             'Uitloggen' => ['en' => 'Log out', 'nl' => 'Uitloggen'],
             'URL' => ['en' => 'URL', 'nl' => 'URL'],
             'URL References' => ['en' => 'URL References', 'nl' => 'URL verwijzingen'],
@@ -526,13 +677,14 @@ class TranslationModuleSeeder extends Seeder
             'Website' => ['en' => 'Website', 'nl' => 'Website'],
             'Website languages' => ['en' => 'Website languages', 'nl' => 'Website talen'],
             'Zoeken' => ['en' => 'Search', 'nl' => 'Zoeken'],
+            'Zoeken in alle talen' => ['en' => 'Search in all languages', 'nl' => 'Zoeken in alle talen'],
             'Actiecode' => ['en' => 'Action code', 'nl' => 'Actiecode'],
             'BannerCategorie' => ['en' => 'Banner category', 'nl' => 'Banner categorie'],
             'CatalogusArtikel' => ['en' => 'Catalog product', 'nl' => 'Catalogus artikel'],
             'CatalogusCategorie' => ['en' => 'Catalog category', 'nl' => 'Catalogus categorie'],
             'CatalogusMerk' => ['en' => 'Catalog brand', 'nl' => 'Merk'],
             'CatalogusPromotie' => ['en' => 'Catalog promotion', 'nl' => 'Catalogus promotie'],
-            'ContentCategorie' => ['en' => 'Content category', 'nl' => 'Content categorie'],
+            'ContentCategorie' => ['en' => 'Page category', 'nl' => 'Paginacategorie'],
             'Domein' => ['en' => 'Domain', 'nl' => 'Domein'],
             'Download' => ['en' => 'Download', 'nl' => 'Download'],
             'DownloadCategorie' => ['en' => 'Download category', 'nl' => 'Download categorie'],
@@ -540,8 +692,7 @@ class TranslationModuleSeeder extends Seeder
             'EvenementCategorie' => ['en' => 'Event category', 'nl' => 'Evenement categorie'],
             'Form' => ['en' => 'Form', 'nl' => 'Formulier'],
             'FormCategorie' => ['en' => 'Form category', 'nl' => 'Formulier categorie'],
-            'Isoland' => ['en' => 'Country', 'nl' => 'Land'],
-            'ModuleCategorie' => ['en' => 'Module category', 'nl' => 'Module categorie'],
+            'Country' => ['en' => 'Country', 'nl' => 'Land'],
             'Order' => ['en' => 'Order', 'nl' => 'Order'],
             'OrderAfleverData' => ['en' => 'Delivery date', 'nl' => 'Afleverdatum'],
             'Redirect' => ['en' => 'Redirect', 'nl' => 'Redirect'],
@@ -553,5 +704,15 @@ class TranslationModuleSeeder extends Seeder
             'Urlverwijzing' => ['en' => 'URL reference', 'nl' => 'URL verwijzing'],
             'User' => ['en' => 'User', 'nl' => 'Gebruiker'],
         ];
+
+        return $defaults + self::supplementalDefaults();
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private static function supplementalDefaults(): array
+    {
+        return require __DIR__.'/translation-defaults/backend.php';
     }
 }

@@ -21,6 +21,8 @@ class NavigationLinkSearchRequest extends FormRequest
         return [
             'type' => ['required', Rule::in(app(NavigationLinkRegistry::class)->allowedTypes())],
             'q' => ['nullable', 'string', 'max:100'],
+            'locale' => ['nullable', 'string', 'max:8'],
+            'all_languages' => ['sometimes', 'boolean'],
         ];
     }
 }

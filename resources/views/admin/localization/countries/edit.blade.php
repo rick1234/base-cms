@@ -16,11 +16,11 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="country-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <button class="btn btn-save-and-stay" form="country-form" name="saveAndStay" type="submit" value="1">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan en blijven') }}
                 </button>
                 @if ($isExisting)
@@ -28,14 +28,14 @@
                         @csrf
                         @method('delete')
                         <button class="btn btn-remove" type="submit">
-                            <span class="flaticon-close-button"></span>
+                            <x-admin.material-icon name="delete" />
                             {{ __('Verwijderen') }}
                         </button>
                     </form>
                 @endif
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -175,65 +175,11 @@
                     </div>
                 </div>
 
-                <div class="main-section">
-                    <h2 class="title">{{ __('Verzendkosten') }}</h2>
-                    <div class="grid">
-                        <div class="grid-row">
-                            <div class="col-6">
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="shipping_general_cents">{{ __('Algemeen') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="shipping_general_cents" name="shipping_general_cents" min="0" type="number" value="{{ old('shipping_general_cents', $country->shipping_general_cents) }}">
-                                        <span class="message">{{ __('In centen') }}</span>
-                                        @include('admin.content.partials.field-error', ['field' => 'shipping_general_cents'])
-                                    </div>
-                                </div>
-
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="shipping_envelope_cents">{{ __('Envelope') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="shipping_envelope_cents" name="shipping_envelope_cents" min="0" type="number" value="{{ old('shipping_envelope_cents', $country->shipping_envelope_cents) }}">
-                                        <span class="message">{{ __('In centen') }}</span>
-                                        @include('admin.content.partials.field-error', ['field' => 'shipping_envelope_cents'])
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-6">
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="shipping_small_box_cents">{{ __('Smallbox') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="shipping_small_box_cents" name="shipping_small_box_cents" min="0" type="number" value="{{ old('shipping_small_box_cents', $country->shipping_small_box_cents) }}">
-                                        <span class="message">{{ __('In centen') }}</span>
-                                        @include('admin.content.partials.field-error', ['field' => 'shipping_small_box_cents'])
-                                    </div>
-                                </div>
-
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="shipping_big_box_cents">{{ __('Bigbox') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="shipping_big_box_cents" name="shipping_big_box_cents" min="0" type="number" value="{{ old('shipping_big_box_cents', $country->shipping_big_box_cents) }}">
-                                        <span class="message">{{ __('In centen') }}</span>
-                                        @include('admin.content.partials.field-error', ['field' => 'shipping_big_box_cents'])
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </form>
 
             @if ($isExisting)
                 <div class="author-container">
-                    <span><strong>{{ __('Auteur') }}:</strong> {{ $country->created_by ?? '-' }}</span>
+                    <span><strong>{{ __('Gemaakt door') }}:</strong> {{ $country->creator?->fullName() ?? '-' }}</span>
                     <span><strong>{{ __('Gemaakt op') }}:</strong> {{ optional($country->created_at)->format('d-m-Y H:i') }}</span>
                     @if ($country->updated_at)
                         <span><strong>{{ __('Aangepast op') }}:</strong> {{ $country->updated_at->format('d-m-Y H:i') }}</span>

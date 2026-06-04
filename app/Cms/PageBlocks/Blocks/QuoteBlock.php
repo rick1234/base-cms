@@ -29,7 +29,6 @@ class QuoteBlock extends BasePageBlock
         return [
             Textarea::make('data.quote')
                 ->label(__('Quote'))
-                ->required()
                 ->rows(4)
                 ->columnSpanFull(),
             TextInput::make('data.author')

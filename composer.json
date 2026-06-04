@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.5",
+        "bacon/bacon-qr-code": "^3.1",
         "commerceguys/addressing": "^2.2",
         "commerceguys/intl": "^2.0",
         "filament/filament": "^5.6",

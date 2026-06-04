@@ -11,12 +11,12 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="banner-bulk-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Uploaden') }}
                 </button>
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -33,7 +33,7 @@
                         <div class="attachment-row form-item">
                             <input name="banners[]" id="bulk_banners" type="file" class="attachment-row-input" accept="image/*" multiple required>
                             <label for="bulk_banners" class="attachment-label">
-                                <span class="admin-symbol admin-symbol-attachment" aria-hidden="true"></span>
+                                <x-admin.material-icon name="attach_file" />
                                 {{ __('Kies bestanden') }}
                             </label>
                         </div>

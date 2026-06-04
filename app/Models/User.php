@@ -3,9 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Models\Cms\UserCategory;
 use App\Models\Cms\CmsPermission;
 use App\Models\Cms\CmsRole;
+use App\Models\Cms\UserCategory;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -136,6 +136,15 @@ class User extends Authenticatable
         return $this->username ?: $this->name ?: $this->email;
     }
 
+    public function fullName(): string
+    {
+        $fullName = trim(collect([$this->first_name, $this->middle_name, $this->last_name])
+            ->filter()
+            ->implode(' '));
+
+        return $fullName ?: ($this->name ?: $this->username ?: $this->email);
+    }
+
     public function hasAdminPermission(string $permissionKey): bool
     {
         if (! $this->isActive()) {
@@ -156,6 +165,11 @@ class User extends Authenticatable
             ->where('permission_key', $permissionKey)
             ->whereHas('roles', fn ($query) => $query->whereIn('roles.id', $roles->pluck('id')))
             ->exists();
+    }
+
+    public function isSuperUser(): bool
+    {
+        return $this->isActive() && $this->is_admin;
     }
 
     /**

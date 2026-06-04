@@ -16,9 +16,9 @@ class FrontendNavigationBuilder
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    public function tree(string $handle = 'primary', ?Domain $domain = null): Collection
+    public function tree(string $handle = 'primary', ?Domain $domain = null, ?string $locale = null): Collection
     {
-        $menu = $this->menu($handle, $domain);
+        $menu = $this->menu($handle, $domain, $this->normalizeLocale($locale));
 
         if (! $menu instanceof NavigationMenu) {
             return collect();
@@ -32,30 +32,51 @@ class FrontendNavigationBuilder
         return $this->childrenFor(0, $items);
     }
 
-    private function menu(string $handle, ?Domain $domain): ?NavigationMenu
+    private function menu(string $handle, ?Domain $domain, ?string $locale): ?NavigationMenu
     {
         if (! $this->hasNavigationTables()) {
             return null;
         }
 
         try {
-            $baseQuery = NavigationMenu::query()
-                ->active()
-                ->where('handle', $handle)
-                ->whereNull('locale')
-                ->ordered();
+            $scopes = [];
 
             if ($domain instanceof Domain) {
-                $domainMenu = (clone $baseQuery)
-                    ->where('domain_id', $domain->id)
-                    ->first();
+                if ($locale !== null) {
+                    $scopes[] = ['domain_id' => $domain->id, 'locale' => $locale];
+                }
 
-                if ($domainMenu instanceof NavigationMenu) {
-                    return $domainMenu;
+                $scopes[] = ['domain_id' => $domain->id, 'locale' => null];
+            }
+
+            if ($locale !== null) {
+                $scopes[] = ['domain_id' => null, 'locale' => $locale];
+            }
+
+            $scopes[] = ['domain_id' => null, 'locale' => null];
+
+            foreach ($scopes as $scope) {
+                $query = NavigationMenu::query()
+                    ->active()
+                    ->where('handle', $handle)
+                    ->ordered();
+
+                $scope['domain_id'] === null
+                    ? $query->whereNull('domain_id')
+                    : $query->where('domain_id', $scope['domain_id']);
+
+                $scope['locale'] === null
+                    ? $query->whereNull('locale')
+                    : $query->where('locale', $scope['locale']);
+
+                $menu = $query->first();
+
+                if ($menu instanceof NavigationMenu) {
+                    return $menu;
                 }
             }
 
-            return (clone $baseQuery)->whereNull('domain_id')->first();
+            return null;
         } catch (QueryException) {
             return null;
         }
@@ -102,5 +123,12 @@ class FrontendNavigationBuilder
         } catch (QueryException) {
             return false;
         }
+    }
+
+    private function normalizeLocale(?string $locale): ?string
+    {
+        $locale = strtolower(trim(str_replace('_', '-', (string) $locale)));
+
+        return $locale !== '' ? $locale : null;
     }
 }

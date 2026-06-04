@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 
 class CmsModuleController extends Controller
 {
@@ -65,7 +66,7 @@ class CmsModuleController extends Controller
         $definition = $modules->find($module);
         $modules->updateRecord($definition, $record, $request->validated(), $request->user()?->id);
 
-        flash(__('Record updated.'))->success();
+        flash(__('Record saved.'))->success();
 
         return $this->redirectToEdit($definition, $record);
     }
@@ -197,7 +198,36 @@ class CmsModuleController extends Controller
             'columns' => $modules->columns($definition),
             'rows' => $modules->rows($definition),
             'routeNames' => $this->routeNames(),
+            'emptyStateMessage' => $this->emptyStateMessage($definition),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     */
+    private function emptyStateMessage(array $definition): string
+    {
+        $label = $this->emptyStateLabel($definition);
+
+        return __('No :module found.', [
+            'module' => Str::of(__($label))->lower()->toString(),
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     */
+    private function emptyStateLabel(array $definition): string
+    {
+        return match ($definition['table'] ?? null) {
+            'catalog_products' => 'Products',
+            'faq_items' => 'FAQ items',
+            'guestbook_entries' => 'Guestbook entries',
+            'navigation_menus' => 'Navigation menus',
+            'redirects' => 'Redirects',
+            'translation_keys' => 'Translations',
+            default => (string) ($definition['empty_label'] ?? $definition['name'] ?? 'records'),
+        };
     }
 
     /**
@@ -258,7 +288,7 @@ class CmsModuleController extends Controller
         if ($id > 0 && $modules->findRecord($definition, $id)) {
             $modules->updateRecord($definition, $id, $request->validated(), $request->user()?->id);
 
-            flash(__('Record updated.'))->success();
+            flash(__('Record saved.'))->success();
 
             return redirect()
                 ->route($this->routeNames()['page'], [$definition['folder'], $definition['page_key'], 'id' => $id]);

@@ -15,13 +15,14 @@
 
         <div class="main has-buttons">
             <div class="buttons-container align-right">
+                @include('admin.partials.category-related-items-button')
                 <button class="btn btn-save" form="location-category-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -49,15 +50,6 @@
                                     <div class="form-item-input">
                                         <input id="name" name="name" type="text" value="{{ old('name', $category->name) }}" required>
                                         @include('admin.content.partials.field-error', ['field' => 'name'])
-                                    </div>
-                                </div>
-
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="slug">{{ __('Slug') }}</label>
-                                    </div>
-                                    <div class="form-item-input">
-                                        <input id="slug" name="slug" type="text" value="{{ old('slug', $category->slug) }}">
                                     </div>
                                 </div>
 

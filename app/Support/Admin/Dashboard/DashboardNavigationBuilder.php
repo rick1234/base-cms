@@ -14,10 +14,16 @@ class DashboardNavigationBuilder
      */
     private const MODULE_TREE = [
         'content' => [
-            ['title' => 'Content', 'icon' => 'content', 'screens' => ['content_items', 'content_categories']],
-            ['title' => 'FAQ', 'icon' => 'faq', 'screens' => ['faq_items', 'faq_categories']],
+            ['title' => 'Navigation', 'icon' => 'website', 'screens' => ['navigation']],
+            ['title' => 'Pages', 'icon' => 'content', 'screens' => ['content_items', 'content_categories']],
             ['title' => 'Forms', 'icon' => 'form', 'screens' => ['forms', 'form_categories']],
+        ],
+        'modules' => [
+            ['title' => 'FAQ', 'icon' => 'faq', 'screens' => ['faq_items', 'faq_categories']],
             ['title' => 'Vacancies', 'icon' => 'vacatures', 'screens' => ['vacancies', 'vacancy_categories']],
+            ['title' => 'Events', 'icon' => 'evenementen', 'screens' => ['events', 'event_categories']],
+            ['title' => 'Downloads', 'icon' => 'download', 'screens' => ['downloads', 'download_categories']],
+            ['title' => 'Locations', 'icon' => 'vestigingen', 'screens' => ['locations', 'location_categories']],
         ],
         'commerce' => [
             ['title' => 'Catalog', 'icon' => 'catalogus', 'screens' => ['catalog_products', 'catalog_categories', 'catalog_brands']],
@@ -30,27 +36,20 @@ class DashboardNavigationBuilder
         ],
         'users' => [
             ['title' => 'Users', 'icon' => 'users', 'screens' => ['users', 'user_categories']],
-        ],
-        'locations' => [
-            ['title' => 'Locations', 'icon' => 'vestigingen', 'screens' => ['locations', 'location_categories']],
-        ],
-        'events' => [
-            ['title' => 'Events', 'icon' => 'evenementen', 'screens' => ['events', 'event_categories']],
+            ['title' => 'Roles and Permissions', 'icon' => 'roles', 'screens' => ['roles']],
         ],
         'seo' => [
             ['title' => 'SEO', 'icon' => 'redirect', 'screens' => ['redirects', 'urls', 'url_references']],
         ],
-        'modules' => [
-            ['title' => 'Modules', 'icon' => 'module', 'screens' => ['downloads', 'download_categories']],
+        'language' => [
+            ['title' => 'Translations', 'icon' => 'translations', 'screens' => ['translations']],
+            ['title' => 'Countries', 'icon' => 'countries', 'screens' => ['countries']],
         ],
         'configuration' => [
-            ['title' => 'Configuration', 'icon' => 'settings', 'screens' => ['roles', 'domains', 'website_templates', 'countries', 'module_manager', 'module_categories']],
-        ],
-        'localization' => [
-            ['title' => 'Translations', 'icon' => 'translations', 'screens' => ['translations']],
+            ['title' => 'Configuration', 'icon' => 'settings', 'screens' => ['domains', 'website_templates']],
         ],
         'website' => [
-            ['title' => 'Website', 'icon' => 'website', 'screens' => ['navigation', 'guestbook']],
+            ['title' => 'Website', 'icon' => 'website', 'screens' => ['guestbook']],
         ],
     ];
 
@@ -90,6 +89,34 @@ class DashboardNavigationBuilder
     }
 
     /**
+     * @return Collection<int, array{title: string, icon: string, theme: string, url: string, overview_title: string, overview_screen: string|null, subitems: Collection<int, array{title: string, url: string, icon: string, screen_key: string}>}>
+     */
+    public function moduleList(bool $legacyRoutes = false): Collection
+    {
+        return $this->build($legacyRoutes)
+            ->flatMap(fn (array $group): Collection => $group['modules'])
+            ->map(function (array $module): ?array {
+                $overview = $module['links']->first();
+
+                if (! $overview) {
+                    return null;
+                }
+
+                return [
+                    'title' => $module['title'],
+                    'icon' => $module['icon'],
+                    'theme' => $module['theme'],
+                    'url' => $overview['url'],
+                    'overview_title' => $overview['title'],
+                    'overview_screen' => $overview['screen_key'] ?? null,
+                    'subitems' => $module['links']->skip(1)->values(),
+                ];
+            })
+            ->filter()
+            ->values();
+    }
+
+    /**
      * @param  array{title: string, icon: string, screens: array<int, string>}  $module
      * @param  Collection<string, array<string, mixed>>  $screens
      * @return array{title: string, icon: string, theme: string, links: Collection<int, array{title: string, url: string, icon: string}>}|null
@@ -115,7 +142,7 @@ class DashboardNavigationBuilder
 
     /**
      * @param  Collection<string, array<string, mixed>>  $screens
-     * @return array{title: string, url: string, icon: string}|null
+     * @return array{title: string, url: string, icon: string, screen_key: string}|null
      */
     private function buildLink(string $screenKey, Collection $screens, bool $legacyRoutes, string $fallbackIcon): ?array
     {
@@ -128,6 +155,7 @@ class DashboardNavigationBuilder
 
         if (! $legacyRoutes && isset($screen['admin_route']) && is_string($screen['admin_route'])) {
             return [
+                'screen_key' => $screenKey,
                 'title' => (string) data_get($screen, 'pages.index.name', $screen['name']),
                 'url' => route($screen['admin_route']),
                 'icon' => $this->materialIcon($fallbackIcon),
@@ -138,6 +166,7 @@ class DashboardNavigationBuilder
         $routeName = $legacyRoutes ? 'cms.modules.show' : 'admin.modules.show';
 
         return [
+            'screen_key' => $screenKey,
             'title' => (string) data_get($screen, 'pages.index.name', $screen['name']),
             'url' => route($routeName, $path),
             'icon' => $this->materialIcon($fallbackIcon),
@@ -217,7 +246,7 @@ class DashboardNavigationBuilder
             'domein' => 'domein',
             'evenementen' => 'evenementen',
             'form' => 'form',
-            'isolanden' => 'isoland',
+            'landen' => 'countries',
             'vacatures' => 'vacatures',
             'vestigingen' => 'vestigingen',
             default => $name,

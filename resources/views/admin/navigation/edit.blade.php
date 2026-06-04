@@ -2,10 +2,28 @@
 
 @php
     $isExisting = (bool) $menu->id;
+    $showTechnicalName = (bool) auth()->user()?->is_admin;
     $title = $isExisting ? __('Edit navigation: :name', ['name' => $menu->name]) : __('Create navigation menu');
     $oldItemsPayload = old('items_payload');
     $oldItems = is_string($oldItemsPayload) ? json_decode($oldItemsPayload, true) : null;
     $initialItems = is_array($oldItems) ? $oldItems : $itemsPayload;
+    $selectedLocale = old('locale', $menu->locale ?: $defaultLocale);
+    $builderLabels = [
+        'active' => __('Active'),
+        'allLanguages' => __('Zoeken in alle talen'),
+        'changeLink' => __('Change link'),
+        'customUrl' => __('Custom URL'),
+        'editSource' => __('Edit source'),
+        'linkedItem' => __('Linked item'),
+        'moveItem' => __('Move item'),
+        'navigationTitle' => __('Navigation title'),
+        'noResults' => __('No results found.'),
+        'removeItem' => __('Remove item'),
+        'searchFailed' => __('Search failed.'),
+        'searching' => __('Searching...'),
+        'select' => __('Select'),
+        'useSubcategoriesAsSubmenu' => __('Use subcategories as submenu'),
+    ];
 @endphp
 
 @section('title', $title)
@@ -19,7 +37,7 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="navigation-menu-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 @if ($isExisting)
@@ -27,14 +45,14 @@
                         @csrf
                         @method('delete')
                         <button class="btn btn-remove" type="submit">
-                            <span class="flaticon-close-button"></span>
+                            <x-admin.material-icon name="delete" />
                             {{ __('Verwijderen') }}
                         </button>
                     </form>
                 @endif
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -44,8 +62,11 @@
                 action="{{ $isExisting ? route('admin.navigation.update', $menu) : route('admin.navigation.store') }}"
                 data-navigation-builder
                 data-link-options-url="{{ route('admin.navigation.link-options') }}"
+                data-link-types-url="{{ route('admin.navigation.link-types') }}"
                 data-link-types='@json($linkTypes)'
                 data-initial-items='@json($initialItems)'
+                data-navigation-labels='@json($builderLabels)'
+                data-navigation-locale="{{ $selectedLocale }}"
             >
                 @csrf
                 @if ($isExisting)
@@ -75,15 +96,17 @@
                                     </div>
                                 </div>
 
-                                <div class="form-item">
-                                    <div class="form-item-label">
-                                        <label for="handle">{{ __('Handle') }}</label>
+                                @if ($showTechnicalName)
+                                    <div class="form-item">
+                                        <div class="form-item-label">
+                                            <label for="handle">{{ __('Handle') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <input id="handle" name="handle" type="text" value="{{ old('handle', $menu->handle) }}" required>
+                                            @include('admin.content.partials.field-error', ['field' => 'handle'])
+                                        </div>
                                     </div>
-                                    <div class="form-item-input">
-                                        <input id="handle" name="handle" type="text" value="{{ old('handle', $menu->handle) }}" required>
-                                        @include('admin.content.partials.field-error', ['field' => 'handle'])
-                                    </div>
-                                </div>
+                                @endif
                             </div>
 
                             <div class="col-6">
@@ -104,10 +127,15 @@
 
                                 <div class="form-item">
                                     <div class="form-item-label">
-                                        <label for="locale">{{ __('Locale') }}</label>
+                                        <label>{{ __('Taal') }}</label>
                                     </div>
                                     <div class="form-item-input">
-                                        <input id="locale" name="locale" type="text" value="{{ old('locale', $menu->locale) }}" maxlength="8">
+                                        <x-admin.locale-radio-group
+                                            name="locale"
+                                            :selected="$selectedLocale"
+                                            :locales="$languages->isNotEmpty() ? $languages : ['nl', 'en', 'fr']"
+                                            id-prefix="navigation_locale"
+                                        />
                                         @include('admin.content.partials.field-error', ['field' => 'locale'])
                                     </div>
                                 </div>
@@ -131,7 +159,7 @@
                             <h2 class="title">{{ __('Menu items') }}</h2>
                             @include('admin.content.partials.field-error', ['field' => 'items_payload'])
                         </div>
-                        <button class="btn" type="button" data-navigation-open-selector>
+                        <button class="btn btn-add" type="button" data-navigation-open-selector>
                             <x-admin.material-icon name="add_link" />
                             {{ __('Add item') }}
                         </button>
@@ -154,42 +182,51 @@
                             </button>
                         </div>
 
-                        <div class="navigation-selector-types" data-navigation-selector-types></div>
+                        <div class="navigation-selector-layout">
+                            <nav class="navigation-selector-types" aria-label="{{ __('Modules') }}" data-navigation-selector-types></nav>
 
-                        <div class="navigation-selector-custom" hidden data-navigation-selector-custom>
-                            <div class="form-item">
-                                <div class="form-item-label">
-                                    <label for="navigation_custom_title">{{ __('Title') }}</label>
+                            <div class="navigation-selector-content">
+                                <label class="listing-filter-check navigation-selector-language-toggle">
+                                    <input type="checkbox" value="1" data-navigation-all-languages>
+                                    <span>{{ __('Zoeken in alle talen') }}</span>
+                                </label>
+
+                                <div class="navigation-selector-custom" hidden data-navigation-selector-custom>
+                                    <div class="form-item">
+                                        <div class="form-item-label">
+                                            <label for="navigation_custom_title">{{ __('Title') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <input id="navigation_custom_title" type="text" data-navigation-custom-title>
+                                        </div>
+                                    </div>
+                                    <div class="form-item">
+                                        <div class="form-item-label">
+                                            <label for="navigation_custom_url">{{ __('URL') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <input id="navigation_custom_url" type="text" data-navigation-custom-url>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-add" type="button" data-navigation-add-custom>
+                                        <x-admin.material-icon name="add" />
+                                        {{ __('Select') }}
+                                    </button>
                                 </div>
-                                <div class="form-item-input">
-                                    <input id="navigation_custom_title" type="text" data-navigation-custom-title>
+
+                                <div class="navigation-selector-search" data-navigation-selector-search>
+                                    <div class="form-item">
+                                        <div class="form-item-label">
+                                            <label for="navigation_link_search">{{ __('Search') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <input id="navigation_link_search" type="search" data-navigation-search-input autocomplete="off">
+                                        </div>
+                                    </div>
+
+                                    <div class="listing-container navigation-selector-results" data-navigation-results></div>
                                 </div>
                             </div>
-                            <div class="form-item">
-                                <div class="form-item-label">
-                                    <label for="navigation_custom_url">{{ __('URL') }}</label>
-                                </div>
-                                <div class="form-item-input">
-                                    <input id="navigation_custom_url" type="text" data-navigation-custom-url>
-                                </div>
-                            </div>
-                            <button class="btn" type="button" data-navigation-add-custom>
-                                <x-admin.material-icon name="add" />
-                                {{ __('Select') }}
-                            </button>
-                        </div>
-
-                        <div class="navigation-selector-search" data-navigation-selector-search>
-                            <div class="form-item">
-                                <div class="form-item-label">
-                                    <label for="navigation_link_search">{{ __('Search') }}</label>
-                                </div>
-                                <div class="form-item-input">
-                                    <input id="navigation_link_search" type="search" data-navigation-search-input autocomplete="off">
-                                </div>
-                            </div>
-
-                            <div class="listing-container navigation-selector-results" data-navigation-results></div>
                         </div>
                     </div>
                 </div>

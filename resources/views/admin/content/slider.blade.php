@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @php
-    $title = $contentItem ? __('Slider: :title', ['title' => $contentItem->title]) : __('Content slider');
+    $title = $contentItem ? __('Slider: :title', ['title' => $contentItem->title]) : __('Page slider');
 @endphp
 
 @section('title', $title)
@@ -16,13 +16,13 @@
             <div class="buttons-container align-right">
                 @if ($contentItem)
                     <button class="btn btn-save" form="content-slider-form" type="submit">
-                        <span class="flaticon-save-button"></span>
+                        <x-admin.material-icon name="save" />
                         {{ __('Opslaan') }}
                     </button>
                 @endif
                 <a href="{{ $contentItem ? route($routeNames['edit'], ['id' => $contentItem->id]) : $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -42,8 +42,8 @@
 
                 @if (! $contentItem)
                     <div class="attachment-message">
-                        <span class="flaticon-rounded-info-button"></span>
-                        <em>{{ __('Sla het content item eerst op voordat u een slider koppelt.') }}</em>
+                        <x-admin.material-icon name="info" />
+                        <em>{{ __('Save the page before linking a slider.') }}</em>
                     </div>
                 @else
 
@@ -67,22 +67,6 @@
                                         </select>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="choice">
-                                <h2 class="title">{{ __('Categorie sliders') }}</h2>
-                                @if ($contentItem->categories->isNotEmpty())
-                                    <ul class="content-related-list">
-                                        @foreach ($contentItem->categories as $category)
-                                            <li>
-                                                <a href="{{ route(request()->routeIs('cms.*') ? 'cms.content.categories.slider' : 'admin.content.categories.slider', ['id' => $category->id]) }}">
-                                                    {{ $category->name }}
-                                                </a>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <p>{{ __('Dit content item is nog niet aan categorieen gekoppeld.') }}</p>
-                                @endif
                             </div>
                         </div>
                     </form>

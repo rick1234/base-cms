@@ -18,11 +18,11 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="role-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <button class="btn btn-save-and-stay" form="role-form" name="saveAndStay" type="submit" value="1">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan en blijven') }}
                 </button>
                 @if ($isExisting)
@@ -30,14 +30,14 @@
                         @csrf
                         @method('delete')
                         <button class="btn btn-remove" type="submit">
-                            <span class="flaticon-close-button"></span>
+                            <x-admin.material-icon name="delete" />
                             {{ __('Verwijderen') }}
                         </button>
                     </form>
                 @endif
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 

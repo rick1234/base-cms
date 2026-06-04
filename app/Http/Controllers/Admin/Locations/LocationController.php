@@ -28,6 +28,11 @@ class LocationController extends Controller
 {
     use UsesEditViewForCreate;
 
+    /**
+     * @var list<string>
+     */
+    private const EDIT_TABS = ['location'];
+
     public function index(Request $request): View|RedirectResponse
     {
         if ($this->shouldMoveLocation($request)) {
@@ -92,18 +97,24 @@ class LocationController extends Controller
         return redirect()->route($this->routeName('edit'), ['id' => $location->id]);
     }
 
-    public function edit(Request $request): View
+    public function edit(Request $request): View|RedirectResponse
     {
+        if ($redirect = $this->redirectQueryTabToRoute($request)) {
+            return $redirect;
+        }
+
         $location = $this->locationFromRequest($request);
         $location?->load(['categories', 'images', 'openingHours', 'specialOpeningHours']);
+        $editableLocation = $location ?? new Location([
+            'status' => 'active',
+            'active_from' => now(),
+            'country_code' => 'NL',
+            'metadata' => [],
+        ]);
 
         return view('admin.locations.edit', [
-            'location' => $location ?? new Location([
-                'status' => 'active',
-                'active_from' => now(),
-                'country_code' => 'NL',
-                'metadata' => [],
-            ]),
+            'location' => $editableLocation,
+            'activeTab' => $this->activeTab($request, $location),
             'categories' => $this->categories(),
             'routeNames' => $this->routeNames(),
             'pageName' => __('Edit location'),
@@ -118,7 +129,10 @@ class LocationController extends Controller
 
         flash(__('Location saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $location->id]);
+        $activeTab = $request->validated('active_tab');
+
+        return redirect()
+            ->route($this->editRouteName($activeTab), $this->editRedirectParameters($location, $activeTab));
     }
 
     public function update(Location $location, LocationRequest $request, UpsertLocation $upsert): RedirectResponse
@@ -127,7 +141,10 @@ class LocationController extends Controller
 
         flash(__('Location saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $location->id]);
+        $activeTab = $request->validated('active_tab');
+
+        return redirect()
+            ->route($this->editRouteName($activeTab), $this->editRedirectParameters($location, $activeTab));
     }
 
     public function destroy(Location $location): RedirectResponse
@@ -426,6 +443,7 @@ class LocationController extends Controller
             'store' => $this->routeName('store'),
             'create' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('create'),
             'edit' => $this->routeName('edit'),
+            'edit.tab' => $this->routeName('edit.tab'),
             'save' => $this->routeName('save'),
             'destroy' => $this->routeName('destroy'),
             'duplicate' => $this->routeName('duplicate'),
@@ -443,5 +461,61 @@ class LocationController extends Controller
     private function routeName(string $name): string
     {
         return (request()->routeIs('cms.*') ? 'cms.locations.' : 'admin.locations.').$name;
+    }
+
+    private function activeTab(Request $request, ?Location $location): string
+    {
+        $tab = (string) $request->route('tab');
+
+        if ($location && in_array($tab, self::EDIT_TABS, true)) {
+            return $tab;
+        }
+
+        return 'general';
+    }
+
+    private function editRouteName(?string $activeTab = null): string
+    {
+        if (in_array($activeTab, self::EDIT_TABS, true)) {
+            return $this->routeName('edit.tab');
+        }
+
+        return $this->routeName('edit');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function editRedirectParameters(Location $location, ?string $activeTab = null): array
+    {
+        $parameters = ['id' => $location->id];
+
+        if (in_array($activeTab, self::EDIT_TABS, true)) {
+            $parameters['tab'] = $activeTab;
+        }
+
+        return $parameters;
+    }
+
+    private function redirectQueryTabToRoute(Request $request): ?RedirectResponse
+    {
+        if ($request->route('tab')) {
+            return null;
+        }
+
+        $tab = $request->query('tab');
+
+        if (! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return null;
+        }
+
+        $location = $this->locationFromRequest($request);
+
+        if (! $location) {
+            return null;
+        }
+
+        return redirect()
+            ->route($this->editRouteName($tab), $this->editRedirectParameters($location, $tab));
     }
 }

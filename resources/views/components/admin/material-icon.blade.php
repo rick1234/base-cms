@@ -4,7 +4,10 @@
 ])
 
 <span
-    {{ $attributes->class('admin-material-icon') }}
+    {{ $attributes->class([
+        'mso',
+        'admin-delete-icon' => $name === 'delete',
+    ]) }}
     @if ($label)
         role="img"
         aria-label="{{ $label }}"

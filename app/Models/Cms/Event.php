@@ -18,6 +18,7 @@ class Event extends CmsModel
             ...parent::casts(),
             'starts_at' => 'date',
             'ends_at' => 'date',
+            'structured_blocks' => 'array',
         ];
     }
 
@@ -43,6 +44,13 @@ class Event extends CmsModel
     public function parts(): HasMany
     {
         return $this->hasMany(EventPart::class)->orderBy('starts_at')->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function scheduleGroups(): HasMany
+    {
+        return $this->hasMany(EventScheduleGroup::class)
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function isActive(): bool

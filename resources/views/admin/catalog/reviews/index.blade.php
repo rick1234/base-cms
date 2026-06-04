@@ -11,13 +11,10 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Toevoegen') }}
                 </a>
-                <a class="btn" href="{{ route(request()->routeIs('cms.*') ? 'cms.catalog.index' : 'admin.catalog.index') }}">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Producten') }}
-                </a>
+                @include('admin.catalog.partials.toolbar-links')
             </div>
 
             <div class="main-section">
@@ -56,7 +53,7 @@
                             </div>
                             <div class="overview-item options">
                                 <button type="submit" title="{{ __('Zoeken') }}">
-                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                    <x-admin.material-icon name="search" />
                                 </button>
                             </div>
                         </div>
@@ -73,13 +70,13 @@
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $review->id]) }}" title="{{ __('Bewerken') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
                                 <form method="post" action="{{ route($routeNames['destroy'], $review) }}">
                                     @csrf
                                     @method('delete')
                                     <button type="submit" title="{{ __('Verwijderen') }}">
-                                        <span class="flaticon-rubbish-bin-delete-button"></span>
+                                        <x-admin.material-icon name="delete" />
                                     </button>
                                 </form>
                             </div>

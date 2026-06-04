@@ -20,6 +20,13 @@ class NavigationMenuRequest extends FormRequest
     {
         $name = (string) $this->input('name');
         $handle = (string) $this->input('handle');
+        $menu = $this->navigationMenu();
+
+        if (! $this->user()?->is_admin) {
+            $handle = $menu instanceof NavigationMenu && filled($menu->handle)
+                ? (string) $menu->handle
+                : $name;
+        }
 
         $this->merge([
             'handle' => Str::slug($handle !== '' ? $handle : $name),

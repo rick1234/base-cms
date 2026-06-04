@@ -1,0 +1,4 @@
+Seeded public download
+======================
+
+This generated fixture verifies that a seeded public download has a real source file.

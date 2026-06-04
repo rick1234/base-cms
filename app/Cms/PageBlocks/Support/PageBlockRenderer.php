@@ -75,6 +75,28 @@ class PageBlockRenderer
         };
     }
 
+    public static function hasRenderableContent(mixed $block): bool
+    {
+        if (! is_array($block)) {
+            return false;
+        }
+
+        $data = data_get($block, 'data', []);
+        $settings = data_get($block, 'settings', []);
+
+        return match ((string) data_get($block, 'type')) {
+            'attachment' => self::mediaUrl(data_get($data, 'file')) !== null,
+            'button' => self::hasText(data_get($data, 'label')) && self::safeUrl(data_get($data, 'url')) !== null,
+            'gallery' => collect(data_get($data, 'images', []))->contains(fn (mixed $image): bool => self::mediaUrl($image) !== null),
+            'image' => self::mediaUrl(data_get($data, 'image')) !== null,
+            'quote' => self::hasText(data_get($data, 'quote')),
+            'text' => self::hasText(data_get($data, 'content')),
+            'title' => self::hasText(data_get($data, 'title')),
+            'video' => self::videoEmbedUrl(data_get($data, 'video_url'), data_get($settings, 'provider')) !== null,
+            default => true,
+        };
+    }
+
     public static function videoEmbedUrl(mixed $url, mixed $provider = 'auto'): ?string
     {
         if (! is_string($url) || trim($url) === '') {
@@ -109,5 +131,20 @@ class PageBlockRenderer
             ->map(fn (string $caption): string => trim($caption))
             ->values()
             ->all();
+    }
+
+    private static function hasText(mixed $value): bool
+    {
+        if (is_array($value)) {
+            $value = collect($value)
+                ->flatten()
+                ->filter(fn (mixed $item): bool => is_scalar($item))
+                ->implode(' ');
+        }
+
+        $text = html_entity_decode(strip_tags((string) ($value ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = str_replace("\xc2\xa0", ' ', $text);
+
+        return trim($text) !== '';
     }
 }

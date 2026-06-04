@@ -37,7 +37,6 @@ class TextBlock extends BasePageBlock
                     ['table', 'clearFormatting'],
                     ['undo', 'redo'],
                 ])
-                ->required()
                 ->columnSpanFull(),
             Toggle::make('settings.intro_style')
                 ->label(__('Intro style')),

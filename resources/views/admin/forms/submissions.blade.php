@@ -11,7 +11,7 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
+                    <x-admin.material-icon name="undo" />
                     {{ __('Terug') }}
                 </a>
             </div>
@@ -34,7 +34,7 @@
 
                 @if (! $form)
                     <div class="attachment-message">
-                        <span class="flaticon-rounded-info-button"></span>
+                        <x-admin.material-icon name="info" />
                         <em>{{ __('Selecteer eerst een formulier.') }}</em>
                     </div>
                 @else
@@ -59,8 +59,8 @@
                             </details>
                         @empty
                             <div class="attachment-message">
-                                <span class="flaticon-rounded-info-button"></span>
-                                <em>{{ __('Er zijn nog geen berichten ontvangen.') }}</em>
+                                <x-admin.material-icon name="info" />
+                                <em>{{ __('No messages found.') }}</em>
                             </div>
                         @endforelse
                     </div>

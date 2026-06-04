@@ -14,13 +14,9 @@
                 wire:key="category-tree-node-{{ $module }}-{{ $treeCategory->id }}"
             >
                 <div class="category-tree-row {{ $selectedCategoryId === $treeCategory->id ? 'is-selected' : '' }}">
-                    <span
-                        class="category-tree-drag-handle admin-symbol admin-symbol-reorder"
-                        draggable="true"
-                        title="{{ __('Sleep om te sorteren') }}"
-                    ></span>
+                    <x-admin.material-icon name="drag_indicator" class="category-tree-drag-handle" />
                     <button class="category-tree-select" type="button" wire:click="selectCategory({{ $treeCategory->id }})">
-                        <span class="admin-symbol admin-symbol-folder" aria-hidden="true"></span>
+                        <x-admin.material-icon name="folder" />
                         <span>{{ $treeCategory->name }}</span>
                     </button>
                     @if ($selectedCategoryId !== $treeCategory->id)

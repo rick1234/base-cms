@@ -21,4 +21,9 @@ class EventPart extends CmsModel
     {
         return $this->belongsTo(Event::class);
     }
+
+    public function scheduleGroup(): BelongsTo
+    {
+        return $this->belongsTo(EventScheduleGroup::class, 'event_schedule_group_id');
+    }
 }

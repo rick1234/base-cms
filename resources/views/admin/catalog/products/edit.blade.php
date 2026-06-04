@@ -17,11 +17,11 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="catalog-product-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <button class="btn btn-save-and-stay" form="catalog-product-form" name="saveAndStay" type="submit" value="1">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan en blijven') }}
                 </button>
                 @if ($isExisting)
@@ -29,7 +29,7 @@
                         @csrf
                         <input type="hidden" name="itemId" value="{{ $product->id }}">
                         <button class="btn btn-duplicate" type="submit">
-                            <span class="flaticon-add-to-queue-button"></span>
+                            <x-admin.material-icon name="content_copy" />
                             {{ __('Dupliceren') }}
                         </button>
                     </form>
@@ -37,14 +37,14 @@
                         @csrf
                         @method('delete')
                         <button class="btn btn-remove" type="submit">
-                            <span class="flaticon-close-button"></span>
+                            <x-admin.material-icon name="delete" />
                             {{ __('Verwijderen') }}
                         </button>
                     </form>
                 @endif
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -313,8 +313,8 @@
                             <div class="form-item-input">
                                 <input id="catalog_product_image" name="image" type="file" accept="image/*">
                                 <input name="caption" type="text" placeholder="{{ __('Titel') }}">
-                                <button class="btn" type="submit">
-                                    <span class="flaticon-add-plus-button"></span>
+                                <button class="btn btn-add" type="submit">
+                                    <x-admin.material-icon name="add" />
                                     {{ __('Uploaden') }}
                                 </button>
                             </div>
@@ -323,7 +323,7 @@
                 </div>
 
                 <div class="author-container">
-                    <span><strong>{{ __('Auteur') }}:</strong> {{ $product->created_by ?? '-' }}</span>
+                    <span><strong>{{ __('Gemaakt door') }}:</strong> {{ $product->creator?->fullName() ?? '-' }}</span>
                     <span><strong>{{ __('Gemaakt op') }}:</strong> {{ optional($product->created_at)->format('d-m-Y H:i') }}</span>
                 </div>
             @endif

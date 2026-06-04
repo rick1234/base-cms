@@ -11,18 +11,19 @@ $groups = [
     'modules' => 'Modules',
     'configuration' => 'Configuration',
     'localization' => 'Localization',
+    'language' => 'Languages',
     'platform' => 'Platform',
     'website' => 'Website',
 ];
 
 $modules = [
     'content' => [
-        'name' => 'Content',
+        'name' => 'Pages',
         'legacy_path' => 'cms/content',
         'group' => 'content',
         'table' => 'content_items',
         'title_column' => 'title',
-        'description' => 'Pages, content categories, blocks, images, and attachments.',
+        'description' => 'Pages, page categories, blocks, images, and attachments.',
         'legacy_tables' => ['contentitems', 'contentcategorieen', 'contentitemblock', 'contentitemafbeeldingen', 'contentitemattachment'],
     ],
     'banners' => [
@@ -67,8 +68,8 @@ $modules = [
         'group' => 'content',
         'table' => 'faq_items',
         'title_column' => 'question',
-        'description' => 'Frequently asked questions, categories, images, videos, and attachments.',
-        'legacy_tables' => ['faq', 'faqcategorie', 'faqafbeeldingen', 'faqattachment', 'faqvideo'],
+        'description' => 'Frequently asked questions and categories.',
+        'legacy_tables' => ['faq', 'faqcategorie'],
     ],
     'downloads' => [
         'name' => 'Downloads',
@@ -142,24 +143,14 @@ $modules = [
         'description' => 'Laravel-managed roles with permissions per module, field, and module block.',
         'legacy_tables' => ['role', 'permissions', 'rechten', 'rechtencategoriespecificatie'],
     ],
-    'module_manager' => [
-        'name' => 'Module Manager',
-        'legacy_path' => 'cms/module',
-        'group' => 'configuration',
-        'table' => 'cms_modules',
-        'title_column' => 'name',
-        'read_only' => true,
-        'description' => 'Base and website module registration, categories, and sort order.',
-        'legacy_tables' => ['module', 'modulecategorie', 'modulemodulecategorie'],
-    ],
     'countries' => [
         'name' => 'Countries',
-        'legacy_path' => 'cms/isolanden',
+        'legacy_path' => 'cms/landen',
         'group' => 'configuration',
         'table' => 'countries',
         'title_column' => 'name',
         'description' => 'Package-backed countries, website languages, ISO language data, and payment-country settings.',
-        'legacy_tables' => ['isolanden', 'isolandcode', 'isolandbetalingswijze', 'landen', 'isotalen', 'talen'],
+        'legacy_tables' => ['countries', 'country_codes', 'country_payment_methods', 'languages', 'iso_languages'],
     ],
     'translations' => [
         'name' => 'Translations',
@@ -192,32 +183,32 @@ $modules = [
 
 $screens = [
     'content_items' => [
-        'name' => 'Content',
+        'name' => 'Pages',
         'legacy_path' => 'cms/content',
         'group' => 'content',
         'table' => 'content_items',
         'title_column' => 'title',
-        'description' => 'Legacy content item overview and editor.',
+        'description' => 'Legacy page overview and editor.',
         'legacy_tables' => ['contentitems'],
         'pages' => [
-            'index' => ['name' => 'Content overview', 'type' => 'index'],
-            'edit' => ['name' => 'Edit content item', 'type' => 'edit'],
-            'editAfbeeldingen' => ['name' => 'Content images', 'type' => 'edit', 'table' => 'content_images', 'title_column' => 'caption', 'legacy_tables' => ['contentitemafbeeldingen']],
-            'editSlider' => ['name' => 'Content slider', 'type' => 'edit', 'table' => 'sliders', 'title_column' => 'title', 'legacy_tables' => ['slider']],
+            'index' => ['name' => 'Pages overview', 'type' => 'index'],
+            'edit' => ['name' => 'Edit page', 'type' => 'edit'],
+            'editAfbeeldingen' => ['name' => 'Page images', 'type' => 'edit', 'table' => 'content_images', 'title_column' => 'caption', 'legacy_tables' => ['contentitemafbeeldingen']],
+            'editSlider' => ['name' => 'Page slider', 'type' => 'edit', 'table' => 'sliders', 'title_column' => 'title', 'legacy_tables' => ['slider']],
         ],
     ],
     'content_categories' => [
-        'name' => 'Content Categories',
+        'name' => 'Page Categories',
+        'parent_screen' => 'content_items',
         'legacy_path' => 'cms/content/categorieen',
         'group' => 'content',
         'table' => 'content_categories',
         'title_column' => 'name',
-        'description' => 'Legacy content category tree and editor.',
+        'description' => 'Legacy page category tree and editor.',
         'legacy_tables' => ['contentcategorieen', 'contentcategorieafbeeldingen'],
         'pages' => [
-            'index' => ['name' => 'Category overview', 'type' => 'index'],
-            'edit' => ['name' => 'Edit content category', 'type' => 'edit'],
-            'editSlider' => ['name' => 'Category slider', 'type' => 'edit', 'table' => 'sliders', 'title_column' => 'title', 'legacy_tables' => ['slider']],
+            'index' => ['name' => 'Page category overview', 'type' => 'index'],
+            'edit' => ['name' => 'Edit page category', 'type' => 'edit'],
         ],
     ],
     'events' => [
@@ -235,6 +226,7 @@ $screens = [
     ],
     'event_categories' => [
         'name' => 'Event Categories',
+        'parent_screen' => 'events',
         'legacy_path' => 'cms/evenementen/categorieen',
         'group' => 'events',
         'table' => 'event_categories',
@@ -257,12 +249,11 @@ $screens = [
         'pages' => [
             'index' => ['name' => 'FAQ overview', 'type' => 'index'],
             'edit' => ['name' => 'Edit FAQ item', 'type' => 'edit'],
-            'editAfbeeldingen' => ['name' => 'FAQ images', 'type' => 'edit', 'table' => 'faq_images', 'title_column' => 'caption', 'legacy_tables' => ['faqafbeeldingen']],
-            'editVideo' => ['name' => 'FAQ videos', 'type' => 'edit', 'table' => 'faq_videos', 'title_column' => 'title', 'legacy_tables' => ['faqvideo']],
         ],
     ],
     'faq_categories' => [
         'name' => 'FAQ Categories',
+        'parent_screen' => 'faq_items',
         'legacy_path' => 'cms/faq/categorieen',
         'group' => 'content',
         'table' => 'faq_categories',
@@ -290,6 +281,7 @@ $screens = [
     ],
     'form_categories' => [
         'name' => 'Form Categories',
+        'parent_screen' => 'forms',
         'legacy_path' => 'cms/form/categorieen',
         'group' => 'content',
         'table' => 'form_categories',
@@ -307,19 +299,23 @@ $screens = [
         'group' => 'content',
         'table' => 'vacancies',
         'title_column' => 'title',
+        'admin_route' => 'admin.vacancies.index',
         'description' => 'Legacy vacancy overview and editor.',
         'legacy_tables' => ['vacatures'],
         'pages' => [
             'index' => ['name' => 'Vacancy overview', 'type' => 'index'],
             'edit' => ['name' => 'Edit vacancy', 'type' => 'edit'],
+            'seo' => ['name' => 'SEO settings', 'type' => 'edit'],
         ],
     ],
     'vacancy_categories' => [
         'name' => 'Vacancy Categories',
+        'parent_screen' => 'vacancies',
         'legacy_path' => 'cms/vacatures/categorieen',
         'group' => 'content',
         'table' => 'vacancy_categories',
         'title_column' => 'name',
+        'admin_route' => 'admin.vacancies.categories.index',
         'description' => 'Legacy vacancy category overview and editor.',
         'legacy_tables' => ['vacaturecategorieen'],
         'pages' => [
@@ -343,6 +339,7 @@ $screens = [
     ],
     'banner_categories' => [
         'name' => 'Banner Categories',
+        'parent_screen' => 'banners',
         'legacy_path' => 'cms/banner/categorieen',
         'group' => 'media',
         'table' => 'banner_categories',
@@ -369,6 +366,7 @@ $screens = [
     ],
     'slider_categories' => [
         'name' => 'Slider Categories',
+        'parent_screen' => 'sliders',
         'legacy_path' => 'cms/slider/categorieen',
         'group' => 'media',
         'table' => 'slider_categories',
@@ -402,6 +400,7 @@ $screens = [
     ],
     'catalog_categories' => [
         'name' => 'Catalog Categories',
+        'parent_screen' => 'catalog_products',
         'legacy_path' => 'cms/catalogus/categorieen',
         'group' => 'commerce',
         'table' => 'catalog_categories',
@@ -504,7 +503,7 @@ $screens = [
         'table' => 'country_payment_methods',
         'title_column' => 'country_id',
         'description' => 'Legacy country payment method overview.',
-        'legacy_tables' => ['isolandbetalingswijze'],
+        'legacy_tables' => ['country_payment_methods'],
         'pages' => [
             'index' => ['name' => 'Payment method overview', 'type' => 'index'],
         ],
@@ -540,6 +539,7 @@ $screens = [
     ],
     'user_categories' => [
         'name' => 'User Categories',
+        'parent_screen' => 'users',
         'legacy_path' => 'cms/users/categorieen',
         'group' => 'users',
         'table' => 'user_categories',
@@ -568,6 +568,7 @@ $screens = [
     ],
     'location_categories' => [
         'name' => 'Location Categories',
+        'parent_screen' => 'locations',
         'legacy_path' => 'cms/vestigingen/categorieen',
         'group' => 'locations',
         'table' => 'location_categories',
@@ -647,6 +648,7 @@ $screens = [
     ],
     'download_categories' => [
         'name' => 'Download Categories',
+        'parent_screen' => 'downloads',
         'legacy_path' => 'cms/download/categorieen',
         'group' => 'modules',
         'table' => 'download_categories',
@@ -656,33 +658,6 @@ $screens = [
         'pages' => [
             'index' => ['name' => 'Download category overview', 'type' => 'index'],
             'edit' => ['name' => 'Edit download category', 'type' => 'edit'],
-        ],
-    ],
-    'module_manager' => [
-        'name' => 'Module Manager',
-        'legacy_path' => 'cms/module',
-        'group' => 'configuration',
-        'table' => 'cms_modules',
-        'title_column' => 'name',
-        'read_only' => true,
-        'description' => 'Legacy module overview and protected editor.',
-        'legacy_tables' => ['module'],
-        'pages' => [
-            'index' => ['name' => 'Module overview', 'type' => 'index', 'read_only' => true],
-            'edit' => ['name' => 'Edit module', 'type' => 'edit', 'read_only' => true],
-        ],
-    ],
-    'module_categories' => [
-        'name' => 'Module Categories',
-        'legacy_path' => 'cms/module/categorieen',
-        'group' => 'configuration',
-        'table' => 'module_categories',
-        'title_column' => 'name',
-        'description' => 'Legacy module category overview and editor.',
-        'legacy_tables' => ['modulecategorie'],
-        'pages' => [
-            'index' => ['name' => 'Module category overview', 'type' => 'index'],
-            'edit' => ['name' => 'Edit module category', 'type' => 'edit'],
         ],
     ],
     'roles' => [
@@ -728,12 +703,12 @@ $screens = [
     ],
     'countries' => [
         'name' => 'Countries',
-        'legacy_path' => 'cms/isolanden',
+        'legacy_path' => 'cms/landen',
         'group' => 'configuration',
         'table' => 'countries',
         'title_column' => 'name',
         'description' => 'Package-backed country overview, country editor, and website language settings.',
-        'legacy_tables' => ['isolanden', 'isotalen', 'talen'],
+        'legacy_tables' => ['countries', 'iso_languages', 'languages'],
         'pages' => [
             'index' => ['name' => 'Country overview', 'type' => 'index'],
             'edit' => ['name' => 'Edit country', 'type' => 'edit'],
@@ -783,9 +758,7 @@ $legacyClasses = [
     'FaqCategorie' => 'faq_categories',
     'Form' => 'forms',
     'FormCategorie' => 'form_categories',
-    'Isoland' => 'countries',
-    'Module' => 'module_manager',
-    'ModuleCategorie' => 'module_categories',
+    'Country' => 'countries',
     'Order' => 'orders',
     'OrderAfleverData' => 'order_delivery_dates',
     'Redirect' => 'redirects',

@@ -7,9 +7,10 @@
     $contentText = data_get($settings, 'footer_content_text', __('Een modern Laravel basisplatform voor maatwerk websites.'));
     $socialTitle = data_get($settings, 'footer_social_title', __('Social media'));
     $socialText = data_get($settings, 'footer_social_text', __('Volg ons op social media en blijf op de hoogte.'));
-    $showCredit = filter_var(data_get($settings, 'show_footer_credit', true), FILTER_VALIDATE_BOOLEAN);
-    $creditLabel = data_get($settings, 'footer_credit_label', 'HPU internet services');
-    $creditUrl = data_get($settings, 'footer_credit_url', 'https://hpu.nl/');
+    $showCredit = filter_var(data_get($settings, 'show_footer_credit', false), FILTER_VALIDATE_BOOLEAN);
+    $creditLabel = trim((string) data_get($settings, 'footer_credit_label', ''));
+    $creditUrl = trim((string) data_get($settings, 'footer_credit_url', ''));
+    $footerNavigationItems = collect($frontendFooterNavigationItems ?? []);
 @endphp
 
 <footer class="footer-container">
@@ -57,20 +58,26 @@
     <div class="wrapper-container">
         <div class="site-info-partial">
             <span>&copy; {{ now()->year }} {{ $companyName }}</span>
-            @if (collect($frontendNavigationPages ?? [])->isNotEmpty())
-                <ul class="site-info-links">
-                    @foreach (collect($frontendNavigationPages ?? [])->take(3) as $footerPage)
-                        <li>
-                            <a href="{{ $footerPage->slug === 'home' ? route('frontend.home') : route('frontend.pages.show', ['slug' => $footerPage->slug]) }}">
-                                {{ $footerPage->navigation_label ?: $footerPage->title }}
-                            </a>
-                        </li>
-                    @endforeach
-                </ul>
+            @if ($footerNavigationItems->isNotEmpty())
+                <nav class="site-info-navigation" aria-label="{{ __('Footer navigation') }}">
+                    <ul class="site-info-links">
+                        @foreach ($footerNavigationItems as $footerItem)
+                            @php
+                                $footerUrl = (string) ($footerItem['url'] ?? '#');
+                            @endphp
+
+                            <li>
+                                <a href="{{ $footerUrl }}" @if ($footerItem['target_blank'] ?? false) target="_blank" rel="noopener" @endif>
+                                    {{ $footerItem['title'] }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </nav>
             @endif
         </div>
 
-        @if ($showCredit && $creditLabel)
+        @if ($showCredit && $creditLabel !== '')
             <div class="site-info-partial">
                 <span>{{ __('Webdesign') }}:&nbsp;</span>
                 @if ($creditUrl)

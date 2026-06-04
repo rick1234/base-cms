@@ -6,6 +6,7 @@ use App\Actions\Admin\Navigation\SaveNavigationMenu;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Navigation\NavigationLinkSearchRequest;
 use App\Http\Requests\Admin\Navigation\NavigationMenuRequest;
+use App\Models\Cms\CmsLanguage;
 use App\Models\Cms\Domain;
 use App\Models\Cms\NavigationMenu;
 use App\Models\Cms\NavigationMenuItem;
@@ -13,7 +14,9 @@ use App\Support\Navigation\NavigationLinkRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class NavigationMenuController extends Controller
 {
@@ -36,6 +39,7 @@ class NavigationMenuController extends Controller
         return $this->form(new NavigationMenu([
             'handle' => 'primary',
             'name' => __('Primary navigation'),
+            'locale' => $this->defaultLocale(),
             'is_active' => true,
         ]));
     }
@@ -72,19 +76,26 @@ class NavigationMenuController extends Controller
         return redirect()->route('admin.navigation.index');
     }
 
-    public function linkTypes(): JsonResponse
+    public function linkTypes(Request $request): JsonResponse
     {
         return response()->json([
-            'types' => $this->links->typeOptions(),
+            'types' => $this->links->typeOptions(
+                $request->string('locale')->toString() ?: null,
+                $request->boolean('all_languages'),
+            ),
         ]);
     }
 
     public function linkOptions(NavigationLinkSearchRequest $request): JsonResponse
     {
+        $validated = $request->validated();
+
         return response()->json([
             'results' => $this->links->searchOptions(
-                (string) $request->validated('type'),
-                $request->validated('q'),
+                (string) $validated['type'],
+                $validated['q'] ?? null,
+                $validated['locale'] ?? null,
+                (bool) ($validated['all_languages'] ?? false),
             ),
         ]);
     }
@@ -96,7 +107,9 @@ class NavigationMenuController extends Controller
         return view('admin.navigation.edit', [
             'menu' => $menu,
             'domains' => Domain::query()->ordered()->get(),
-            'linkTypes' => $this->links->typeOptions(),
+            'languages' => $this->languages(),
+            'defaultLocale' => $this->defaultLocale(),
+            'linkTypes' => $this->links->typeOptions($menu->locale ?: $this->defaultLocale()),
             'itemsPayload' => $this->itemsPayload($menu),
             'pageName' => __('Navigation'),
             'backUrl' => route('admin.navigation.index'),
@@ -120,6 +133,31 @@ class NavigationMenuController extends Controller
     }
 
     /**
+     * @return Collection<int, CmsLanguage>
+     */
+    private function languages(): Collection
+    {
+        if (! Schema::hasTable('languages')) {
+            return collect();
+        }
+
+        return CmsLanguage::query()
+            ->enabled()
+            ->orderByDesc('is_default')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function defaultLocale(): string
+    {
+        $default = $this->languages()->firstWhere('is_default', true)?->code
+            ?: config('app.locale', 'nl');
+
+        return strtolower((string) $default);
+    }
+
+    /**
      * @param  Collection<int, Collection<int, NavigationMenuItem>>  $itemsByParent
      * @return Collection<int, array<string, mixed>>
      */
@@ -139,6 +177,7 @@ class NavigationMenuController extends Controller
                     'expand_children' => $item->expand_children,
                     'target_label' => $target['label'] ?? data_get($item->metadata, 'target_label'),
                     'target_type_label' => $target['type_label'] ?? data_get($item->metadata, 'target_type_label'),
+                    'source_edit_url' => $target['source_edit_url'] ?? null,
                     'is_category' => $this->links->isCategoryType($item->link_type),
                     'children' => $this->serializeChildren($item->id, $itemsByParent)->all(),
                 ];

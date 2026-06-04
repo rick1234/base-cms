@@ -11,16 +11,16 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Toevoegen') }}
                 </a>
                 <a class="btn" href="{{ route(request()->routeIs('cms.*') ? 'cms.users.categories.index' : 'admin.users.categories.index') }}">
-                    <span class="flaticon-folder-symbol"></span>
+                    <x-admin.material-icon name="folder" />
                     {{ __('Categorieen') }}
                 </a>
                 @if ($selectedCategoryId)
                     <a class="btn btn-toggle-child-categories" href="{{ route($routeNames['index'], array_merge(request()->except('showChild'), ['showChild' => $showChild ? 0 : 1])) }}">
-                        <span class="flaticon-visibility-button"></span>
+                        <x-admin.material-icon name="visibility" />
                         {{ $showChild ? __('Toon alleen gebruikers in deze categorie') : __('Toon alle onderliggende gebruikers') }}
                     </a>
                 @endif
@@ -37,19 +37,19 @@
                         <div class="overview-item id">
                             Id
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item user">
                             {{ __('Gebruiker') }}
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'username', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'username', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item category">{{ __('Categorie') }}</div>
@@ -61,11 +61,11 @@
                         <div class="overview-row filters">
                             <div class="overview-item id">
                                 <input name="id" type="text" value="{{ request('id') }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item user">
                                 <input name="username" type="text" value="{{ request('username') }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item category">
                                 <select name="categoryId">
@@ -86,7 +86,7 @@
                             <div class="overview-item options">
                                 <input type="hidden" name="showChild" value="{{ $showChild ? 1 : 0 }}">
                                 <button type="submit" title="{{ __('Zoeken') }}">
-                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                    <x-admin.material-icon name="search" />
                                 </button>
                             </div>
                         </div>
@@ -107,14 +107,14 @@
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $listedUser->id]) }}" title="{{ __('Bewerken') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
                                 @unless (auth()->user()?->is($listedUser))
                                     <form method="post" action="{{ route($routeNames['destroy'], $listedUser) }}">
                                         @csrf
                                         @method('delete')
                                         <button type="submit" title="{{ __('Verwijderen') }}">
-                                            <span class="flaticon-rubbish-bin-delete-button"></span>
+                                            <x-admin.material-icon name="delete" />
                                         </button>
                                     </form>
                                 @endunless

@@ -7,6 +7,7 @@ use App\Models\Cms\LocationCategory;
 use App\Models\Cms\LocationImage;
 use App\Models\Cms\LocationOpeningHour;
 use App\Models\Cms\LocationSpecialOpeningHour;
+use Database\Seeders\Support\SeederFiles;
 use Illuminate\Database\Seeder;
 
 class LocationModuleSeeder extends Seeder
@@ -52,11 +53,7 @@ class LocationModuleSeeder extends Seeder
                 'status' => 'active',
                 'active_from' => now()->toDateString(),
                 'sort_order' => 1,
-                'metadata' => [
-                    'slug' => 'seeded-amsterdam-location',
-                    'seo_title' => 'Seeded Amsterdam location',
-                    'meta_description' => 'Seeded location for the Laravel base CMS.',
-                ],
+                'metadata' => null,
             ],
         );
 
@@ -65,10 +62,12 @@ class LocationModuleSeeder extends Seeder
             $showroomCategory->id => ['sort_order' => 2],
         ]);
 
+        $locationImagePath = SeederFiles::publicImage('seed-image-07.jpg', 'admin/uploads/locations/images', 'seeded-location.jpg');
+
         LocationImage::query()->updateOrCreate(
-            ['location_id' => $location->id, 'image_path' => 'admin/cms/img/icons/modules/vestigingen.svg'],
+            ['location_id' => $location->id, 'image_path' => $locationImagePath],
             [
-                'folder' => 'admin/cms/img/icons/modules',
+                'folder' => 'storage/admin/uploads/locations/images',
                 'caption' => 'Seeded location image',
                 'sort_order' => 1,
             ],

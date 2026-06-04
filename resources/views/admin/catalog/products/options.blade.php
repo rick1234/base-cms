@@ -11,12 +11,12 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="catalog-options-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -48,7 +48,11 @@
                             <div class="grid-row">
                                 <div class="col-2">
                                     <input type="hidden" name="options[{{ $index }}][id]" value="{{ $option->id }}">
-                                    <input name="options[{{ $index }}][locale]" type="text" value="{{ old("options.{$index}.locale", $option->locale) }}">
+                                    <x-admin.locale-radio-group
+                                        name="options[{{ $index }}][locale]"
+                                        :selected="old('options.'.$index.'.locale', $option->locale)"
+                                        :id-prefix="'option_locale_'.$index"
+                                    />
                                 </div>
                                 <div class="col-3">
                                     <input name="options[{{ $index }}][label]" type="text" value="{{ old("options.{$index}.label", $option->label) }}">
@@ -69,7 +73,11 @@
                             @php $index = $product->options->count() + $newIndex; @endphp
                             <div class="grid-row">
                                 <div class="col-2">
-                                    <input name="options[{{ $index }}][locale]" type="text" value="{{ old("options.{$index}.locale", app()->getLocale()) }}">
+                                    <x-admin.locale-radio-group
+                                        name="options[{{ $index }}][locale]"
+                                        :selected="old('options.'.$index.'.locale', app()->getLocale())"
+                                        :id-prefix="'option_locale_'.$index"
+                                    />
                                 </div>
                                 <div class="col-3">
                                     <input name="options[{{ $index }}][label]" type="text" value="{{ old("options.{$index}.label") }}">

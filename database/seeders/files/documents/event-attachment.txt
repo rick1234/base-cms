@@ -1,0 +1,4 @@
+Event attachment
+================
+
+This generated fixture represents an attachment for seeded event module data.

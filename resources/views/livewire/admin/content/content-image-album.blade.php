@@ -1,3 +1,10 @@
+@php
+    $contentImageUploadRoute = $contentImageUploadRoute ?? route(
+        request()->routeIs('cms.*') ? 'cms.content.images.upload' : 'admin.content.images.upload',
+        ['id' => $contentItem->id],
+    );
+@endphp
+
 <div class="content-album">
     @if ($message)
         <div class="content-album-message flash-message flash-message-success" data-flash-message role="alert">
@@ -25,21 +32,103 @@
             </button>
         </div>
 
-        <form class="content-album-upload-form" wire:submit.prevent="uploadImages">
+        <form
+            action="{{ $contentImageUploadRoute }}"
+            class="content-album-upload-form"
+            data-content-image-editor
+            data-edited-file-suffix="{{ __('edited') }}"
+            data-export-error-message="{{ __('The edited image could not be prepared. Try another file or crop.') }}"
+            data-files-selected-plural="{{ __('Bestanden klaar voor upload') }}"
+            data-files-selected-singular="{{ __('Bestand klaar voor upload') }}"
+            data-processing-copy="{{ __('De uitsnede wordt verwerkt.') }}"
+            data-processing-title="{{ __('Afbeelding voorbereiden') }}"
+            data-upload-error-message="{{ __('Image upload failed. Check the file and try again.') }}"
+            data-uploading-copy="{{ __('De bewerkte afbeelding wordt opgeslagen.') }}"
+            data-uploading-title="{{ __('Afbeelding opslaan') }}"
+            data-upload-success-message="{{ __('Image uploaded.') }}"
+            data-upload-url="{{ $contentImageUploadRoute }}"
+            enctype="multipart/form-data"
+            method="post"
+        >
+            @csrf
+
             <label class="content-album-dropzone" for="content-album-uploads">
                 <input
                     id="content-album-uploads"
                     class="content-album-file-input"
-                    name="uploads"
+                    data-content-image-editor-input
+                    name="images[]"
                     type="file"
                     accept="image/*"
                     multiple
-                    wire:model="uploads"
                 >
                 <x-admin.material-icon class="content-album-dropzone-icon" name="add_photo_alternate" />
                 <span class="content-album-dropzone-title">{{ __('Sleep afbeeldingen hierheen of kies bestanden') }}</span>
-                <span class="content-album-dropzone-copy">{{ __('Meerdere afbeeldingen tegelijk uploaden.') }}</span>
+                <span class="content-album-dropzone-copy">{{ __('Kies een afbeelding om te bewerken of meerdere afbeeldingen om direct te uploaden.') }}</span>
             </label>
+
+            <div class="content-album-upload-preview" data-content-image-editor-file-list hidden></div>
+
+            <section class="content-image-editor" data-content-image-editor-panel hidden aria-label="{{ __('Afbeelding bewerken') }}">
+                <div class="content-image-editor-header">
+                    <div>
+                        <strong>{{ __('Afbeelding bewerken') }}</strong>
+                        <span data-content-image-editor-file-name></span>
+                    </div>
+                    <button class="content-album-icon-button" type="button" data-content-image-editor-action="close" aria-label="{{ __('Sluiten') }}" title="{{ __('Sluiten') }}">
+                        <x-admin.material-icon name="close" />
+                    </button>
+                </div>
+
+                <div class="content-image-editor-toolbar" role="toolbar" aria-label="{{ __('Afbeelding bewerken') }}">
+                    <button class="content-image-editor-button" type="button" data-content-image-editor-action="rotate-left" title="{{ __('Links draaien') }}">
+                        <x-admin.material-icon name="rotate_left" />
+                    </button>
+                    <button class="content-image-editor-button" type="button" data-content-image-editor-action="rotate-right" title="{{ __('Rechts draaien') }}">
+                        <x-admin.material-icon name="rotate_right" />
+                    </button>
+                    <button class="content-image-editor-button" type="button" data-content-image-editor-action="zoom-out" title="{{ __('Uitzoomen') }}">
+                        <x-admin.material-icon name="zoom_out" />
+                    </button>
+                    <button class="content-image-editor-button" type="button" data-content-image-editor-action="zoom-in" title="{{ __('Inzoomen') }}">
+                        <x-admin.material-icon name="zoom_in" />
+                    </button>
+                    <button class="content-image-editor-button" type="button" data-content-image-editor-action="reset" title="{{ __('Reset') }}">
+                        <x-admin.material-icon name="restart_alt" />
+                    </button>
+                    <label class="content-image-editor-ratio">
+                        <span>{{ __('Uitsnede') }}</span>
+                        <select data-content-image-editor-ratio>
+                            <option value="free">{{ __('Vrij') }}</option>
+                            <option value="16:9">16:9</option>
+                            <option value="4:3">4:3</option>
+                            <option value="1:1">1:1</option>
+                            <option value="3:4">3:4</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="content-image-editor-stage" data-content-image-editor-cropper></div>
+
+                <div class="content-image-editor-actions">
+                    <button class="btn btn-save" type="button" data-content-image-editor-upload>
+                        <x-admin.material-icon name="cloud_upload" />
+                        {{ __('Bewerking uploaden') }}
+                    </button>
+                    <button class="btn btn-cancel" type="button" data-content-image-editor-action="close">
+                        <x-admin.material-icon name="close" />
+                        {{ __('Annuleren') }}
+                    </button>
+                </div>
+            </section>
+
+            <div class="content-album-upload-status" data-content-image-editor-status hidden role="status" aria-live="polite">
+                <span class="content-album-loader" aria-hidden="true"></span>
+                <span class="content-album-upload-status-copy">
+                    <strong data-content-image-editor-status-title>{{ __('Afbeelding voorbereiden') }}</strong>
+                    <span data-content-image-editor-status-copy>{{ __('De uitsnede wordt verwerkt.') }}</span>
+                </span>
+            </div>
 
             @if ($capacityVisible)
                 <div id="content-album-capacity" class="content-album-capacity" aria-label="{{ __('Uploadcapaciteit') }}">
@@ -77,38 +166,18 @@
                 <p class="content-album-error">{{ $message }}</p>
             @enderror
 
-            @if ($uploads !== [])
-                <div class="content-album-upload-preview">
-                    <strong>{{ trans_choice('{1} Bestand klaar voor upload|[2,*] Bestanden klaar voor upload', count($uploads)) }}</strong>
-                    <ul>
-                        @foreach ($uploads as $upload)
-                            <li wire:key="pending-content-image-{{ $loop->index }}">{{ $upload->getClientOriginalName() }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+            @error('images')
+                <p class="content-album-error">{{ $message }}</p>
+            @enderror
 
-            <button class="btn btn-add" type="submit" wire:loading.attr="disabled" wire:target="uploads,uploadImages" @disabled($uploads === [])>
+            @error('images.*')
+                <p class="content-album-error">{{ $message }}</p>
+            @enderror
+
+            <button class="btn btn-add" type="submit">
                 <x-admin.material-icon name="cloud_upload" />
-                <span wire:loading.remove wire:target="uploadImages">{{ __('Uploaden') }}</span>
-                <span wire:loading wire:target="uploadImages">{{ __('Uploaden...') }}</span>
+                {{ __('Upload selectie') }}
             </button>
-
-            <div class="content-album-upload-status" wire:loading.flex wire:target="uploads" role="status" aria-live="polite" aria-busy="true">
-                <span class="content-album-loader" aria-hidden="true"></span>
-                <span class="content-album-upload-status-copy">
-                    <strong>{{ __('Bestanden voorbereiden') }}</strong>
-                    <span>{{ __('De afbeeldingen worden gecontroleerd. Dit kan even duren bij een grote batch.') }}</span>
-                </span>
-            </div>
-
-            <div class="content-album-upload-status" wire:loading.flex wire:target="uploadImages" role="status" aria-live="polite" aria-busy="true">
-                <span class="content-album-loader" aria-hidden="true"></span>
-                <span class="content-album-upload-status-copy">
-                    <strong>{{ __('Afbeeldingen opslaan') }}</strong>
-                    <span>{{ __('De bestanden worden opgeslagen en aan het fotoalbum toegevoegd.') }}</span>
-                </span>
-            </div>
         </form>
     </section>
 

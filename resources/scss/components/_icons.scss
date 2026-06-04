@@ -7,183 +7,42 @@
 }
 
 @layer components {
-  .admin-material-icon,
-  [class^="flaticon-"],
-  [class*=" flaticon-"],
-  .admin-symbol {
+  .mso {
     align-items: center;
+    direction: ltr;
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 0;
-    font-style: normal;
-    font-weight: 400;
-    height: 1.2rem;
-    justify-content: center;
-    line-height: 1;
-    vertical-align: middle;
-    width: 1.2rem;
-  }
-
-  .admin-material-icon,
-  [class^="flaticon-"]::before,
-  [class*=" flaticon-"]::before,
-  .admin-symbol::before {
-    direction: ltr;
-    display: inline-block;
     font-family: "Material Symbols Outlined";
     font-feature-settings: "liga";
     font-size: 1.15rem;
     font-style: normal;
     font-variation-settings: "FILL" 1, "wght" 600, "GRAD" 0, "opsz" 20;
     font-weight: normal;
+    height: 1.2rem;
+    justify-content: center;
     letter-spacing: 0;
     line-height: 1;
     text-rendering: optimizelegibility;
     text-transform: none;
+    vertical-align: middle;
     white-space: nowrap;
+    width: 1.2rem;
     word-wrap: normal;
   }
 
-  .admin-material-icon {
-    font-size: 1.15rem;
-  }
-
-  .admin-material-icon.is-small,
-  .overview-item .admin-material-icon,
-  .overview-item [class^="flaticon-"]::before,
-  .overview-item [class*=" flaticon-"]::before,
-  .overview-item .admin-symbol::before {
+  .mso.is-small,
+  .overview-item .mso {
     font-size: 1.25rem;
   }
 
-  .overview-item .admin-material-icon,
-  .overview-item [class^="flaticon-"],
-  .overview-item [class*=" flaticon-"],
-  .overview-item .admin-symbol {
+  .overview-item .mso {
     height: 1.35rem;
     width: 1.35rem;
   }
 
-  .admin-material-icon.is-large {
+  .mso.is-large {
     font-size: 1.65rem;
     height: 1.65rem;
     width: 1.65rem;
-  }
-
-  .flaticon-save-button::before,
-  .flaticon-save-file-option::before {
-    content: "save";
-  }
-
-  .flaticon-undo-button::before {
-    content: "undo";
-  }
-
-  .flaticon-back-arrow::before {
-    content: "arrow_back";
-  }
-
-  .flaticon-searching-magnifying-glass::before {
-    content: "search";
-  }
-
-  .flaticon-add-plus-button::before,
-  .flaticon-add-to-queue-button::before {
-    content: "add";
-  }
-
-  .flaticon-downwards-arrow-key::before {
-    content: "keyboard_arrow_down";
-  }
-
-  .flaticon-up-arrow-key::before {
-    content: "keyboard_arrow_up";
-  }
-
-  .flaticon-rounded-info-button::before,
-  .admin-symbol-info::before {
-    content: "info";
-  }
-
-  .flaticon-close-button::before,
-  .flaticon-cancel-button::before,
-  .admin-symbol-close::before {
-    content: "close";
-  }
-
-  .flaticon-rubbish-bin-delete-button::before,
-  .flaticon-delete-button::before {
-    content: "delete";
-  }
-
-  .flaticon-create-new-pencil-button::before {
-    content: "edit";
-  }
-
-  .flaticon-visibility-button::before {
-    content: "visibility";
-  }
-
-  .flaticon-folder-symbol::before,
-  .admin-symbol-folder::before {
-    content: "folder";
-  }
-
-  .flaticon-shuffle-mode-arrows::before,
-  .admin-symbol-reorder::before {
-    content: "drag_indicator";
-  }
-
-  .flaticon-link-symbol::before {
-    content: "link";
-  }
-
-  .flaticon-refresh-button::before {
-    content: "refresh";
-  }
-
-  .flaticon-exit-to-app-button::before {
-    content: "logout";
-  }
-
-  .flaticon-download-button::before,
-  .admin-symbol-download::before {
-    content: "download";
-  }
-
-  .flaticon-earth-grid-select-language-button::before {
-    content: "language";
-  }
-
-  .admin-symbol-attachment::before {
-    content: "attach_file";
-  }
-
-  .admin-symbol-gallery::before {
-    content: "photo_library";
-  }
-
-  .admin-symbol-image-missing::before {
-    content: "broken_image";
-  }
-
-  .admin-symbol-lock::before {
-    content: "lock";
-  }
-
-  .admin-symbol-schedule::before {
-    content: "schedule";
-  }
-
-  .admin-symbol-dashboard::before {
-    content: "home";
-  }
-
-  .admin-symbol-apps::before {
-    content: "apps";
-  }
-
-  .admin-symbol-translation::before {
-    content: "translate";
   }
 }

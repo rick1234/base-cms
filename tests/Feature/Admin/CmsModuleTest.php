@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Models\User;
+use App\Models\Cms\CmsLanguage;
 use App\Models\Cms\ContentItem;
 use App\Models\Cms\Event;
+use App\Models\User;
+use Database\Seeders\CountryLanguageSeeder;
+use Database\Seeders\TranslationModuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -46,11 +49,35 @@ class CmsModuleTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/modules')
             ->assertOk()
-            ->assertSee('Content')
+            ->assertSee('Admin Modules')
+            ->assertSee('Pages')
             ->assertSee('Events')
-            ->assertSee('Locations')
+            ->assertSee('Vestigingen')
             ->assertSee('Catalog')
-            ->assertSee('Roles and Permissions');
+            ->assertSee('Roles and Permissions')
+            ->assertDontSee('Website setup')
+            ->assertDontSee('Open direct het overzicht van een module.');
+    }
+
+    public function test_legacy_module_manager_routes_and_database_artifacts_are_removed(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->assertArrayNotHasKey('module_manager', config('cms_modules.modules'));
+        $this->assertArrayNotHasKey('module_manager', config('cms_modules.screens'));
+        $this->assertArrayNotHasKey('module_categories', config('cms_modules.screens'));
+        $this->assertArrayNotHasKey('Module', config('cms_modules.legacy_classes'));
+        $this->assertArrayNotHasKey('ModuleCategorie', config('cms_modules.legacy_classes'));
+        $this->assertFalse(Schema::hasTable('module_categories'));
+        $this->assertFalse(Schema::hasTable('module_category_module'));
+
+        $this->actingAs($admin)
+            ->get('/admin/module')
+            ->assertNotFound();
+
+        $this->actingAs($admin)
+            ->get('/admin/module/categorieen')
+            ->assertNotFound();
     }
 
     public function test_every_configured_admin_index_route_resolves_without_php_filename(): void
@@ -63,7 +90,7 @@ class CmsModuleTest extends TestCase
             $this->actingAs($admin)
                 ->get("/admin/{$path}")
                 ->assertOk()
-                ->assertSee($screen['name']);
+                ->assertSee(__(data_get($screen, 'pages.index.name', $screen['name'])));
         }
     }
 
@@ -94,7 +121,86 @@ class CmsModuleTest extends TestCase
         $this->actingAs($admin)
             ->get('/cms/content/index.php')
             ->assertOk()
-            ->assertSee('Content');
+            ->assertSee('Pages');
+    }
+
+    public function test_generic_cms_empty_states_use_human_module_names(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->seed(CountryLanguageSeeder::class);
+        $this->seed(TranslationModuleSeeder::class);
+
+        app()->setLocale('nl');
+        app('translator')->setLoaded([]);
+
+        $this->actingAs($admin)
+            ->get('/cms/slider/index.php')
+            ->assertOk()
+            ->assertSee('Er zijn geen sliders gevonden.')
+            ->assertDontSee('Er zijn nog geen records gemigreerd of aangemaakt voor dit scherm.')
+            ->assertDontSee('No records have been migrated or created for this screen yet.');
+
+        $this->actingAs($admin)
+            ->get('/cms/slider/categorieen/index.php')
+            ->assertOk()
+            ->assertSee('Er zijn geen slider categorieen gevonden.')
+            ->assertDontSee('Er zijn nog geen records gemigreerd of aangemaakt voor dit scherm.')
+            ->assertDontSee('No records have been migrated or created for this screen yet.');
+    }
+
+    public function test_dedicated_cms_empty_states_use_human_module_names(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->seed(CountryLanguageSeeder::class);
+        $this->seed(TranslationModuleSeeder::class);
+
+        CmsLanguage::query()->update([
+            'is_enabled' => false,
+            'is_default' => false,
+        ]);
+
+        app()->setLocale('nl');
+        app('translator')->setLoaded([]);
+
+        $emptyStates = [
+            '/admin/domains' => [
+                'expected' => 'Er zijn geen domeinen gevonden.',
+                'obsolete' => ['No domains have been configured yet.'],
+            ],
+            '/admin/templates' => [
+                'expected' => 'Er zijn geen templates gevonden.',
+                'obsolete' => ['No templates have been configured yet.'],
+            ],
+            '/admin/navigation' => [
+                'expected' => 'Er zijn geen navigatiemenu\'s gevonden.',
+                'obsolete' => ['No navigation menus have been created yet.'],
+            ],
+            '/admin/pages' => [
+                'expected' => 'Er zijn geen pagina\'s gevonden.',
+                'obsolete' => ['No pages have been created yet.'],
+            ],
+            '/admin/landen/talen' => [
+                'expected' => 'Er zijn geen websitetalen gevonden.',
+                'obsolete' => ['No website languages enabled yet.'],
+            ],
+            '/admin/content/categorieen' => [
+                'expected' => 'Er zijn geen categorieen gevonden.',
+                'obsolete' => ['Er zijn nog geen categorieen toegevoegd.'],
+            ],
+        ];
+
+        foreach ($emptyStates as $path => $state) {
+            $response = $this->actingAs($admin)
+                ->get($path)
+                ->assertOk()
+                ->assertSee($state['expected']);
+
+            foreach ($state['obsolete'] as $obsoleteText) {
+                $response->assertDontSee($obsoleteText);
+            }
+        }
     }
 
     public function test_admin_folder_routes_match_legacy_content_examples(): void
@@ -104,7 +210,7 @@ class CmsModuleTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/content')
             ->assertOk()
-            ->assertSee('Content');
+            ->assertSee('Pages');
 
         $event = Event::query()->create([
             'title' => 'Folder edit event',

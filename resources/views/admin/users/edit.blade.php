@@ -18,11 +18,11 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="user-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <button class="btn btn-save-and-stay" form="user-form" name="saveAndStay" type="submit" value="1">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan en blijven') }}
                 </button>
                 @if ($isExisting && ! auth()->user()?->is($managedUser))
@@ -30,14 +30,14 @@
                         @csrf
                         @method('delete')
                         <button class="btn btn-remove" type="submit">
-                            <span class="flaticon-close-button"></span>
+                            <x-admin.material-icon name="delete" />
                             {{ __('Verwijderen') }}
                         </button>
                     </form>
                 @endif
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -98,7 +98,7 @@
                                 @include('admin.content.partials.field-error', ['field' => 'password'])
                             </div>
                             <p class="form-item-info">
-                                <span class="admin-symbol admin-symbol-info" aria-hidden="true"></span>
+                                <x-admin.material-icon name="info" />
                                 {{ $isExisting ? __('Laat leeg om het huidige wachtwoord te behouden.') : __('Gebruik minimaal 8 tekens.') }}
                             </p>
                         </div>
@@ -108,14 +108,12 @@
                                 <label for="locale">{{ __('Standaard taalcode') }}</label>
                             </div>
                             <div class="form-item-input">
-                                <select id="locale" name="locale">
-                                    <option value="">{{ __('Kies een optie') }}</option>
-                                    @foreach ($languages as $language)
-                                        <option value="{{ $language->code }}" @selected(old('locale', $managedUser->locale) === $language->code)>
-                                            {{ $language->label() }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <x-admin.locale-radio-group
+                                    name="locale"
+                                    :selected="old('locale', $managedUser->locale)"
+                                    :locales="$languages"
+                                    id-prefix="locale"
+                                />
                                 @include('admin.content.partials.field-error', ['field' => 'locale'])
                             </div>
                         </div>
@@ -177,7 +175,7 @@
                             </div>
 
                             <div class="col-6">
-                                <h2 class="title">{{ __('Selecteer een categorie') }}</h2>
+                                <h2 class="title">{{ __('Categorie') }}</h2>
                                 <div class="categories-tree">
                                     @include('admin.users.partials.category-tree', [
                                         'categoriesByParent' => $categories->groupBy(fn ($category) => $category->parent_id ?: 0),
@@ -199,14 +197,14 @@
                                         </label>
                                     @empty
                                         <div class="attachment-message">
-                                            <span class="flaticon-rounded-info-button"></span>
+                                            <x-admin.material-icon name="info" />
                                             <em>{{ __('Maak eerst een rol aan via Rollen en rechten.') }}</em>
                                         </div>
                                     @endforelse
                                 </div>
                                 @include('admin.content.partials.field-error', ['field' => 'roles'])
                                 <a class="btn" href="{{ route(request()->routeIs('cms.*') ? 'cms.roles.index' : 'admin.roles.index') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                     {{ __('Rollen beheren') }}
                                 </a>
                             </div>
@@ -230,7 +228,7 @@
                                 @if ($managedUser->image_path)
                                     <img src="{{ asset($managedUser->image_path) }}" alt="{{ __('Afbeelding') }}" class="user-image">
                                     <button class="btn delete-image-button" form="delete-user-image-form" type="submit">
-                                        <span class="flaticon-close-button"></span>
+                                    <x-admin.material-icon name="delete" />
                                         {{ __('Verwijder afbeelding') }}
                                     </button>
                                 @endif
@@ -376,7 +374,7 @@
 
             @if ($isExisting)
                 <div class="author-container">
-                    <span><strong>{{ __('Auteur') }}:</strong> {{ $managedUser->creator?->displayName() ?? '-' }}</span>
+                    <span><strong>{{ __('Gemaakt door') }}:</strong> {{ $managedUser->creator?->fullName() ?? '-' }}</span>
                     <span><strong>{{ __('Gemaakt op') }}:</strong> {{ optional($managedUser->created_at)->format('d-m-Y H:i') }}</span>
                     @if ($managedUser->updated_at)
                         <span><strong>{{ __('Aangepast op') }}:</strong> {{ $managedUser->updated_at->format('d-m-Y H:i') }}</span>

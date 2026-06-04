@@ -4,10 +4,10 @@
             <div class="overview-item id">
                 Id
                 <button type="button" wire:click="sortBy('id', 'desc')" title="{{ __('Nieuwste eerst') }}">
-                    <span class="flaticon-up-arrow-key"></span>
+                    <x-admin.material-icon name="keyboard_arrow_up" />
                 </button>
                 <button type="button" wire:click="sortBy('id', 'asc')" title="{{ __('Oudste eerst') }}">
-                    <span class="flaticon-downwards-arrow-key"></span>
+                    <x-admin.material-icon name="keyboard_arrow_down" />
                 </button>
             </div>
             <div class="overview-item language">{{ __('Taal') }}</div>
@@ -15,10 +15,10 @@
             <div class="overview-item title">
                 {{ __('Titel') }}
                 <button type="button" wire:click="sortBy('title', 'desc')" title="{{ __('Sorteer aflopend') }}">
-                    <span class="flaticon-up-arrow-key"></span>
+                    <x-admin.material-icon name="keyboard_arrow_up" />
                 </button>
                 <button type="button" wire:click="sortBy('title', 'asc')" title="{{ __('Sorteer oplopend') }}">
-                    <span class="flaticon-downwards-arrow-key"></span>
+                    <x-admin.material-icon name="keyboard_arrow_down" />
                 </button>
                 <span class="listing-sort-state" aria-live="polite">
                     @if ($sort === 'title')
@@ -33,32 +33,32 @@
         <form class="overview-row filters" wire:submit.prevent="applyFilters">
             <div class="overview-item id">
                 <input name="id" type="text" wire:model="draftId">
-                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                <x-admin.material-icon name="search" class="search-icon" />
             </div>
             <div class="overview-item language">
-                <select name="locale" wire:model="draftLocale">
-                    <option value="">{{ __('Selecteer') }}</option>
+                <select name="locale" wire:model="draftLocale" aria-label="{{ __('Taal') }}">
+                    <option value="">{{ __('Alle talen') }}</option>
                     @foreach ($localeOptions as $locale)
-                        <option value="{{ $locale }}">{{ strtoupper($locale) }}</option>
+                        <option value="{{ $locale }}">{{ $this->localeLabel($locale) }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="overview-item category">
                 <div class="listing-category-picker">
                     <button class="listing-category-picker-button" type="button" wire:click="openCategorySelector">
-                        <span class="admin-symbol admin-symbol-folder" aria-hidden="true"></span>
+                        <x-admin.material-icon name="folder" />
                         <span>{{ $selectedCategoryName }}</span>
                     </button>
                     @if ($draftCategoryId > 0)
                         <button class="listing-category-clear-button" type="button" wire:click="clearCategory" title="{{ __('Categorie wissen') }}">
-                            <span class="flaticon-close-button"></span>
+                            <x-admin.material-icon name="close" />
                         </button>
                     @endif
                 </div>
             </div>
             <div class="overview-item title">
                 <input name="title" type="text" wire:model="draftTitle">
-                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                <x-admin.material-icon name="search" class="search-icon" />
             </div>
             <div class="overview-item status">
                 <select name="status" wire:model="draftStatus">
@@ -70,10 +70,10 @@
             </div>
             <div class="overview-item options">
                 <button type="submit" title="{{ __('Zoeken') }}" wire:loading.attr="disabled">
-                    <span class="flaticon-searching-magnifying-glass"></span>
+                    <x-admin.material-icon name="search" />
                 </button>
                 <button type="button" title="{{ __('Reset') }}" wire:click="resetFilters" wire:loading.attr="disabled">
-                    <span class="flaticon-close-button"></span>
+                    <x-admin.material-icon name="close" />
                 </button>
             </div>
         </form>
@@ -84,18 +84,15 @@
                     {{ $contentItem->id }}
                     @if ($filterCategoryId && ! $showChild)
                         <button type="button" wire:click="moveItem({{ $contentItem->id }}, 'down')" title="{{ __('Omlaag') }}">
-                            <span class="flaticon-downwards-arrow-key"></span>
+                            <x-admin.material-icon name="keyboard_arrow_down" />
                         </button>
                         <button type="button" wire:click="moveItem({{ $contentItem->id }}, 'up')" title="{{ __('Omhoog') }}">
-                            <span class="flaticon-up-arrow-key"></span>
+                            <x-admin.material-icon name="keyboard_arrow_up" />
                         </button>
                     @endif
                 </div>
                 <div class="overview-item language">
                     <x-admin.language-flag :locale="$contentItem->locale ?? app()->getLocale()" />
-                    @if ($contentItem->attachments_count > 0)
-                        <span class="admin-symbol admin-symbol-attachment" aria-hidden="true"></span>
-                    @endif
                 </div>
                 <div class="overview-item category">
                     {{ $contentItem->categories->pluck('name')->join(', ') ?: '-' }}
@@ -108,20 +105,13 @@
                 </div>
                 <div class="overview-item options">
                     <a href="{{ route($routeNames['edit'], ['id' => $contentItem->id]) }}" title="{{ __('Bewerken') }}" wire:navigate>
-                        <span class="flaticon-create-new-pencil-button"></span>
+                        <x-admin.material-icon name="edit" />
                     </a>
-                    <form method="post" action="{{ route($routeNames['duplicate']) }}">
-                        @csrf
-                        <input type="hidden" name="itemId" value="{{ $contentItem->id }}">
-                        <button type="submit" title="{{ __('Dupliceren') }}">
-                            <span class="flaticon-add-to-queue-button"></span>
-                        </button>
-                    </form>
                     <form method="post" action="{{ route($routeNames['destroy'], $contentItem) }}">
                         @csrf
                         @method('delete')
                         <button type="submit" title="{{ __('Verwijderen') }}">
-                            <span class="flaticon-rubbish-bin-delete-button"></span>
+                            <x-admin.material-icon name="delete" />
                         </button>
                     </form>
                 </div>
@@ -185,7 +175,7 @@
                 <header class="listing-category-modal-header">
                     <h2 id="listing-category-modal-title">{{ __('Categorie selecteren') }}</h2>
                     <button type="button" wire:click="closeCategorySelector" title="{{ __('Sluiten') }}">
-                        <span class="flaticon-close-button"></span>
+                        <x-admin.material-icon name="close" />
                     </button>
                 </header>
 
@@ -198,7 +188,7 @@
                     </div>
 
                     <button class="listing-category-option {{ $draftCategoryId === 0 ? 'is-selected' : '' }}" type="button" wire:click="clearCategory">
-                        <span class="flaticon-rounded-info-button" aria-hidden="true"></span>
+                        <x-admin.material-icon name="info" />
                         <span>{{ __('Alle categorieen') }}</span>
                     </button>
 

@@ -8,6 +8,7 @@ use App\Livewire\Admin\AttachmentManager;
 use App\Livewire\Admin\CategoryTreeManager;
 use App\Livewire\Admin\ListingOverview;
 use App\Models\User;
+use App\Models\Cms\CmsRedirect;
 use App\Models\Cms\ContentAttachment;
 use App\Models\Cms\ContentBlock;
 use App\Models\Cms\ContentBlockLayout;
@@ -19,11 +20,15 @@ use App\Models\Cms\ContentImage;
 use App\Models\Cms\ContentItem;
 use App\Models\Cms\ContentPreviewToken;
 use App\Models\Cms\Form;
+use App\Models\Cms\Page;
+use App\Models\Cms\SliderCategory;
 use Database\Seeders\ContentModuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -37,9 +42,9 @@ class ContentModuleTest extends TestCase
         $this->seed(ContentModuleSeeder::class);
 
         $this->assertSame(2, ContentCategory::query()->count());
-        $this->assertSame(2, ContentItem::query()->count());
-        $this->assertSame(1, ContentImage::query()->count());
-        $this->assertSame(1, ContentAttachment::query()->count());
+        $this->assertSame(4, ContentItem::query()->count());
+        $this->assertSame(2, ContentImage::query()->count());
+        $this->assertSame(2, ContentAttachment::query()->count());
 
         $this->assertDatabaseHas('content_categories', [
             'slug' => 'news',
@@ -47,7 +52,13 @@ class ContentModuleTest extends TestCase
         ]);
         $this->assertDatabaseHas('content_items', [
             'slug' => 'welcome-to-the-rebuilt-content-module',
-            'title' => 'Welcome to the rebuilt content module',
+            'locale' => 'nl',
+            'title' => 'Welkom bij de vernieuwde paginamodule',
+        ]);
+        $this->assertDatabaseHas('content_items', [
+            'slug' => 'welcome-to-the-rebuilt-content-module-en',
+            'locale' => 'en',
+            'title' => 'Welcome to the rebuilt page module',
         ]);
         $this->assertSame(
             ['text', 'image', 'video'],
@@ -61,6 +72,81 @@ class ContentModuleTest extends TestCase
         $this->assertDatabaseMissing('cms_modules', [
             'handle' => 'radio',
         ]);
+    }
+
+    public function test_admin_breadcrumbs_render_in_layout_bar_outside_content_window(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'first_name' => 'Rick',
+            'last_name' => 'Roelofsen',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get('/admin/content')
+            ->assertOk()
+            ->assertSee('admin-breadcrumbs-bar', false);
+
+        $html = $response->getContent();
+        $mainSectionStart = strpos($html, '<div class="main-section">');
+        $breadcrumbBarStart = strpos($html, '<div class="admin-breadcrumbs-bar">');
+
+        $this->assertNotFalse($mainSectionStart);
+        $this->assertNotFalse($breadcrumbBarStart);
+        $this->assertGreaterThan($mainSectionStart, $breadcrumbBarStart);
+        $this->assertStringNotContainsString(
+            'class="breadcrumbs"',
+            substr($html, $mainSectionStart, $breadcrumbBarStart - $mainSectionStart),
+        );
+    }
+
+    public function test_admin_breadcrumbs_are_built_from_route_and_navigation_structure(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'first_name' => 'Rick',
+            'last_name' => 'Roelofsen',
+        ]);
+        $route = app('router')->getRoutes()->getByName('admin.content.categories.index');
+        $routeScreens = collect(Arr::flatten(Arr::wrap($route?->getAction('admin_screen'))));
+
+        $response = $this->actingAs($admin)
+            ->get('/admin/content/categorieen')
+            ->assertOk()
+            ->assertSee('admin-breadcrumbs-bar', false)
+            ->assertDontSee('admin_breadcrumbs', false);
+
+        $breadcrumbs = Str::between(
+            $response->getContent(),
+            '<div class="admin-breadcrumbs-bar">',
+            '</div>',
+        );
+
+        $this->assertStringContainsString('Home', $breadcrumbs);
+        $this->assertStringContainsString(__('Content'), $breadcrumbs);
+        $this->assertStringContainsString('Pages overview', $breadcrumbs);
+        $this->assertStringContainsString('Page category overview', $breadcrumbs);
+        $this->assertSame('content_categories', $routeScreens->last());
+        $this->assertLessThan(strpos($breadcrumbs, __('Content')), strpos($breadcrumbs, 'Home'));
+        $this->assertLessThan(strpos($breadcrumbs, 'Pages overview'), strpos($breadcrumbs, __('Content')));
+        $this->assertLessThan(strpos($breadcrumbs, 'Page category overview'), strpos($breadcrumbs, 'Pages overview'));
+    }
+
+    public function test_admin_back_toolbar_uses_unsaved_change_modal_copy(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Shared back guard',
+            'slug' => 'shared-back-guard',
+            'locale' => 'nl',
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/content/{$contentItem->id}/edit")
+            ->assertOk()
+            ->assertSee('data-unsaved-back-message', false)
+            ->assertSee('Weet u zeker dat u terug wilt gaan, er zijn wijzigingen gedaan aan deze :module', false)
+            ->assertSee('data-unsaved-back-module="pagina"', false)
+            ->assertSee(__('Terug'));
     }
 
     public function test_admin_can_create_a_content_item_with_categories_and_attachments(): void
@@ -193,6 +279,121 @@ class ContentModuleTest extends TestCase
         $this->assertSame('A structured title', $contentItem->structured_blocks[0]['data']['title']);
         $this->assertSame('text', $contentItem->structured_blocks[1]['type']);
         $this->assertSame('50', $contentItem->structured_blocks[1]['layout']);
+    }
+
+    public function test_livewire_content_block_editor_can_save_empty_placeholder_blocks(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Placeholder block item',
+            'slug' => 'placeholder-block-item',
+            'locale' => 'nl',
+            'status' => 'published',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ContentBlockEditor::class, [
+                'contentItemId' => $contentItem->id,
+            ])
+            ->set('data.blocks', [
+                [
+                    'type' => 'title',
+                    'data' => [
+                        'uuid' => '00000000-0000-4000-8000-000000000001',
+                        'layout' => '100',
+                        'data' => ['level' => 'h2'],
+                        'settings' => ['alignment' => 'left'],
+                    ],
+                ],
+                [
+                    'type' => 'text',
+                    'data' => [
+                        'uuid' => '00000000-0000-4000-8000-000000000002',
+                        'layout' => '50',
+                        'data' => [],
+                        'settings' => [
+                            'alignment' => 'left',
+                            'background_style' => 'none',
+                            'intro_style' => false,
+                        ],
+                    ],
+                ],
+                [
+                    'type' => 'image',
+                    'data' => [
+                        'uuid' => '00000000-0000-4000-8000-000000000003',
+                        'layout' => '50',
+                        'data' => [],
+                        'settings' => [
+                            'layout' => 'default',
+                            'aspect' => 'auto',
+                        ],
+                    ],
+                ],
+                [
+                    'type' => 'gallery',
+                    'data' => [
+                        'uuid' => '00000000-0000-4000-8000-000000000004',
+                        'layout' => '50',
+                        'data' => [],
+                        'settings' => ['layout' => 'grid'],
+                    ],
+                ],
+                [
+                    'type' => 'button',
+                    'data' => [
+                        'uuid' => '00000000-0000-4000-8000-000000000005',
+                        'layout' => '50',
+                        'data' => [],
+                        'settings' => [
+                            'style' => 'primary',
+                            'alignment' => 'left',
+                            'open_in_new_tab' => false,
+                        ],
+                    ],
+                ],
+                [
+                    'type' => 'quote',
+                    'data' => [
+                        'uuid' => '00000000-0000-4000-8000-000000000006',
+                        'layout' => '50',
+                        'data' => [],
+                        'settings' => ['style' => 'default'],
+                    ],
+                ],
+                [
+                    'type' => 'video',
+                    'data' => [
+                        'uuid' => '00000000-0000-4000-8000-000000000007',
+                        'layout' => '50',
+                        'data' => [],
+                        'settings' => ['provider' => 'auto'],
+                    ],
+                ],
+                [
+                    'type' => 'attachment',
+                    'data' => [
+                        'uuid' => '00000000-0000-4000-8000-000000000008',
+                        'layout' => '50',
+                        'data' => [],
+                        'settings' => ['open_in_new_tab' => false],
+                    ],
+                ],
+            ])
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('message', 'Contentblokken opgeslagen.');
+
+        $contentItem->refresh();
+
+        $this->assertCount(8, $contentItem->structured_blocks);
+        $this->assertSame(['title', 'text', 'image', 'gallery', 'button', 'quote', 'video', 'attachment'], collect($contentItem->structured_blocks)->pluck('type')->all());
+
+        $this->get('/placeholder-block-item')
+            ->assertOk()
+            ->assertSee('Placeholder block item')
+            ->assertDontSee('page-block-grid', false)
+            ->assertDontSee('page-block--image', false);
     }
 
     public function test_livewire_content_block_editor_can_save_a_single_block(): void
@@ -373,6 +574,259 @@ class ContentModuleTest extends TestCase
             ->assertDontSee('twe'.'etit', false);
     }
 
+    public function test_content_edit_uses_flags_for_locale_selection(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $contentItem = ContentItem::query()->create([
+            'title' => 'English page',
+            'slug' => 'english-page',
+            'locale' => 'en',
+            'status' => 'published',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get("/admin/content/{$contentItem->id}/edit")
+            ->assertOk()
+            ->assertSee('language-choice-group', false)
+            ->assertSee('vendor/flag-icons/flags/4x3/gb.svg', false)
+            ->assertDontSee('<option value="en"', false);
+
+        $this->assertStringNotContainsString('>EN<', $response->getContent());
+    }
+
+    public function test_content_edit_splits_seo_and_form_settings_into_tabs(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'first_name' => 'Rick',
+            'last_name' => 'Roelofsen',
+        ]);
+        $category = ContentCategory::query()->create([
+            'name' => 'Insights',
+            'slug' => 'insights',
+            'status' => 'active',
+        ]);
+        $form = Form::query()->create([
+            'name' => 'Contact',
+            'slug' => 'contact',
+            'status' => 'active',
+        ]);
+        $newsletterForm = Form::query()->create([
+            'name' => 'Newsletter',
+            'slug' => 'newsletter',
+            'status' => 'active',
+        ]);
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Tabbed page',
+            'slug' => 'tabbed-page',
+            'locale' => 'nl',
+            'meta_description' => 'Original SEO description',
+            'form_id' => $form->id,
+            'status' => 'published',
+            'active_from' => '2026-05-01',
+            'active_until' => '2026-12-31',
+            'created_by' => $admin->id,
+        ]);
+        $contentItem->categories()->attach($category->id);
+
+        $pageResponse = $this->actingAs($admin)
+            ->get("/admin/content/{$contentItem->id}/edit")
+            ->assertOk()
+            ->assertSee('href="'.route('admin.content.edit.tab', ['id' => $contentItem->id, 'tab' => 'seo']).'"', false)
+            ->assertSee('href="'.route('admin.content.edit.tab', ['id' => $contentItem->id, 'tab' => 'form']).'"', false)
+            ->assertSee('name="active_tab" value="info"', false)
+            ->assertSee('Categorie')
+            ->assertDontSee('Selecteer een categorie')
+            ->assertSee('<h3 class="sub-title">Periode</h3>', false)
+            ->assertSee('<label for="active_from">Startdatum</label>', false)
+            ->assertSee('<label for="active_until">Einddatum</label>', false)
+            ->assertSee('<label for="status">Status</label>', false)
+            ->assertSee('Gemaakt door')
+            ->assertSee('Rick Roelofsen')
+            ->assertDontSee('Auteur')
+            ->assertDontSee('name="meta_description"', false)
+            ->assertDontSee('name="form_id"', false);
+
+        $this->assertGreaterThanOrEqual(3, substr_count($pageResponse->getContent(), 'class="col-4"'));
+
+        $this->actingAs($admin)
+            ->get("/admin/content/{$contentItem->id}/edit?tab=seo")
+            ->assertRedirect("/admin/content/{$contentItem->id}/edit/seo");
+
+        $this->actingAs($admin)
+            ->get("/admin/content/{$contentItem->id}/edit/seo")
+            ->assertOk()
+            ->assertSee('name="active_tab" value="seo"', false)
+            ->assertSee('SEO settings')
+            ->assertSee('name="meta_description"', false)
+            ->assertSee('Original SEO description')
+            ->assertDontSee('name="form_id"', false)
+            ->assertDontSee('Blokken toevoegen');
+
+        $this->actingAs($admin)
+            ->get("/admin/content/{$contentItem->id}/edit/form")
+            ->assertOk()
+            ->assertSee('name="active_tab" value="form"', false)
+            ->assertSee('name="form_id"', false)
+            ->assertSee('Contact')
+            ->assertSee('Newsletter')
+            ->assertDontSee('name="meta_description"', false);
+
+        $this->actingAs($admin)
+            ->post("/admin/content/{$contentItem->id}", [
+                'id' => $contentItem->id,
+                'active_tab' => 'seo',
+                'meta_description' => 'Updated SEO description',
+            ])
+            ->assertRedirect("/admin/content/{$contentItem->id}/edit/seo");
+
+        $contentItem->refresh();
+
+        $this->assertSame('Tabbed page', $contentItem->title);
+        $this->assertSame('tabbed-page', $contentItem->slug);
+        $this->assertSame('Updated SEO description', $contentItem->meta_description);
+        $this->assertSame($form->id, $contentItem->form_id);
+        $this->assertSame([$category->id], $contentItem->categories()->pluck('content_categories.id')->all());
+
+        $this->actingAs($admin)
+            ->post("/admin/content/{$contentItem->id}", [
+                'id' => $contentItem->id,
+                'active_tab' => 'form',
+                'form_id' => $newsletterForm->id,
+            ])
+            ->assertRedirect("/admin/content/{$contentItem->id}/edit/form");
+
+        $contentItem->refresh();
+
+        $this->assertSame('Updated SEO description', $contentItem->meta_description);
+        $this->assertSame($newsletterForm->id, $contentItem->form_id);
+        $this->assertSame([$category->id], $contentItem->categories()->pluck('content_categories.id')->all());
+
+        $this->actingAs($admin)
+            ->post("/admin/content/{$contentItem->id}", [
+                'id' => $contentItem->id,
+                'active_tab' => 'seo',
+                'meta_description' => '',
+            ])
+            ->assertRedirect("/admin/content/{$contentItem->id}/edit/seo");
+
+        $this->actingAs($admin)
+            ->post("/admin/content/{$contentItem->id}", [
+                'id' => $contentItem->id,
+                'active_tab' => 'form',
+                'form_id' => '',
+            ])
+            ->assertRedirect("/admin/content/{$contentItem->id}/edit/form");
+
+        $contentItem->refresh();
+
+        $this->assertNull($contentItem->meta_description);
+        $this->assertNull($contentItem->form_id);
+        $this->assertSame([$category->id], $contentItem->categories()->pluck('content_categories.id')->all());
+    }
+
+    public function test_generated_content_slug_follows_title_changes_and_creates_permanent_redirect(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Fish',
+            'slug' => 'fish',
+            'locale' => 'nl',
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($admin)
+            ->post("/admin/content/{$contentItem->id}", [
+                'id' => $contentItem->id,
+                'title' => 'Fishes',
+                'slug' => 'fish',
+                'locale' => 'nl',
+                'status' => 'published',
+            ])
+            ->assertRedirect("/admin/content/{$contentItem->id}/edit");
+
+        $this->assertSame('fishes', $contentItem->refresh()->slug);
+        $this->assertDatabaseHas('redirects', [
+            'source_path' => 'fish',
+            'target_url' => '/fishes',
+            'status_code' => 301,
+            'is_active' => true,
+            'preserve_query' => true,
+        ]);
+
+        $this->get('/fish?utm=old')
+            ->assertStatus(301)
+            ->assertHeader('Location', 'http://localhost/fishes?utm=old');
+    }
+
+    public function test_generated_content_slug_uses_numbered_suffix_when_public_slug_exists(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Page::factory()->create([
+            'title' => 'Existing fishes page',
+            'slug' => 'fishes',
+        ]);
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Fish',
+            'slug' => 'fish',
+            'locale' => 'nl',
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($admin)
+            ->post("/admin/content/{$contentItem->id}", [
+                'id' => $contentItem->id,
+                'title' => 'Fishes',
+                'slug' => 'fish',
+                'locale' => 'nl',
+                'status' => 'published',
+            ])
+            ->assertRedirect("/admin/content/{$contentItem->id}/edit");
+
+        $this->assertSame('fishes-2', $contentItem->refresh()->slug);
+        $this->assertDatabaseHas('redirects', [
+            'source_path' => 'fish',
+            'target_url' => '/fishes-2',
+            'status_code' => 301,
+        ]);
+    }
+
+    public function test_content_slug_history_reuses_existing_redirect_rule(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $redirect = CmsRedirect::query()->create([
+            'source_path' => 'fish',
+            'target_url' => '/legacy-fish',
+            'description' => 'Old imported redirect.',
+            'status_code' => 302,
+            'is_active' => false,
+        ]);
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Fish',
+            'slug' => 'fish',
+            'locale' => 'nl',
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($admin)
+            ->post("/admin/content/{$contentItem->id}", [
+                'id' => $contentItem->id,
+                'title' => 'Fishes',
+                'slug' => 'fish',
+                'locale' => 'nl',
+                'status' => 'published',
+            ])
+            ->assertRedirect("/admin/content/{$contentItem->id}/edit");
+
+        $redirect->refresh();
+
+        $this->assertSame('fish', $redirect->source_path);
+        $this->assertSame('/fishes', $redirect->target_url);
+        $this->assertSame(301, $redirect->status_code);
+        $this->assertTrue($redirect->is_active);
+        $this->assertStringStartsWith('Slug history:', (string) $redirect->description);
+        $this->assertStringContainsString("[content_item:{$contentItem->id}]", (string) $redirect->description);
+    }
+
     public function test_admin_can_add_attachments_when_saving_existing_content_item(): void
     {
         Storage::fake('public');
@@ -542,7 +996,21 @@ class ContentModuleTest extends TestCase
             'slug' => 'draft-preview-item',
             'locale' => 'nl',
             'status' => 'draft',
-            'body' => 'Draft body can be checked before publishing.',
+            'structured_blocks' => [
+                [
+                    'type' => 'text',
+                    'uuid' => 'preview-text-block',
+                    'layout' => '100',
+                    'data' => [
+                        'content' => 'Draft structured content can be checked before publishing.',
+                    ],
+                    'settings' => [
+                        'alignment' => 'left',
+                        'background_style' => 'none',
+                        'intro_style' => false,
+                    ],
+                ],
+            ],
         ]);
         $ipAddress = '203.0.113.10';
 
@@ -573,7 +1041,7 @@ class ContentModuleTest extends TestCase
             ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
             ->assertSee('<meta name="robots" content="noindex, nofollow, noarchive">', false)
             ->assertSee('Draft preview item')
-            ->assertSee('Draft body can be checked before publishing.');
+            ->assertSee('Draft structured content can be checked before publishing.');
 
         $this->assertSame(1, $previewToken->refresh()->used_count);
         $this->assertNotNull($previewToken->last_used_at);
@@ -650,6 +1118,53 @@ class ContentModuleTest extends TestCase
         ]);
     }
 
+    public function test_content_photo_album_uses_direct_upload_form_and_editor_hooks(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->admin()->create();
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Editable album item',
+            'slug' => 'editable-album-item',
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/content/{$contentItem->id}/images")
+            ->assertOk()
+            ->assertSee('data-content-image-editor', false)
+            ->assertSee('data-content-image-editor-input', false)
+            ->assertSee('name="images[]"', false)
+            ->assertSee('data-content-image-editor-cropper', false)
+            ->assertSee('rotate_left')
+            ->assertSee('rotate_right')
+            ->assertSee('Bewerking uploaden')
+            ->assertSee('Uitsnede')
+            ->assertSee(route('admin.content.images.upload', ['id' => $contentItem->id]), false);
+
+        $this->actingAs($admin)
+            ->post("/admin/content/{$contentItem->id}/images", [
+                'images' => [
+                    UploadedFile::fake()->image('first-image.jpg'),
+                    UploadedFile::fake()->image('second-image.png'),
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('content_images', [
+            'content_item_id' => $contentItem->id,
+            'caption' => 'First Image',
+            'alt_text' => 'First Image',
+            'title_text' => 'First Image',
+            'sort_order' => 1,
+        ]);
+        $this->assertDatabaseHas('content_images', [
+            'content_item_id' => $contentItem->id,
+            'caption' => 'Second Image',
+            'sort_order' => 2,
+        ]);
+    }
+
     public function test_content_listing_overview_filters_on_demand_and_sorts_asynchronously(): void
     {
         $admin = User::factory()->admin()->create();
@@ -704,7 +1219,11 @@ class ContentModuleTest extends TestCase
             ->test(ListingOverview::class, ['module' => 'content'])
             ->assertSee('Aardvark release')
             ->assertSee('Zebra update')
+            ->assertSee('<select name="locale"', false)
+            ->assertSee('Alle talen')
+            ->assertDontSee('language-choice-group', false)
             ->assertSee('language-flag', false)
+            ->assertDontSee('Dupliceren')
             ->call('openCategorySelector')
             ->assertSet('categorySelectorOpen', true)
             ->assertSee('News')
@@ -766,9 +1285,11 @@ class ContentModuleTest extends TestCase
             ->assertSee('category-tree-status inactive-item', false)
             ->call('selectCategory', $news->id)
             ->assertSet('selectedCategoryId', $news->id)
-            ->assertSee(url('/news'))
+            ->assertDontSee(url('/news'))
             ->assertSee('Linked category article')
-            ->assertSee('Totaal gekoppeld')
+            ->assertDontSee('Totaal gekoppeld')
+            ->assertDontSee('Slug')
+            ->assertSee('(1)')
             ->assertSee('1')
             ->set('draggedCategoryId', $archive->id)
             ->call('moveCategory', $news->id)
@@ -776,6 +1297,116 @@ class ContentModuleTest extends TestCase
 
         $this->assertSame(1, $archive->refresh()->sort_order);
         $this->assertSame(2, $news->refresh()->sort_order);
+    }
+
+    public function test_content_category_edit_is_simplified_and_preserves_removed_legacy_fields(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $parent = ContentCategory::query()->create([
+            'name' => 'Knowledge',
+            'slug' => 'knowledge',
+            'status' => 'active',
+        ]);
+        $sliderCategory = SliderCategory::query()->create([
+            'name' => 'Legacy slider',
+            'slug' => 'legacy-slider',
+            'status' => 'active',
+        ]);
+        $category = ContentCategory::query()->create([
+            'name' => 'Insights',
+            'slug' => 'insights',
+            'description' => 'Original description',
+            'meta_description' => 'Legacy meta description',
+            'custom_url' => '/legacy-insights',
+            'slider_category_id' => $sliderCategory->id,
+            'status' => 'active',
+            'is_hidden_from_navigation' => true,
+        ]);
+
+        $this->assertNull(app('router')->getRoutes()->getByName('admin.content.categories.slider'));
+        $this->assertNull(app('router')->getRoutes()->getByName('cms.content.categories.slider'));
+
+        $response = $this->actingAs($admin)
+            ->get("/admin/content/categorieen/{$category->id}/edit")
+            ->assertOk()
+            ->assertSee('Edit page category')
+            ->assertSee('class="grid"', false)
+            ->assertSee('class="col-6"', false)
+            ->assertSee('Parent categorie')
+            ->assertDontSee('content-section', false)
+            ->assertDontSee('<h1 class="title">', false)
+            ->assertDontSee('Niet weergeven op de voorkant')
+            ->assertDontSee('Meta omschrijving')
+            ->assertDontSee('Aangepaste URL in navigatie')
+            ->assertDontSee('Afbeeldingen')
+            ->assertDontSee('Reeds gekoppelde afbeeldingen')
+            ->assertDontSee('name="meta_description"', false)
+            ->assertDontSee('name="custom_url"', false)
+            ->assertDontSee('name="is_hidden_from_navigation"', false)
+            ->assertDontSee('name="images[]"', false)
+            ->assertDontSee('slider_category_id', false)
+            ->assertDontSee('tabmenu', false);
+
+        $this->assertStringNotContainsString('Legacy meta description', $response->getContent());
+        $this->assertStringNotContainsString('/legacy-insights', $response->getContent());
+
+        $this->actingAs($admin)
+            ->post("/admin/content/categorieen/{$category->id}", [
+                'id' => $category->id,
+                'name' => 'Renamed insights',
+                'slug' => 'renamed-insights',
+                'description' => 'Updated description',
+                'status' => 'inactive',
+                'parent_id' => $parent->id,
+            ])
+            ->assertRedirect("/admin/content/categorieen/{$category->id}/edit");
+
+        $category->refresh();
+
+        $this->assertSame('Renamed insights', $category->name);
+        $this->assertSame('renamed-insights', $category->slug);
+        $this->assertSame('Updated description', $category->description);
+        $this->assertSame('inactive', $category->status);
+        $this->assertSame($parent->id, $category->parent_id);
+        $this->assertSame('Legacy meta description', $category->meta_description);
+        $this->assertSame('/legacy-insights', $category->custom_url);
+        $this->assertSame($sliderCategory->id, $category->slider_category_id);
+        $this->assertTrue($category->is_hidden_from_navigation);
+    }
+
+    public function test_content_slider_page_ignores_removed_category_slider_routes(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $category = ContentCategory::query()->create([
+            'name' => 'Insights',
+            'slug' => 'insights',
+            'status' => 'active',
+        ]);
+        $sliderCategory = SliderCategory::query()->create([
+            'name' => 'Homepage slider',
+            'slug' => 'homepage-slider',
+            'status' => 'active',
+        ]);
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Slider route check',
+            'slug' => 'slider-route-check',
+            'locale' => 'nl',
+            'status' => 'draft',
+            'slider_category_id' => $sliderCategory->id,
+        ]);
+
+        $contentItem->categories()->sync([$category->id => ['sort_order' => 1]]);
+
+        $this->assertNull(app('router')->getRoutes()->getByName('admin.content.categories.slider'));
+        $this->assertNull(app('router')->getRoutes()->getByName('cms.content.categories.slider'));
+
+        $this->actingAs($admin)
+            ->get("/admin/content/{$contentItem->id}/slider")
+            ->assertOk()
+            ->assertSee('Slider route check')
+            ->assertSee('Homepage slider')
+            ->assertDontSee('Categorie sliders')
+            ->assertDontSee("/admin/content/categorieen/{$category->id}/slider", false);
     }
 
     public function test_content_photo_album_livewire_component_uploads_sorts_and_saves_image_seo(): void
@@ -791,10 +1422,10 @@ class ContentModuleTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test(ContentImageAlbum::class, ['contentItem' => $contentItem])
-            ->assertSee('Bestanden voorbereiden')
-            ->assertSee('De afbeeldingen worden gecontroleerd. Dit kan even duren bij een grote batch.')
-            ->assertSee('Afbeeldingen opslaan')
-            ->assertSee('De bestanden worden opgeslagen en aan het fotoalbum toegevoegd.')
+            ->assertSee('data-content-image-editor', false)
+            ->assertSee('name="images[]"', false)
+            ->assertSee('data-content-image-editor-cropper', false)
+            ->assertSee('Bewerking uploaden')
             ->assertSet('capacityVisible', false)
             ->assertDontSee('Bestandsgrootte')
             ->call('toggleCapacity')

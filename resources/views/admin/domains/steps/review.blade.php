@@ -9,7 +9,13 @@
         <dt>{{ __('Template') }}</dt>
         <dd>{{ $domain->template?->name ?? __('Not selected') }}</dd>
         <dt>{{ __('Frontend languages') }}</dt>
-        <dd>{{ implode(', ', array_map('strtoupper', $frontendLocales)) }}</dd>
+        <dd>
+            <span class="language-inline-list">
+                @foreach ($frontendLocales as $locale)
+                    <x-admin.language-flag :locale="$locale" />
+                @endforeach
+            </span>
+        </dd>
         <dt>{{ __('SEO fallback') }}</dt>
         <dd>{{ old('default_meta_description', $domain->default_meta_description ?: __('Not set')) }}</dd>
     </dl>

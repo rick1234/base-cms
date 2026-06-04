@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-labelledby="title">
+    <title id="title">Admin</title>
+    <rect width="120" height="120" rx="24" fill="#2488b8"/>
+    <rect x="30" y="30" width="60" height="12" rx="6" fill="#ffffff"/>
+    <rect x="30" y="54" width="60" height="12" rx="6" fill="#ffffff" opacity=".78"/>
+    <rect x="30" y="78" width="42" height="12" rx="6" fill="#ffffff" opacity=".56"/>
+</svg>

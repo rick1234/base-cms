@@ -11,16 +11,16 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Toevoegen') }}
                 </a>
                 <a class="btn" href="{{ route(request()->routeIs('cms.*') ? 'cms.locations.categories.index' : 'admin.locations.categories.index') }}">
-                    <span class="flaticon-folder-symbol"></span>
+                    <x-admin.material-icon name="folder" />
                     {{ __('Categorieen') }}
                 </a>
                 @if ($selectedCategoryId)
                     <a class="btn btn-toggle-child-categories" href="{{ route($routeNames['index'], array_merge(request()->except('showChild'), ['showChild' => $showChild ? 0 : 1])) }}">
-                        <span class="flaticon-visibility-button"></span>
+                        <x-admin.material-icon name="visibility" />
                         {{ $showChild ? __('Toon alleen vestigingen in deze categorie') : __('Toon alle onderliggende vestigingen') }}
                     </a>
                 @endif
@@ -38,20 +38,20 @@
                     <div class="overview-row header">
                         <div class="overview-item id">
                             Id
-                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'desc'])) }}" aria-label="{{ __('Sorteer aflopend') }}" title="{{ __('Sorteer aflopend') }}">
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
-                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'asc'])) }}" aria-label="{{ __('Sorteer oplopend') }}" title="{{ __('Sorteer oplopend') }}">
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item name">
                             {{ __('Naam') }}
-                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'desc'])) }}" aria-label="{{ __('Sorteer aflopend') }}" title="{{ __('Sorteer aflopend') }}">
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
-                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'asc'])) }}" aria-label="{{ __('Sorteer oplopend') }}" title="{{ __('Sorteer oplopend') }}">
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item city">{{ __('Plaats') }}</div>
@@ -64,15 +64,15 @@
                         <div class="overview-row filters">
                             <div class="overview-item id">
                                 <input name="id" type="text" value="{{ request('id') }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item name">
                                 <input name="name" type="text" value="{{ request('name', request('naam')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item city">
                                 <input name="city" type="text" value="{{ request('city', request('plaats')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item category">
                                 <select name="categoryId">
@@ -92,7 +92,7 @@
                             <div class="overview-item options">
                                 <input type="hidden" name="showChild" value="{{ $showChild ? 1 : 0 }}">
                                 <button type="submit" title="{{ __('Zoeken') }}">
-                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                    <x-admin.material-icon name="search" />
                                 </button>
                             </div>
                         </div>
@@ -103,21 +103,21 @@
                             <div class="overview-item id">
                                 {{ $location->id }}
                                 @if ($selectedCategoryId && ! $showChild)
-                                    <a href="{{ route($routeNames['index'], array_merge(request()->query(), ['move' => $location->id, 'direction' => 'down'])) }}">
-                                        <span class="flaticon-downwards-arrow-key"></span>
+                                    <a href="{{ route($routeNames['index'], array_merge(request()->query(), ['move' => $location->id, 'direction' => 'down'])) }}" aria-label="{{ __('Omlaag verplaatsen') }}" title="{{ __('Omlaag verplaatsen') }}">
+                                        <x-admin.material-icon name="keyboard_arrow_down" />
                                     </a>
-                                    <a href="{{ route($routeNames['index'], array_merge(request()->query(), ['move' => $location->id, 'direction' => 'up'])) }}">
-                                        <span class="flaticon-up-arrow-key"></span>
+                                    <a href="{{ route($routeNames['index'], array_merge(request()->query(), ['move' => $location->id, 'direction' => 'up'])) }}" aria-label="{{ __('Omhoog verplaatsen') }}" title="{{ __('Omhoog verplaatsen') }}">
+                                        <x-admin.material-icon name="keyboard_arrow_up" />
                                     </a>
                                 @endif
                             </div>
                             <div class="overview-item name">
                                 {{ $location->name }}
                                 @if ($location->images_count > 0)
-                                    <span class="admin-symbol admin-symbol-gallery" aria-hidden="true"></span>
+                                    <x-admin.material-icon name="photo_library" :label="__('Heeft afbeeldingen')" title="{{ __('Heeft afbeeldingen') }}" />
                                 @endif
                                 @if ($location->opening_hours_count > 0 || $location->special_opening_hours_count > 0)
-                                    <span class="admin-symbol admin-symbol-schedule" aria-hidden="true"></span>
+                                    <x-admin.material-icon name="schedule" :label="__('Heeft openingstijden')" title="{{ __('Heeft openingstijden') }}" />
                                 @endif
                             </div>
                             <div class="overview-item city">{{ $location->city ?: '-' }}</div>
@@ -125,24 +125,17 @@
                                 {{ $location->categories->pluck('name')->join(', ') ?: '-' }}
                             </div>
                             <div class="overview-item status">
-                                <span class="{{ $location->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <span class="{{ $location->isActive() ? 'active-item' : 'inactive-item' }}" role="img" aria-label="{{ $location->isActive() ? __('Online') : __('Offline') }}" title="{{ $location->isActive() ? __('Online') : __('Offline') }}"></span>
                             </div>
                             <div class="overview-item options">
-                                <a href="{{ route($routeNames['edit'], ['id' => $location->id]) }}" title="{{ __('Bewerken') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                <a href="{{ route($routeNames['edit'], ['id' => $location->id]) }}" aria-label="{{ __('Bewerken') }}" title="{{ __('Bewerken') }}">
+                                    <x-admin.material-icon name="edit" />
                                 </a>
-                                <form method="post" action="{{ route($routeNames['duplicate']) }}">
-                                    @csrf
-                                    <input type="hidden" name="itemId" value="{{ $location->id }}">
-                                    <button type="submit" title="{{ __('Dupliceren') }}">
-                                        <span class="flaticon-add-to-queue-button"></span>
-                                    </button>
-                                </form>
                                 <form method="post" action="{{ route($routeNames['destroy'], $location) }}">
                                     @csrf
                                     @method('delete')
-                                    <button type="submit" title="{{ __('Verwijderen') }}">
-                                        <span class="flaticon-rubbish-bin-delete-button"></span>
+                                    <button type="submit" aria-label="{{ __('Verwijderen') }}" title="{{ __('Verwijderen') }}">
+                                        <x-admin.material-icon name="delete" />
                                     </button>
                                 </form>
                             </div>

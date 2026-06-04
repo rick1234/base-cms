@@ -24,16 +24,17 @@
                     @unless ($module['read_only'] ?? false)
                         @if (request()->routeIs('cms.*') && $usesFolderRoutes && ($module['pages']['edit'] ?? false))
                             <a class="btn btn-add" href="{{ route($routeNames['edit'], [$module['folder'], 'action' => 'nw']) }}">
-                                <span class="flaticon-add-plus-button"></span>
+                                <x-admin.material-icon name="add" />
                                 {{ __('Toevoegen') }}
                             </a>
                         @else
                             <a class="btn btn-add" href="{{ route($routeNames['create'], $usesFolderRoutes ? $module['folder'] : $module['handle']) }}">
-                                <span class="flaticon-add-plus-button"></span>
+                                <x-admin.material-icon name="add" />
                                 {{ __('Toevoegen') }}
                             </a>
                         @endif
                     @endunless
+                    @include('admin.partials.module-subitem-toolbar', ['screenKey' => $module['handle'] ?? null])
                 </div>
             </div>
 
@@ -45,11 +46,6 @@
                         </div>
                         <strong>{{ $module['name'] }}</strong>
                     </div>
-                </div>
-
-                <div class="breadcrumbs">
-                    <a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a> &rsaquo;
-                    {{ $module['name'] }}
                 </div>
 
                 @if ($pages->isNotEmpty())
@@ -86,13 +82,13 @@
                                 @endphp
                                 <div class="overview-item options">
                                     <a href="{{ route($routeNames['edit'], $editTarget) }}" title="{{ __('Edit') }}">
-                                        <span class="flaticon-create-new-pencil-button"></span>
+                                        <x-admin.material-icon name="edit" />
                                     </a>
                                     <form method="post" action="{{ route($routeNames['destroy'], [$usesFolderRoutes ? $module['folder'] : $module['handle'], $row->id]) }}">
                                         @csrf
                                         @method('delete')
                                         <button class="button-link" type="submit" title="{{ __('Delete') }}">
-                                            <span class="flaticon-delete-button"></span>
+                                            <x-admin.material-icon name="delete" />
                                         </button>
                                     </form>
                                 </div>
@@ -100,7 +96,7 @@
                         </div>
                     @empty
                         <div class="overview-row">
-                            <div class="overview-item">{{ __('No records have been migrated or created for this screen yet.') }}</div>
+                            <div class="overview-item">{{ $emptyStateMessage }}</div>
                         </div>
                     @endforelse
                 </div>

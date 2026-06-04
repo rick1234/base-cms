@@ -55,15 +55,18 @@ class DomainTemplateModuleTest extends TestCase
         $this->assertSame('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@600;700&display=swap', $template->default_settings['heading_font_google_url']);
     }
 
-    public function test_admin_can_start_domain_setup_from_dashboard_and_domain_index(): void
+    public function test_admin_can_start_domain_setup_from_domain_index(): void
     {
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
             ->get('/admin')
             ->assertOk()
-            ->assertSee('Website setup')
-            ->assertSee('Start domain setup');
+            ->assertSee('dashboard-module-index', false)
+            ->assertSee('dashboard-widget-column', false)
+            ->assertDontSee('Website setup')
+            ->assertDontSee('Start domain setup')
+            ->assertDontSee('Create template');
 
         $this->actingAs($admin)
             ->get('/admin/domains')
@@ -136,6 +139,67 @@ class DomainTemplateModuleTest extends TestCase
             ->assertSee('Frontend languages')
             ->assertSee('NL')
             ->assertDontSee('All enabled languages');
+    }
+
+    public function test_dashboard_uses_module_index_without_setup_panel(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('dashboard-module-index', false)
+            ->assertSee('dashboard-widget-column', false)
+            ->assertDontSee('Website setup')
+            ->assertDontSee('Start domain setup')
+            ->assertDontSee('Create template');
+
+        Domain::query()->create([
+            'host' => 'www.example.test',
+            'name' => 'Example',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('dashboard-module-index', false)
+            ->assertSee('dashboard-widget-column', false)
+            ->assertDontSee('Website setup')
+            ->assertDontSee('Start domain setup')
+            ->assertDontSee('Create template');
+
+        Domain::query()->delete();
+
+        WebsiteTemplate::query()->create([
+            'handle' => 'base',
+            'name' => 'Base Template',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('dashboard-module-index', false)
+            ->assertSee('dashboard-widget-column', false)
+            ->assertDontSee('Website setup')
+            ->assertDontSee('Start domain setup')
+            ->assertDontSee('Create template');
+
+        Domain::query()->create([
+            'host' => 'www.ready.test',
+            'name' => 'Ready',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertDontSee('Website setup')
+            ->assertDontSee('Start domain setup')
+            ->assertDontSee('Create template')
+            ->assertSee('dashboard-module-index', false)
+            ->assertSee('dashboard-widget-column', false);
     }
 
     public function test_admin_can_create_domain_with_safe_settings_and_favicon_assets(): void
@@ -303,11 +367,18 @@ class DomainTemplateModuleTest extends TestCase
             'is_development' => true,
         ]);
         $this->assertDatabaseHas('domains', ['host' => 'www.example.nl']);
+        $this->assertDatabaseHas('domains', ['host' => 'www.example.com']);
         $this->assertDatabaseHas('domains', ['host' => 'www.example.fr']);
         $this->assertDatabaseHas('website_templates', [
             'handle' => 'default',
             'stylesheet_path' => 'resources/scss/site/templates/default/_index.scss',
             'asset_path' => 'public/site/templates/default',
         ]);
+
+        $template = WebsiteTemplate::query()->where('handle', 'default')->firstOrFail();
+
+        $this->assertFalse($template->default_settings['show_footer_credit']);
+        $this->assertArrayNotHasKey('footer_credit_label', $template->default_settings);
+        $this->assertArrayNotHasKey('footer_credit_url', $template->default_settings);
     }
 }

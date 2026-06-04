@@ -21,7 +21,7 @@
             <div class="buttons-container">
                 <div class="buttons-container align-right">
                     <a class="btn" href="{{ $backUrl }}">
-                        <span class="flaticon-back-arrow"></span>
+                        <x-admin.material-icon name="arrow_back" />
                         {{ __('Terug') }}
                     </a>
                 </div>
@@ -35,11 +35,6 @@
                         </div>
                         <strong>{{ $module['name'] }}</strong>
                     </div>
-                </div>
-
-                <div class="breadcrumbs">
-                    <a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a> &rsaquo;
-                    {{ $module['name'] }}
                 </div>
 
                 @if ($pages->isNotEmpty())

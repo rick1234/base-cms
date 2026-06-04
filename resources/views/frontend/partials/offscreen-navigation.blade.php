@@ -2,7 +2,7 @@
 
 <section class="offscreen-navigation-container" id="site-offscreen-navigation" aria-label="{{ __('Mobile navigation') }}" hidden data-site-menu-panel>
     <button class="btn-close-offscreen-navigation" type="button" data-site-menu-close>
-        <span class="site-material-icon admin-material-icon" aria-hidden="true">cancel</span>
+        <span class="site-material-icon mso" aria-hidden="true">cancel</span>
         {{ __('Sluiten') }}
     </button>
 

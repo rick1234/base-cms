@@ -38,7 +38,6 @@ class GalleryBlock extends BasePageBlock
                 ->appendFiles()
                 ->reorderable()
                 ->maxSize(10240)
-                ->required()
                 ->columnSpanFull(),
             Select::make('settings.layout')
                 ->label(__('Gallery layout'))

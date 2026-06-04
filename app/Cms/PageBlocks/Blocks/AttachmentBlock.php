@@ -36,7 +36,6 @@ class AttachmentBlock extends BasePageBlock
                 ->maxSize(20480)
                 ->downloadable()
                 ->openable()
-                ->required()
                 ->columnSpanFull(),
             TextInput::make('data.display_title')
                 ->label(__('Display title'))

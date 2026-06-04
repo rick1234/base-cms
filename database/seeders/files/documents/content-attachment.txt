@@ -1,0 +1,4 @@
+Content attachment
+==================
+
+This generated fixture represents an attachment for seeded page module data.

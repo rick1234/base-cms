@@ -1,0 +1,45 @@
+@layer admin-overrides {
+  [data-tippy-root] {
+    z-index: 7000 !important;
+  }
+
+  .tippy-box {
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-admin-tile-line) !important;
+    border-radius: var(--radius-small) !important;
+    box-shadow: var(--shadow-soft) !important;
+    color: var(--color-ink) !important;
+    font-family: var(--font-ui) !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+  }
+
+  .tippy-content {
+    padding: 0.45rem 0.65rem !important;
+  }
+
+  .tippy-arrow {
+    color: var(--color-surface) !important;
+  }
+
+  .tippy-box[data-placement^="top"] > .tippy-arrow::before {
+    border-top-color: var(--color-surface) !important;
+    filter: drop-shadow(0 1px 0 var(--color-admin-tile-line));
+  }
+
+  .tippy-box[data-placement^="bottom"] > .tippy-arrow::before {
+    border-bottom-color: var(--color-surface) !important;
+    filter: drop-shadow(0 -1px 0 var(--color-admin-tile-line));
+  }
+
+  .tippy-box[data-placement^="left"] > .tippy-arrow::before {
+    border-left-color: var(--color-surface) !important;
+    filter: drop-shadow(1px 0 0 var(--color-admin-tile-line));
+  }
+
+  .tippy-box[data-placement^="right"] > .tippy-arrow::before {
+    border-right-color: var(--color-surface) !important;
+    filter: drop-shadow(-1px 0 0 var(--color-admin-tile-line));
+  }
+}

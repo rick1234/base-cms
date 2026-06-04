@@ -24,22 +24,6 @@ class DuplicateFaqItem
                 ->all()
         );
 
-        $this->copyChildren($faqItem->attachments, $copy);
-        $this->copyChildren($faqItem->images, $copy);
-        $this->copyChildren($faqItem->videos, $copy);
-
         return $copy->refresh();
-    }
-
-    /**
-     * @param  iterable<int, object>  $children
-     */
-    private function copyChildren(iterable $children, FaqItem $copy): void
-    {
-        foreach ($children as $child) {
-            $duplicate = $child->replicate(['uuid', 'created_by', 'updated_by']);
-            $duplicate->faq_item_id = $copy->id;
-            $duplicate->save();
-        }
     }
 }

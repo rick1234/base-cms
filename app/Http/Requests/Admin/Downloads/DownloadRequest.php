@@ -35,6 +35,7 @@ class DownloadRequest extends FormRequest
             'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'link_expires_after_minutes' => ['nullable', 'integer', 'min:1', 'max:525600'],
             'unlimited_link' => ['boolean'],
+            'active_tab' => ['sometimes', Rule::in(['general', 'storage', 'invites', 'log', 'qr'])],
             'categories' => ['array'],
             'categories.*' => ['integer', 'exists:download_categories,id'],
             'file' => ['nullable', 'file', 'max:51200', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,jpg,jpeg,png,gif,webp,zip,rar,7z'],

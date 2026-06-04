@@ -4,17 +4,21 @@ namespace App\Actions\Cms;
 
 use App\Models\Cms\Page;
 use App\Models\User;
+use App\Support\Routing\PublicSlugManager;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 
 class UpsertPage
 {
+    public function __construct(private readonly PublicSlugManager $slugs) {}
+
     /**
      * @param  array<string, mixed>  $data
      */
     public function handle(array $data, User $user, ?Page $page = null): Page
     {
         $page ??= new Page;
+        $creating = ! $page->exists;
+        $oldSlug = $page->slug;
 
         $payload = Arr::only($data, [
             'domain_id',
@@ -35,15 +39,19 @@ class UpsertPage
             'published_at',
         ]);
 
-        $payload['slug'] = Str::slug($data['slug'] ?: $data['title']);
+        $payload['slug'] = $this->slugs->pageSlug($data['slug'] ?? null, $data['title'], $page);
         $payload['updated_by'] = $user->id;
 
-        if (! $page->exists) {
+        if ($creating) {
             $payload['created_by'] = $user->id;
         }
 
         $page->fill($payload);
         $page->save();
+
+        if (! $creating) {
+            $this->slugs->recordPageSlugChange($page, $oldSlug, $user);
+        }
 
         return $page;
     }

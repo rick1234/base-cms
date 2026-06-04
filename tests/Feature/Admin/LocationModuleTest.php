@@ -11,6 +11,7 @@ use App\Models\Cms\LocationSpecialOpeningHour;
 use Database\Seeders\LocationModuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -28,11 +29,14 @@ class LocationModuleTest extends TestCase
         $this->assertSame(1, LocationImage::query()->count());
         $this->assertSame(7, LocationOpeningHour::query()->count());
         $this->assertSame(1, LocationSpecialOpeningHour::query()->count());
+        $this->assertFalse(Schema::hasColumn('locations', 'meta_title'));
+        $this->assertFalse(Schema::hasColumn('locations', 'og_title'));
 
         $this->assertDatabaseHas('locations', [
             'name' => 'Seeded Amsterdam location',
             'city' => 'Amsterdam',
             'status' => 'active',
+            'metadata' => null,
         ]);
         $this->assertDatabaseHas('location_categories', [
             'slug' => 'showrooms',
@@ -88,14 +92,104 @@ class LocationModuleTest extends TestCase
         ]);
 
         $location = Location::query()->firstOrFail();
-        $this->assertSame('legacy-amsterdam-shop', $location->metadata['slug']);
+        $this->assertNull($location->metadata);
 
         $this->actingAs($admin)
             ->get('/admin/vestigingen')
             ->assertOk()
             ->assertSee('Location overview')
             ->assertSee('Legacy Amsterdam shop')
-            ->assertSee('Shops');
+            ->assertSee('Shops')
+            ->assertDontSee('ajax/duplicateItem', false)
+            ->assertDontSee('Dupliceren');
+    }
+
+    public function test_location_edit_screen_uses_general_and_location_tabs_without_seo_or_sorting(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $category = LocationCategory::query()->create([
+            'name' => 'Showrooms',
+            'slug' => 'showrooms',
+            'status' => 'active',
+        ]);
+        $location = Location::query()->create([
+            'name' => 'Amsterdam showroom',
+            'description' => '<p>Original description.</p>',
+            'latitude' => '52.3731',
+            'longitude' => '4.8922',
+            'map_info' => 'Original marker.',
+            'status' => 'active',
+            'metadata' => [
+                'slug' => 'amsterdam-showroom',
+                'seo_title' => 'Amsterdam showroom',
+                'meta_description' => 'Old SEO description.',
+            ],
+        ]);
+        $location->categories()->sync([$category->id => ['sort_order' => 1]]);
+
+        $this->actingAs($admin)
+            ->get("/admin/vestigingen/{$location->id}/edit")
+            ->assertOk()
+            ->assertSee('Algemeen')
+            ->assertSee('Locatie')
+            ->assertSee('data-wysiwyg-editor', false)
+            ->assertSee('name="description"', false)
+            ->assertSee('name="active_tab" value="general"', false)
+            ->assertSee("/admin/vestigingen/{$location->id}/edit/location", false)
+            ->assertDontSee('<h2 class="title">Vestiging</h2>', false)
+            ->assertDontSee('name="sort_order"', false)
+            ->assertDontSee('name="slug"', false)
+            ->assertDontSee('name="seo_title"', false)
+            ->assertDontSee('name="meta_description"', false)
+            ->assertDontSee('<h2 class="title">SEO</h2>', false);
+
+        $this->actingAs($admin)
+            ->get("/admin/vestigingen/{$location->id}/edit/location")
+            ->assertOk()
+            ->assertSee('name="active_tab" value="location"', false)
+            ->assertSee('name="latitude"', false)
+            ->assertSee('name="longitude"', false)
+            ->assertSee('name="map_info"', false)
+            ->assertSee('https://www.google.com/maps?q=52.3731%2C4.8922&amp;output=embed', false)
+            ->assertDontSee('name="description"', false)
+            ->assertDontSee('Google maps')
+            ->assertDontSee('<h2 class="title">SEO</h2>', false);
+
+        $this->actingAs($admin)
+            ->post("/admin/vestigingen/{$location->id}", [
+                'id' => $location->id,
+                'active_tab' => 'location',
+                'latitude' => '51.4416',
+                'longitude' => '5.4697',
+                'map_info' => 'Updated marker.',
+            ])
+            ->assertRedirect("/admin/vestigingen/{$location->id}/edit/location");
+
+        $location->refresh();
+
+        $this->assertSame('Amsterdam showroom', $location->name);
+        $this->assertSame('<p>Original description.</p>', $location->description);
+        $this->assertSame('51.4416', $location->latitude);
+        $this->assertSame('5.4697', $location->longitude);
+        $this->assertSame('Updated marker.', $location->map_info);
+        $this->assertNull($location->metadata);
+    }
+
+    public function test_location_category_overview_does_not_show_slug_or_url_detail(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $category = LocationCategory::query()->create([
+            'name' => 'Showrooms',
+            'slug' => 'showrooms',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/vestigingen/categorieen?categoryId={$category->id}")
+            ->assertOk()
+            ->assertSee('Showrooms')
+            ->assertDontSee('<dt>URL</dt>', false)
+            ->assertDontSee('/showrooms');
     }
 
     public function test_location_media_endpoints_upload_rename_sort_and_delete_images(): void

@@ -45,7 +45,7 @@ class WebsiteTemplateController extends Controller
     {
         $template = $upsert->handle($request->validated(), $request->user(), $websiteTemplate);
 
-        flash(__('Template updated.'))->success();
+        flash(__('Template saved.'))->success();
 
         return redirect()->route('admin.templates.edit', $template);
     }

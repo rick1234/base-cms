@@ -2,11 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Cms\FaqAttachment;
 use App\Models\Cms\FaqCategory;
-use App\Models\Cms\FaqImage;
 use App\Models\Cms\FaqItem;
-use App\Models\Cms\FaqVideo;
 use Illuminate\Database\Seeder;
 
 class FaqModuleSeeder extends Seeder
@@ -34,50 +31,42 @@ class FaqModuleSeeder extends Seeder
             ],
         );
 
-        $faqItem = FaqItem::query()->updateOrCreate(
-            ['slug' => 'seeded-faq-question'],
+        foreach ($this->faqItems() as $faqData) {
+            $faqItem = FaqItem::query()->updateOrCreate(
+                ['slug' => $faqData['slug']],
+                [
+                    ...$faqData,
+                    'status' => 'published',
+                ],
+            );
+
+            $faqItem->categories()->sync([
+                $rootCategory->id => ['sort_order' => 1],
+                $supportCategory->id => ['sort_order' => 2],
+            ]);
+        }
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function faqItems(): array
+    {
+        return [
             [
-                'question' => 'Seeded FAQ question',
+                'question' => 'Hoe werkt de vernieuwde FAQ module?',
+                'slug' => 'seeded-faq-question',
                 'locale' => 'nl',
-                'intro' => 'A seeded FAQ intro.',
-                'body' => 'This seeded FAQ item verifies the rebuilt FAQ module.',
-                'meta_description' => 'Seeded FAQ item for the Laravel base CMS.',
-                'status' => 'published',
-                'active_from' => now()->toDateString(),
+                'body' => 'Dit voorbeeld controleert dat de FAQ module Nederlandstalige vragen en antwoorden kan beheren.',
                 'sort_order' => 1,
             ],
-        );
-
-        $faqItem->categories()->sync([
-            $rootCategory->id => ['sort_order' => 1],
-            $supportCategory->id => ['sort_order' => 2],
-        ]);
-
-        FaqImage::query()->updateOrCreate(
-            ['faq_item_id' => $faqItem->id, 'image_path' => 'admin/cms/img/icons/modules/faq.svg'],
             [
-                'folder' => 'admin/cms/img/icons/modules',
-                'caption' => 'Seeded FAQ image',
-                'sort_order' => 1,
+                'question' => 'How does the rebuilt FAQ module work?',
+                'slug' => 'seeded-faq-question-en',
+                'locale' => 'en',
+                'body' => 'This seeded FAQ item verifies that the FAQ module can manage English questions and answers.',
+                'sort_order' => 2,
             ],
-        );
-
-        FaqAttachment::query()->updateOrCreate(
-            ['faq_item_id' => $faqItem->id, 'url' => 'admin/cms/img/icons/modules/faq.svg'],
-            [
-                'name' => 'Seeded FAQ attachment',
-                'type' => 'image/svg+xml',
-                'sort_order' => 1,
-            ],
-        );
-
-        FaqVideo::query()->updateOrCreate(
-            ['faq_item_id' => $faqItem->id, 'url' => 'https://example.com/faq-video'],
-            [
-                'title' => 'Seeded FAQ video',
-                'provider' => 'external',
-                'sort_order' => 1,
-            ],
-        );
+        ];
     }
 }

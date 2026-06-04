@@ -16,11 +16,11 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="redirect-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <button class="btn btn-save-and-stay" form="redirect-form" name="saveAndStay" type="submit" value="1">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan en blijven') }}
                 </button>
                 @if ($isExisting)
@@ -28,14 +28,14 @@
                         @csrf
                         @method('delete')
                         <button class="btn btn-remove" type="submit">
-                            <span class="flaticon-close-button"></span>
+                            <x-admin.material-icon name="delete" />
                             {{ __('Verwijderen') }}
                         </button>
                     </form>
                 @endif
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -137,7 +137,7 @@
 
             @if ($isExisting)
                 <div class="author-container">
-                    <span><strong>{{ __('Auteur') }}:</strong> {{ $redirect->created_by ?? '-' }}</span>
+                    <span><strong>{{ __('Gemaakt door') }}:</strong> {{ $redirect->creator?->fullName() ?? '-' }}</span>
                     <span><strong>{{ __('Gemaakt op') }}:</strong> {{ optional($redirect->created_at)->format('d-m-Y H:i') }}</span>
                 </div>
             @endif

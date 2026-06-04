@@ -17,12 +17,12 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="catalog-translations-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -52,7 +52,11 @@
                                     <label for="translation_locale_{{ $index }}">{{ __('Taal') }}</label>
                                 </div>
                                 <div class="form-item-input">
-                                    <input id="translation_locale_{{ $index }}" name="translations[{{ $index }}][locale]" type="text" value="{{ old("translations.{$index}.locale", $translation->locale) }}">
+                                    <x-admin.locale-radio-group
+                                        name="translations[{{ $index }}][locale]"
+                                        :selected="old('translations.'.$index.'.locale', $translation->locale)"
+                                        :id-prefix="'translation_locale_'.$index"
+                                    />
                                 </div>
                             </div>
                             <div class="form-item">
@@ -100,7 +104,11 @@
                                     <label for="translation_locale_{{ $index }}">{{ __('Taal') }}</label>
                                 </div>
                                 <div class="form-item-input">
-                                    <input id="translation_locale_{{ $index }}" name="translations[{{ $index }}][locale]" type="text" value="{{ old("translations.{$index}.locale", $locale) }}">
+                                    <x-admin.locale-radio-group
+                                        name="translations[{{ $index }}][locale]"
+                                        :selected="old('translations.'.$index.'.locale', $locale)"
+                                        :id-prefix="'translation_locale_'.$index"
+                                    />
                                 </div>
                             </div>
                             <div class="form-item">

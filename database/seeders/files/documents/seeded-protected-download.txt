@@ -1,0 +1,4 @@
+Seeded protected download
+=========================
+
+This generated fixture verifies that a seeded password-protected download has a real source file.

@@ -11,8 +11,8 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -24,7 +24,7 @@
 
                 <h2 class="title">{{ $pageName }}</h2>
                 <div class="attachment-message">
-                    <span class="flaticon-rounded-info-button"></span>
+                    <x-admin.material-icon name="info" />
                     <em>{{ __('Selecteer eerst een product om deze catalogusfunctie te gebruiken.') }}</em>
                 </div>
             </div>

@@ -59,8 +59,16 @@ class RedirectModuleTest extends TestCase
             ->get('/admin/redirect')
             ->assertOk()
             ->assertSee('Redirect overview')
+            ->assertSee('/admin/url', false)
+            ->assertSee('/admin/urlverwijzingen', false)
             ->assertSee('/old-path')
             ->assertSee('/new-path');
+
+        $this->actingAs($admin)
+            ->get('/admin/url')
+            ->assertOk()
+            ->assertSee('/admin/redirect', false)
+            ->assertSee('/admin/urlverwijzingen', false);
     }
 
     public function test_frontend_redirects_single_segment_and_fallback_paths_with_query_preservation(): void

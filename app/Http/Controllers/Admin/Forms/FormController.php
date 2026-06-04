@@ -11,6 +11,7 @@ use App\Http\Requests\Admin\Forms\FormRequest as AdminFormRequest;
 use App\Http\Requests\Admin\Forms\FormStructureRequest;
 use App\Models\Cms\Form;
 use App\Models\Cms\FormCategory;
+use App\Support\Localization\TranslationRepository;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,12 @@ class FormController extends Controller
 {
     use UsesEditViewForCreate;
 
-    public function index(Request $request): View|RedirectResponse
+    /**
+     * @var list<string>
+     */
+    private const EDIT_TABS = ['template', 'recipients', 'response', 'builder'];
+
+    public function index(Request $request, TranslationRepository $translations): View|RedirectResponse
     {
         if ($this->shouldMoveForm($request)) {
             $this->moveFormWithinCategory($request->integer('categoryId'), $request->integer('move') ?: $request->integer('id'), $request->string('direction')->toString());
@@ -42,6 +48,10 @@ class FormController extends Controller
 
         if ($request->filled('name') || $request->filled('title')) {
             $query->where('name', 'like', '%'.$request->input('name', $request->input('title')).'%');
+        }
+
+        if ($request->filled('locale')) {
+            $query->where('locale', $translations->normalizeLocale($request->string('locale')->toString()));
         }
 
         if ($request->filled('status') && $this->normalizeStatus($request->input('status')) !== null) {
@@ -67,6 +77,7 @@ class FormController extends Controller
         return view('admin.forms.index', [
             'forms' => $forms,
             'categories' => $categories,
+            'localeOptions' => $this->localeOptions($translations),
             'selectedCategoryId' => $categoryId,
             'showChild' => $request->boolean('showChild'),
             'routeNames' => $this->routeNames(),
@@ -82,8 +93,12 @@ class FormController extends Controller
         return redirect()->route($this->routeName('edit'), ['id' => $form->id]);
     }
 
-    public function edit(Request $request): View
+    public function edit(Request $request): View|RedirectResponse
     {
+        if ($redirect = $this->redirectQueryTabToRoute($request)) {
+            return $redirect;
+        }
+
         $form = $this->formFromRequest($request);
         $form?->load([
             'categories',
@@ -101,10 +116,8 @@ class FormController extends Controller
                 'settings' => [
                     'show_title' => true,
                     'layout' => 'default',
-                    'mail_template' => 'forms.default',
+                    'mail_template' => 'mail.forms.submission',
                     'store_submissions' => true,
-                    'honeypot_enabled' => true,
-                    'honeypot_field' => 'website',
                 ],
             ]),
             'categories' => $this->categories(),
@@ -122,7 +135,9 @@ class FormController extends Controller
 
         flash(__('Form saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $form->id]);
+        $activeTab = $request->validated('active_tab');
+
+        return redirect()->route($this->editRouteName($activeTab), $this->editRedirectParameters($form, $activeTab));
     }
 
     public function update(Form $form, AdminFormRequest $request, UpsertForm $upsert): RedirectResponse
@@ -131,16 +146,18 @@ class FormController extends Controller
 
         flash(__('Form saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $form->id]);
+        $activeTab = $request->validated('active_tab');
+
+        return redirect()->route($this->editRouteName($activeTab), $this->editRedirectParameters($form, $activeTab));
     }
 
     public function saveBuilder(FormStructureRequest $request, SaveFormStructure $saveStructure): RedirectResponse
     {
         $form = $saveStructure->handle($request->formModel(), $request->validated(), $request->user());
 
-        flash(__('Form builder saved.'))->success();
+        flash(__('Formulier opgeslagen'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $form->id, 'tab' => 'builder']);
+        return redirect()->route($this->editRouteName('builder'), $this->editRedirectParameters($form, 'builder'));
     }
 
     public function submissions(Request $request): View
@@ -221,6 +238,30 @@ class FormController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * @return Collection<int, array{code: string, label: string}>
+     */
+    private function localeOptions(TranslationRepository $translations): Collection
+    {
+        $enabledLanguages = $translations->enabledLanguages();
+        $labels = $enabledLanguages
+            ->mapWithKeys(fn ($language): array => [
+                $translations->normalizeLocale($language->code) => $language->label(),
+            ]);
+
+        return $enabledLanguages
+            ->pluck('code')
+            ->merge(Form::query()->whereNotNull('locale')->distinct()->pluck('locale'))
+            ->map(fn (?string $locale): string => $translations->normalizeLocale($locale))
+            ->filter()
+            ->unique()
+            ->values()
+            ->map(fn (string $locale): array => [
+                'code' => $locale,
+                'label' => $labels->get($locale, strtoupper($locale)),
+            ]);
     }
 
     /**
@@ -311,6 +352,7 @@ class FormController extends Controller
             'store' => $this->routeName('store'),
             'create' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('create'),
             'edit' => $this->routeName('edit'),
+            'edit.tab' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('edit.tab'),
             'save' => $this->routeName('save'),
             'builder.save' => $this->routeName('builder.save'),
             'submissions' => $this->routeName('submissions'),
@@ -322,5 +364,52 @@ class FormController extends Controller
     private function routeName(string $name): string
     {
         return (request()->routeIs('cms.*') ? 'cms.forms.' : 'admin.forms.').$name;
+    }
+
+    private function editRouteName(?string $activeTab = null): string
+    {
+        if (! request()->routeIs('cms.*') && in_array($activeTab, self::EDIT_TABS, true)) {
+            return $this->routeName('edit.tab');
+        }
+
+        return $this->routeName('edit');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function editRedirectParameters(Form $form, ?string $activeTab = null): array
+    {
+        $parameters = ['id' => $form->id];
+
+        if (in_array($activeTab, self::EDIT_TABS, true)) {
+            $parameters['tab'] = $activeTab;
+        }
+
+        return $parameters;
+    }
+
+    private function redirectQueryTabToRoute(Request $request): ?RedirectResponse
+    {
+        if (request()->routeIs('cms.*') || $request->route('tab')) {
+            return null;
+        }
+
+        $tab = $request->query('tab');
+
+        if (! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return null;
+        }
+
+        $id = (int) ($request->route('id') ?: $request->integer('id'));
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return redirect()->route($this->routeName('edit.tab'), [
+            'id' => $id,
+            'tab' => $tab,
+        ]);
     }
 }

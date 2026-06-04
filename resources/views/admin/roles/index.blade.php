@@ -11,7 +11,7 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Toevoegen') }}
                 </a>
             </div>
@@ -38,11 +38,11 @@
                         <div class="overview-row filters">
                             <div class="overview-item id">
                                 <input name="id" type="text" value="{{ request('id') }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item name">
                                 <input name="name" type="text" value="{{ request('name', request('naam')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item permissions"></div>
                             <div class="overview-item users"></div>
@@ -55,7 +55,7 @@
                             </div>
                             <div class="overview-item options">
                                 <button type="submit" title="{{ __('Zoeken') }}">
-                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                    <x-admin.material-icon name="search" />
                                 </button>
                             </div>
                         </div>
@@ -77,14 +77,14 @@
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $role->id]) }}" title="{{ __('Bewerken') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
                                 @if ($role->users_count === 0)
                                     <form method="post" action="{{ route($routeNames['destroy'], $role) }}">
                                         @csrf
                                         @method('delete')
                                         <button type="submit" title="{{ __('Verwijderen') }}">
-                                            <span class="flaticon-rubbish-bin-delete-button"></span>
+                                            <x-admin.material-icon name="delete" />
                                         </button>
                                     </form>
                                 @endif

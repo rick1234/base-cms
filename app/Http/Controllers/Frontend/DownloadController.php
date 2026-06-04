@@ -10,8 +10,8 @@ use App\Support\Downloads\DownloadLinkIssuer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DownloadController extends Controller
@@ -52,7 +52,7 @@ class DownloadController extends Controller
         return redirect()->away($issuer->issue($downloadModel));
     }
 
-    public function file(string $token, DownloadLinkIssuer $issuer): StreamedResponse
+    public function file(string $token, DownloadLinkIssuer $issuer, Request $request): StreamedResponse
     {
         $accessToken = DownloadAccessToken::query()
             ->with('download')
@@ -66,12 +66,13 @@ class DownloadController extends Controller
 
         abort_unless($download?->isActive() && $download->hasFile(), 404);
 
-        $accessToken->newQuery()
-            ->whereKey($accessToken->id)
-            ->update([
-                'used_count' => DB::raw('used_count + 1'),
-                'last_used_at' => now(),
-            ]);
+        $accessToken->forceFill([
+            'used_count' => $accessToken->used_count + 1,
+            'first_ip_address' => $accessToken->first_ip_address ?: $request->ip(),
+            'last_ip_address' => $request->ip(),
+            'last_user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
+            'last_used_at' => now(),
+        ])->save();
 
         $download->recordDownload();
 

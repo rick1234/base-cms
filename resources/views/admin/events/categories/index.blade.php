@@ -9,6 +9,9 @@
         </div>
 
         <div class="main has-buttons">
+            <div class="buttons-container align-right">
+                @include('admin.partials.category-related-items-button')
+            </div>
 
             <div class="main-section">
                 @include('admin.events.partials.page-header', [

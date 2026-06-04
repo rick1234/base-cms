@@ -2,16 +2,15 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Models\User;
-use App\Models\Cms\FaqAttachment;
 use App\Models\Cms\FaqCategory;
-use App\Models\Cms\FaqImage;
 use App\Models\Cms\FaqItem;
-use App\Models\Cms\FaqVideo;
+use App\Models\Cms\NavigationMenu;
+use App\Models\Cms\NavigationMenuItem;
+use App\Models\User;
 use Database\Seeders\FaqModuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class FaqModuleTest extends TestCase
@@ -24,14 +23,22 @@ class FaqModuleTest extends TestCase
         $this->seed(FaqModuleSeeder::class);
 
         $this->assertSame(2, FaqCategory::query()->count());
-        $this->assertSame(1, FaqItem::query()->count());
-        $this->assertSame(1, FaqImage::query()->count());
-        $this->assertSame(1, FaqAttachment::query()->count());
-        $this->assertSame(1, FaqVideo::query()->count());
+        $this->assertSame(2, FaqItem::query()->count());
+        $this->assertDatabaseCount('faq_attachments', 0);
+        $this->assertFalse(Schema::hasTable('faq_images'));
+        $this->assertFalse(Schema::hasTable('faq_videos'));
 
         $this->assertDatabaseHas('faq_items', [
             'slug' => 'seeded-faq-question',
-            'question' => 'Seeded FAQ question',
+            'locale' => 'nl',
+            'question' => 'Hoe werkt de vernieuwde FAQ module?',
+            'intro' => null,
+            'meta_description' => null,
+        ]);
+        $this->assertDatabaseHas('faq_items', [
+            'slug' => 'seeded-faq-question-en',
+            'locale' => 'en',
+            'question' => 'How does the rebuilt FAQ module work?',
         ]);
         $this->assertDatabaseHas('faq_categories', [
             'slug' => 'support',
@@ -39,140 +46,152 @@ class FaqModuleTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_create_faq_item_with_legacy_fields_categories_and_attachments(): void
+    public function test_admin_can_create_simple_faq_item_with_categories_and_more_info_navigation_link(): void
     {
-        Storage::fake('public');
-
         $admin = User::factory()->admin()->create();
         $category = FaqCategory::query()->create([
             'name' => 'General',
             'slug' => 'general',
             'status' => 'active',
         ]);
+        $navigationItem = $this->navigationItem();
+        $secondNavigationItem = NavigationMenuItem::query()->create([
+            'navigation_menu_id' => $navigationItem->navigation_menu_id,
+            'title' => 'Planning page',
+            'link_type' => 'custom',
+            'custom_url' => '/planning',
+            'is_active' => true,
+        ]);
 
         $this->actingAs($admin)
             ->post('/admin/faq/edit', [
                 'question' => 'How does the rebuilt FAQ work?',
-                'answer' => 'It uses Laravel controllers, requests, Eloquent models, and Blade views.',
-                'slug' => 'rebuilt-faq-question',
-                'locale' => 'nl',
+                'answer' => '<p>It uses a focused question and answer editor.</p>',
                 'status' => '1',
-                'active_from' => '2026-05-01',
                 'categorie' => [$category->id],
-                'attachment_names' => ['FAQ sheet'],
-                'attachment_files' => [
-                    UploadedFile::fake()->create('faq-sheet.pdf', 12, 'application/pdf'),
+                'more_info_links' => [
+                    [
+                        'navigation_item_id' => $navigationItem->id,
+                        'label' => 'Read more',
+                    ],
+                    [
+                        'navigation_item_id' => $secondNavigationItem->id,
+                        'label' => 'Planning',
+                    ],
+                    [
+                        'navigation_item_id' => null,
+                        'label' => 'Ignored because no target is selected',
+                    ],
                 ],
             ])
             ->assertRedirect('/admin/faq/1/edit');
 
-        $this->assertDatabaseHas('faq_items', [
-            'question' => 'How does the rebuilt FAQ work?',
-            'body' => 'It uses Laravel controllers, requests, Eloquent models, and Blade views.',
-            'slug' => 'rebuilt-faq-question',
-            'status' => 'published',
-        ]);
+        $faqItem = FaqItem::query()->firstOrFail();
+
+        $this->assertSame('How does the rebuilt FAQ work?', $faqItem->question);
+        $this->assertSame('<p>It uses a focused question and answer editor.</p>', $faqItem->body);
+        $this->assertSame('how-does-the-rebuilt-faq-work', $faqItem->slug);
+        $this->assertSame('published', $faqItem->status);
+        $this->assertSame([
+            'navigation_item_id' => $navigationItem->id,
+            'label' => 'Read more',
+        ], $faqItem->metadata['more_info']);
+        $this->assertSame([
+            [
+                'navigation_item_id' => $navigationItem->id,
+                'label' => 'Read more',
+            ],
+            [
+                'navigation_item_id' => $secondNavigationItem->id,
+                'label' => 'Planning',
+            ],
+        ], $faqItem->metadata['more_info_links']);
         $this->assertDatabaseHas('faq_category_faq_item', [
             'faq_category_id' => $category->id,
-            'faq_item_id' => 1,
+            'faq_item_id' => $faqItem->id,
         ]);
-        $this->assertDatabaseHas('faq_attachments', [
-            'faq_item_id' => 1,
-            'name' => 'FAQ sheet',
-        ]);
+        $this->assertDatabaseCount('faq_attachments', 0);
 
         $this->actingAs($admin)
             ->get('/admin/faq')
             ->assertOk()
             ->assertSee('How does the rebuilt FAQ work?')
-            ->assertSee('General');
+            ->assertSee('General')
+            ->assertDontSee('ajax/duplicateItem', false)
+            ->assertDontSee('Dupliceren');
     }
 
-    public function test_faq_media_and_video_endpoints_upload_rename_sort_save_and_delete(): void
+    public function test_faq_edit_screen_is_simplified(): void
     {
-        Storage::fake('public');
-
         $admin = User::factory()->admin()->create();
         $faqItem = FaqItem::query()->create([
-            'question' => 'Media FAQ',
-            'slug' => 'media-faq',
+            'question' => 'Simple FAQ',
+            'slug' => 'simple-faq',
+            'body' => '<p>Simple answer.</p>',
             'status' => 'published',
         ]);
 
-        $this->actingAs($admin)
-            ->withHeader('Accept', 'application/json')
-            ->post("/admin/faq/ajax/uploadFotoalbumAfbeelding?id={$faqItem->id}", [
-                'image' => UploadedFile::fake()->image('faq.jpg'),
-            ])
+        $response = $this->actingAs($admin)
+            ->get("/admin/faq/{$faqItem->id}/edit")
             ->assertOk()
-            ->assertJsonPath('status', 'success');
+            ->assertSee('Vraag')
+            ->assertSee('Antwoord')
+            ->assertSee('Meer informatie')
+            ->assertSee('data-wysiwyg-editor', false)
+            ->assertSee('class="wysiwyg-hidden-input"', false)
+            ->assertSee('data-form-managed-list="faq-more-info-links"', false)
+            ->assertSee('data-form-managed-list-add="faq-more-info-links"', false)
+            ->assertSee('more_info_links[0][navigation_item_id]', false)
+            ->assertSee('listing-category-picker', false)
+            ->assertDontSee('name="slug"', false)
+            ->assertDontSee('name="locale"', false)
+            ->assertDontSee('name="more_info_navigation_item_id"', false)
+            ->assertDontSee('name="more_info_label"', false)
+            ->assertDontSee('active_from', false)
+            ->assertDontSee('meta_description', false)
+            ->assertDontSee('Fotoalbum')
+            ->assertDontSee("Video's");
 
-        $firstImage = FaqImage::query()->firstOrFail();
-        $secondImage = FaqImage::query()->create([
-            'faq_item_id' => $faqItem->id,
-            'image_path' => 'storage/faq/images/second.jpg',
-            'caption' => 'Second',
-            'sort_order' => 2,
+        $html = $response->getContent();
+        $questionPosition = strpos($html, 'id="question"');
+        $statusPosition = strpos($html, 'id="status"');
+        $answerPosition = strpos($html, 'id="faq-answer-label"');
+
+        $this->assertSame(1, substr_count($html, '<textarea'));
+        $this->assertIsInt($questionPosition);
+        $this->assertIsInt($statusPosition);
+        $this->assertIsInt($answerPosition);
+        $this->assertGreaterThan($questionPosition, $statusPosition);
+        $this->assertLessThan($answerPosition, $statusPosition);
+    }
+
+    public function test_faq_media_and_video_routes_are_removed(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $faqItem = FaqItem::query()->create([
+            'question' => 'Media-free FAQ',
+            'slug' => 'media-free-faq',
+            'status' => 'published',
         ]);
 
-        $this->actingAs($admin)
-            ->withHeader('Accept', 'application/json')
-            ->post('/admin/faq/ajax/updateAfbeeldingnaam', [
-                'uploadId' => $firstImage->id,
-                'uploadName' => 'Renamed FAQ image',
-            ])
-            ->assertOk()
-            ->assertJsonPath('status', 'success');
+        $this->assertFalse(Route::has('admin.faq.images'));
+        $this->assertFalse(Route::has('admin.faq.videos'));
+        $this->assertFalse(Route::has('admin.faq.image.upload'));
+        $this->assertFalse(Route::has('admin.faq.video.delete'));
 
         $this->actingAs($admin)
-            ->withHeader('Accept', 'application/json')
-            ->post('/admin/faq/ajax/updateSortIndex', [
-                'sort_index' => "{$secondImage->id},{$firstImage->id}",
-            ])
-            ->assertOk()
-            ->assertJsonPath('status', 'success');
+            ->get("/admin/faq/{$faqItem->id}/images")
+            ->assertNotFound();
+
+        $this->actingAs($admin)
+            ->post("/admin/faq/ajax/uploadFotoalbumAfbeelding?id={$faqItem->id}")
+            ->assertNotFound();
 
         $this->actingAs($admin)
             ->post('/admin/faq/editVideo', [
                 'id' => $faqItem->id,
-                'videos' => [
-                    ['title' => 'FAQ video', 'url' => 'https://example.com/faq-video', 'provider' => 'external'],
-                ],
             ])
-            ->assertRedirect("/admin/faq/{$faqItem->id}/videos");
-
-        $video = FaqVideo::query()->firstOrFail();
-
-        $this->actingAs($admin)
-            ->withHeader('Accept', 'application/json')
-            ->post('/admin/faq/ajax/deleteVideo', [
-                'videoid' => $video->id,
-            ])
-            ->assertOk()
-            ->assertJsonPath('status', 'success');
-
-        $this->actingAs($admin)
-            ->withHeader('Accept', 'application/json')
-            ->post('/admin/faq/ajax/deleteAfbeelding', [
-                'id' => $firstImage->id,
-            ])
-            ->assertOk()
-            ->assertJsonPath('status', 'success');
-
-        $this->assertDatabaseHas('faq_images', [
-            'id' => $firstImage->id,
-            'caption' => 'Renamed FAQ image',
-        ]);
-        $this->assertDatabaseHas('faq_images', [
-            'id' => $secondImage->id,
-            'sort_order' => 1,
-        ]);
-        $this->assertDatabaseMissing('faq_videos', [
-            'id' => $video->id,
-        ]);
-        $this->assertSoftDeleted('faq_images', [
-            'id' => $firstImage->id,
-        ]);
+            ->assertNotFound();
     }
 
     public function test_faq_categories_support_legacy_fields_and_delete_routes(): void
@@ -203,7 +222,7 @@ class FaqModuleTest extends TestCase
         ]);
     }
 
-    public function test_faq_items_can_be_duplicated_with_media_attachments_categories_and_videos(): void
+    public function test_faq_items_can_be_duplicated_with_categories_and_more_info_metadata(): void
     {
         $admin = User::factory()->admin()->create();
         $category = FaqCategory::query()->create([
@@ -211,33 +230,20 @@ class FaqModuleTest extends TestCase
             'slug' => 'duplication',
             'status' => 'active',
         ]);
+        $navigationItem = $this->navigationItem();
         $faqItem = FaqItem::query()->create([
             'question' => 'Original FAQ',
             'slug' => 'original-faq',
             'body' => 'Original answer.',
             'status' => 'published',
+            'metadata' => [
+                'more_info' => [
+                    'navigation_item_id' => $navigationItem->id,
+                    'label' => 'Read more',
+                ],
+            ],
         ]);
         $faqItem->categories()->sync([$category->id => ['sort_order' => 1]]);
-
-        FaqAttachment::query()->create([
-            'faq_item_id' => $faqItem->id,
-            'name' => 'Original attachment',
-            'url' => 'storage/faq/attachments/original.pdf',
-            'sort_order' => 1,
-        ]);
-        FaqImage::query()->create([
-            'faq_item_id' => $faqItem->id,
-            'image_path' => 'storage/faq/images/original.jpg',
-            'caption' => 'Original image',
-            'sort_order' => 1,
-        ]);
-        FaqVideo::query()->create([
-            'faq_item_id' => $faqItem->id,
-            'title' => 'Original video',
-            'url' => 'https://example.com/original-video',
-            'provider' => 'external',
-            'sort_order' => 1,
-        ]);
 
         $this->actingAs($admin)
             ->withHeader('Accept', 'application/json')
@@ -252,21 +258,28 @@ class FaqModuleTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame('draft', $copy->status);
+        $this->assertSame($faqItem->metadata, $copy->metadata);
         $this->assertDatabaseHas('faq_category_faq_item', [
             'faq_category_id' => $category->id,
             'faq_item_id' => $copy->id,
         ]);
-        $this->assertDatabaseHas('faq_attachments', [
-            'faq_item_id' => $copy->id,
-            'name' => 'Original attachment',
+        $this->assertDatabaseCount('faq_attachments', 0);
+    }
+
+    private function navigationItem(): NavigationMenuItem
+    {
+        $menu = NavigationMenu::query()->create([
+            'handle' => 'primary',
+            'name' => 'Primary navigation',
+            'is_active' => true,
         ]);
-        $this->assertDatabaseHas('faq_images', [
-            'faq_item_id' => $copy->id,
-            'caption' => 'Original image',
-        ]);
-        $this->assertDatabaseHas('faq_videos', [
-            'faq_item_id' => $copy->id,
-            'title' => 'Original video',
+
+        return NavigationMenuItem::query()->create([
+            'navigation_menu_id' => $menu->id,
+            'title' => 'More info page',
+            'link_type' => 'custom',
+            'custom_url' => '/more-info',
+            'is_active' => true,
         ]);
     }
 }

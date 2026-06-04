@@ -8,6 +8,7 @@ use App\Models\Cms\IsoLanguage;
 use App\Models\User;
 use Database\Seeders\CountryLanguageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class CountryLanguageModuleTest extends TestCase
@@ -50,6 +51,15 @@ class CountryLanguageModuleTest extends TestCase
             'code' => 'nl',
             'direction' => 'ltr',
         ]);
+
+        foreach ([
+            'shipping_general_cents',
+            'shipping_envelope_cents',
+            'shipping_small_box_cents',
+            'shipping_big_box_cents',
+        ] as $column) {
+            $this->assertFalse(Schema::hasColumn('countries', $column), "The countries table should not include {$column}.");
+        }
     }
 
     public function test_admin_can_browse_and_update_countries_with_legacy_fields(): void
@@ -60,13 +70,29 @@ class CountryLanguageModuleTest extends TestCase
         $country = Country::query()->where('iso2', 'NL')->firstOrFail();
 
         $this->actingAs($admin)
-            ->get('/admin/isolanden?iso2=NL')
+            ->get('/admin/landen?iso2=NL')
             ->assertOk()
             ->assertSee('Countries')
-            ->assertSee('NL');
+            ->assertSee('NL')
+            ->assertDontSee('Refresh package data')
+            ->assertDontSee('Pakketgegevens vernieuwen');
 
         $this->actingAs($admin)
-            ->post("/admin/isolanden/edit?id={$country->id}", [
+            ->post('/admin/landen/sync')
+            ->assertNotFound();
+
+        $this->actingAs($admin)
+            ->get("/admin/landen/{$country->id}/edit")
+            ->assertOk()
+            ->assertDontSee('Shipping costs')
+            ->assertDontSee('Verzendkosten')
+            ->assertDontSee('shipping_general_cents', false)
+            ->assertDontSee('shipping_envelope_cents', false)
+            ->assertDontSee('shipping_small_box_cents', false)
+            ->assertDontSee('shipping_big_box_cents', false);
+
+        $this->actingAs($admin)
+            ->post("/admin/landen/edit?id={$country->id}", [
                 'naam' => 'Netherlands updated',
                 'code' => 'NL',
                 'iso3' => 'NLD',
@@ -76,12 +102,8 @@ class CountryLanguageModuleTest extends TestCase
                 'is_enabled' => '1',
                 'vat' => '1',
                 'regio' => 'EU',
-                'algemeen' => '1250',
-                'envelope' => '500',
-                'smallbox' => '750',
-                'bigbox' => '1500',
             ])
-            ->assertRedirect("/admin/isolanden/{$country->id}/edit");
+            ->assertRedirect("/admin/landen/{$country->id}/edit");
 
         $this->assertDatabaseHas('countries', [
             'id' => $country->id,
@@ -89,10 +111,6 @@ class CountryLanguageModuleTest extends TestCase
             'iso2' => 'NL',
             'charges_vat' => true,
             'region_code' => 'EU',
-            'shipping_general_cents' => 1250,
-            'shipping_envelope_cents' => 500,
-            'shipping_small_box_cents' => 750,
-            'shipping_big_box_cents' => 1500,
         ]);
     }
 
@@ -105,17 +123,17 @@ class CountryLanguageModuleTest extends TestCase
         $dutch = CmsLanguage::query()->where('code', 'nl')->firstOrFail();
 
         $this->actingAs($admin)
-            ->get('/admin/isolanden/talen')
+            ->get('/admin/landen/talen')
             ->assertOk()
             ->assertSee('Website languages')
             ->assertSee('English');
 
         $this->actingAs($admin)
-            ->post('/admin/isolanden/talen', [
+            ->post('/admin/landen/talen', [
                 'enabled_languages' => [$english->id, $dutch->id],
                 'default_language' => $dutch->id,
             ])
-            ->assertRedirect('/admin/isolanden/talen');
+            ->assertRedirect('/admin/landen/talen');
 
         $this->assertDatabaseHas('languages', [
             'id' => $dutch->id,
@@ -130,19 +148,43 @@ class CountryLanguageModuleTest extends TestCase
         ]);
     }
 
-    public function test_legacy_cms_country_routes_still_resolve(): void
+    public function test_language_overview_and_edit_pages_use_flags_for_language_codes(): void
+    {
+        $this->seed(CountryLanguageSeeder::class);
+
+        $admin = User::factory()->admin()->create();
+        $dutch = CmsLanguage::query()->where('code', 'nl')->firstOrFail();
+
+        $overview = $this->actingAs($admin)
+            ->get('/admin/landen/talen')
+            ->assertOk()
+            ->assertSee('vendor/flag-icons/flags/4x3/nl.svg', false)
+            ->assertSee('vendor/flag-icons/flags/4x3/gb.svg', false)
+            ->assertSee('language-summary-item', false)
+            ->assertDontSee('>nl<', false);
+
+        $this->assertStringNotContainsString('>en<', $overview->getContent());
+
+        $this->actingAs($admin)
+            ->get("/admin/landen/talen/{$dutch->id}/edit")
+            ->assertOk()
+            ->assertSee('language-code-field', false)
+            ->assertSee('vendor/flag-icons/flags/4x3/nl.svg', false);
+    }
+
+    public function test_cms_country_routes_still_resolve(): void
     {
         $this->seed(CountryLanguageSeeder::class);
 
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
-            ->get('/cms/isolanden/index.php?iso2=NL')
+            ->get('/cms/landen/index.php?iso2=NL')
             ->assertOk()
             ->assertSee('Countries');
 
         $this->actingAs($admin)
-            ->get('/cms/isolanden/talen/index.php')
+            ->get('/cms/landen/talen/index.php')
             ->assertOk()
             ->assertSee('Website languages');
     }

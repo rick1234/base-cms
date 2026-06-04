@@ -19,9 +19,20 @@ class SaveFormStructure
     public function handle(Form $form, array $data, ?Authenticatable $actor = null): Form
     {
         return DB::transaction(function () use ($form, $data, $actor): Form {
+            $savedBlockIds = [];
+
             foreach ((array) ($data['blocks'] ?? []) as $blockIndex => $blockData) {
-                $this->saveBlock($form, (array) $blockData, (int) $blockIndex, $actor);
+                $savedBlockId = $this->saveBlock($form, (array) $blockData, (int) $blockIndex, $actor);
+
+                if ($savedBlockId !== null) {
+                    $savedBlockIds[] = $savedBlockId;
+                }
             }
+
+            $form->blocks()
+                ->when($savedBlockIds !== [], fn ($query) => $query->whereKeyNot($savedBlockIds))
+                ->get()
+                ->each(fn (FormBlock $block) => $this->deleteBlock($block));
 
             return $form->refresh();
         });
@@ -30,18 +41,18 @@ class SaveFormStructure
     /**
      * @param  array<string, mixed>  $data
      */
-    private function saveBlock(Form $form, array $data, int $index, ?Authenticatable $actor): void
+    private function saveBlock(Form $form, array $data, int $index, ?Authenticatable $actor): ?int
     {
         $block = $this->ownedBlock($form, (int) ($data['id'] ?? 0));
 
         if (! empty($data['delete'])) {
             $this->deleteBlock($block);
 
-            return;
+            return null;
         }
 
         if (! $block && blank($data['title'] ?? null) && empty($data['rows'])) {
-            return;
+            return null;
         }
 
         $block ??= new FormBlock([
@@ -57,26 +68,39 @@ class SaveFormStructure
             'updated_by' => $actor?->getAuthIdentifier(),
         ])->save();
 
+        $savedRowIds = [];
+
         foreach ((array) ($data['rows'] ?? []) as $rowIndex => $rowData) {
-            $this->saveRow($block, (array) $rowData, (int) $rowIndex, $actor);
+            $savedRowId = $this->saveRow($block, (array) $rowData, (int) $rowIndex, $actor);
+
+            if ($savedRowId !== null) {
+                $savedRowIds[] = $savedRowId;
+            }
         }
+
+        $block->rows()
+            ->when($savedRowIds !== [], fn ($query) => $query->whereKeyNot($savedRowIds))
+            ->get()
+            ->each(fn (FormRow $row) => $this->deleteRow($row));
+
+        return (int) $block->id;
     }
 
     /**
      * @param  array<string, mixed>  $data
      */
-    private function saveRow(FormBlock $block, array $data, int $index, ?Authenticatable $actor): void
+    private function saveRow(FormBlock $block, array $data, int $index, ?Authenticatable $actor): ?int
     {
         $row = $this->ownedRow($block, (int) ($data['id'] ?? 0));
 
         if (! empty($data['delete'])) {
             $this->deleteRow($row);
 
-            return;
+            return null;
         }
 
         if (! $row && empty($data['fields'])) {
-            return;
+            return null;
         }
 
         $row ??= new FormRow([
@@ -92,26 +116,39 @@ class SaveFormStructure
             'updated_by' => $actor?->getAuthIdentifier(),
         ])->save();
 
+        $savedFieldIds = [];
+
         foreach ((array) ($data['fields'] ?? []) as $fieldIndex => $fieldData) {
-            $this->saveField($row, (array) $fieldData, (int) $fieldIndex, $actor);
+            $savedFieldId = $this->saveField($row, (array) $fieldData, (int) $fieldIndex, $actor);
+
+            if ($savedFieldId !== null) {
+                $savedFieldIds[] = $savedFieldId;
+            }
         }
+
+        $row->fields()
+            ->when($savedFieldIds !== [], fn ($query) => $query->whereKeyNot($savedFieldIds))
+            ->get()
+            ->each(fn (FormField $field) => $this->deleteField($field));
+
+        return (int) $row->id;
     }
 
     /**
      * @param  array<string, mixed>  $data
      */
-    private function saveField(FormRow $row, array $data, int $index, ?Authenticatable $actor): void
+    private function saveField(FormRow $row, array $data, int $index, ?Authenticatable $actor): ?int
     {
         $field = $this->ownedField($row, (int) ($data['id'] ?? 0));
 
         if (! empty($data['delete'])) {
             $this->deleteField($field);
 
-            return;
+            return null;
         }
 
         if (! $field && blank($data['label'] ?? null) && blank($data['name'] ?? null)) {
-            return;
+            return null;
         }
 
         $field ??= new FormField([
@@ -124,6 +161,7 @@ class SaveFormStructure
         $name = $this->fieldName($row, (string) ($data['name'] ?? ''), (string) ($data['label'] ?? ''), $field);
 
         $field->fill([
+            'row_id' => $row->id,
             'name' => $name,
             'label' => $data['label'] ?? null,
             'type' => $type,
@@ -143,26 +181,39 @@ class SaveFormStructure
             'updated_by' => $actor?->getAuthIdentifier(),
         ])->save();
 
+        $savedOptionIds = [];
+
         foreach ((array) ($data['options'] ?? []) as $optionIndex => $optionData) {
-            $this->saveOption($field, (array) $optionData, (int) $optionIndex, $actor);
+            $savedOptionId = $this->saveOption($field, (array) $optionData, (int) $optionIndex, $actor);
+
+            if ($savedOptionId !== null) {
+                $savedOptionIds[] = $savedOptionId;
+            }
         }
+
+        $field->options()
+            ->when($savedOptionIds !== [], fn ($query) => $query->whereKeyNot($savedOptionIds))
+            ->get()
+            ->each(fn (FormFieldOption $option) => $option->delete());
+
+        return (int) $field->id;
     }
 
     /**
      * @param  array<string, mixed>  $data
      */
-    private function saveOption(FormField $field, array $data, int $index, ?Authenticatable $actor): void
+    private function saveOption(FormField $field, array $data, int $index, ?Authenticatable $actor): ?int
     {
         $option = $this->ownedOption($field, (int) ($data['id'] ?? 0));
 
         if (! empty($data['delete'])) {
             $option?->delete();
 
-            return;
+            return null;
         }
 
         if (! $option && blank($data['label'] ?? null)) {
-            return;
+            return null;
         }
 
         $option ??= new FormFieldOption([
@@ -179,6 +230,8 @@ class SaveFormStructure
             ],
             'updated_by' => $actor?->getAuthIdentifier(),
         ])->save();
+
+        return (int) $option->id;
     }
 
     private function fieldName(FormRow $row, string $candidate, string $label, ?FormField $field): string
@@ -225,7 +278,16 @@ class SaveFormStructure
 
     private function ownedField(FormRow $row, int $id): ?FormField
     {
-        return $id > 0 ? $row->fields()->whereKey($id)->first() : null;
+        if ($id <= 0) {
+            return null;
+        }
+
+        $row->loadMissing('block');
+
+        return FormField::query()
+            ->whereKey($id)
+            ->whereHas('row.block', fn ($query) => $query->where('form_id', $row->block->form_id))
+            ->first();
     }
 
     private function ownedOption(FormField $field, int $id): ?FormFieldOption

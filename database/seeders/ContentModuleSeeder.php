@@ -10,6 +10,7 @@ use App\Models\Cms\ContentImage;
 use App\Models\Cms\ContentItem;
 use App\Models\Cms\Form;
 use App\Models\Cms\SliderCategory;
+use Database\Seeders\Support\SeederFiles;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -31,20 +32,21 @@ class ContentModuleSeeder extends Seeder
             ],
         );
 
-        $contactForm = Form::query()->firstOrCreate(
-            ['slug' => 'general-contact'],
-            [
-                'name' => 'General contact',
-                'description' => 'Seeded form placeholder for content item form assignment.',
-                'submit_text' => 'Send',
-                'success_message' => 'Thanks, your message has been received.',
-                'recipient_email' => 'admin@example.com',
-                'status' => 'active',
-                'sort_order' => 1,
-                'created_by' => $adminId,
-                'updated_by' => $adminId,
-            ],
-        );
+        $contactForms = [];
+
+        foreach ($this->contactForms() as $formData) {
+            $contactForms[$formData['locale']] = Form::query()->updateOrCreate(
+                ['slug' => $formData['slug']],
+                [
+                    ...$formData,
+                    'recipient_email' => 'admin@example.com',
+                    'status' => 'active',
+                    'sort_order' => $formData['locale'] === 'nl' ? 1 : 2,
+                    'created_by' => $adminId,
+                    'updated_by' => $adminId,
+                ],
+            );
+        }
 
         $news = ContentCategory::query()->firstOrCreate(
             ['slug' => 'news'],
@@ -73,13 +75,15 @@ class ContentModuleSeeder extends Seeder
             ],
         );
 
+        $categoryImagePath = SeederFiles::publicImage('seed-image-02.png', 'content/category-images', 'seeded-content-category.png');
+
         ContentCategoryImage::query()->updateOrCreate(
             [
                 'content_category_id' => $news->id,
-                'image_path' => 'admin/cms/img/icons/modules/content.svg',
+                'image_path' => $categoryImagePath,
             ],
             [
-                'folder' => 'admin/cms/img/icons/modules/',
+                'folder' => 'storage/content/category-images/',
                 'caption' => 'Content category seed image',
                 'sort_order' => 1,
                 'created_by' => $adminId,
@@ -87,41 +91,105 @@ class ContentModuleSeeder extends Seeder
             ],
         );
 
-        $landingPage = $this->contentItem([
-            'title' => 'Welcome to the rebuilt content module',
-            'subtitle' => 'Legacy behavior, Laravel structure',
-            'slug' => 'welcome-to-the-rebuilt-content-module',
-            'intro' => 'This seeded item demonstrates categories, blocks, images, attachments, forms, and slider assignment.',
-            'body' => 'Use this record to inspect the recreated admin/content/edit screen after a fresh install.',
-            'meta_description' => 'Seeded content item for the Laravel rebuilt content module.',
-            'form_id' => $contactForm->id,
-            'slider_category_id' => $sliderCategory->id,
-            'sort_order' => 1,
-            'created_by' => $adminId,
-            'updated_by' => $adminId,
-        ]);
-        $landingPage->categories()->sync([
-            $news->id => ['sort_order' => 1],
-            $updates->id => ['sort_order' => 2],
-        ]);
+        foreach ($this->contentItems() as $item) {
+            $contentItem = $this->contentItem([
+                ...$item,
+                'form_id' => ($item['uses_form'] ?? false) ? $contactForms[$item['locale']]->id : null,
+                'slider_category_id' => ($item['uses_slider'] ?? false) ? $sliderCategory->id : null,
+                'created_by' => $adminId,
+                'updated_by' => $adminId,
+            ]);
 
-        $this->media($landingPage, $adminId);
-        $this->blocks($landingPage, $adminId);
+            if ($item['kind'] === 'landing') {
+                $contentItem->categories()->sync([
+                    $news->id => ['sort_order' => 1],
+                    $updates->id => ['sort_order' => 2],
+                ]);
 
-        $secondItem = $this->contentItem([
-            'title' => 'Second seeded content item',
-            'subtitle' => 'Overview and filter data',
-            'slug' => 'second-seeded-content-item',
-            'intro' => 'This item gives the overview screen more than one row.',
-            'body' => 'It is linked only to the Updates category so child-category filters can be checked.',
-            'meta_description' => 'Second seeded content item for overview filtering.',
-            'sort_order' => 2,
-            'created_by' => $adminId,
-            'updated_by' => $adminId,
-        ]);
-        $secondItem->categories()->sync([
-            $updates->id => ['sort_order' => 1],
-        ]);
+                $this->media($contentItem, $adminId, $item['locale']);
+                $this->blocks($contentItem, $adminId, $item['locale']);
+
+                continue;
+            }
+
+            $contentItem->categories()->sync([
+                $updates->id => ['sort_order' => 1],
+            ]);
+        }
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function contactForms(): array
+    {
+        return [
+            [
+                'name' => 'Algemeen contact',
+                'slug' => 'general-contact',
+                'locale' => 'nl',
+                'description' => 'Voorbeeldformulier voor koppeling aan een pagina.',
+                'submit_text' => 'Versturen',
+                'success_message' => 'Bedankt, je bericht is ontvangen.',
+            ],
+            [
+                'name' => 'General contact',
+                'slug' => 'general-contact-en',
+                'locale' => 'en',
+                'description' => 'Seeded form placeholder for content item form assignment.',
+                'submit_text' => 'Send',
+                'success_message' => 'Thanks, your message has been received.',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function contentItems(): array
+    {
+        return [
+            [
+                'kind' => 'landing',
+                'locale' => 'nl',
+                'title' => 'Welkom bij de vernieuwde paginamodule',
+                'subtitle' => 'Legacy gedrag, Laravel structuur',
+                'slug' => 'welcome-to-the-rebuilt-content-module',
+                'meta_description' => 'Voorbeeldpagina voor de vernieuwde Laravel paginamodule.',
+                'uses_form' => true,
+                'uses_slider' => true,
+                'sort_order' => 1,
+            ],
+            [
+                'kind' => 'landing',
+                'locale' => 'en',
+                'title' => 'Welcome to the rebuilt page module',
+                'subtitle' => 'Legacy behavior, Laravel structure',
+                'slug' => 'welcome-to-the-rebuilt-content-module-en',
+                'meta_description' => 'Seeded content item for the Laravel rebuilt page module.',
+                'uses_form' => true,
+                'uses_slider' => true,
+                'sort_order' => 2,
+            ],
+            [
+                'kind' => 'overview',
+                'locale' => 'nl',
+                'title' => 'Tweede voorbeeldpagina',
+                'subtitle' => 'Overzicht en filterdata',
+                'slug' => 'second-seeded-content-item',
+                'meta_description' => 'Tweede voorbeeldpagina voor overzichtsfilters.',
+                'sort_order' => 3,
+            ],
+            [
+                'kind' => 'overview',
+                'locale' => 'en',
+                'title' => 'Second seeded page',
+                'subtitle' => 'Overview and filter data',
+                'slug' => 'second-seeded-content-item-en',
+                'meta_description' => 'Second seeded content item for overview filtering.',
+                'sort_order' => 4,
+            ],
+        ];
     }
 
     /**
@@ -132,25 +200,29 @@ class ContentModuleSeeder extends Seeder
         return ContentItem::query()->updateOrCreate(
             ['slug' => $attributes['slug']],
             [
-                'locale' => 'nl',
                 'status' => 'published',
                 'active_from' => now()->subDay()->toDateString(),
                 'active_until' => now()->addYear()->toDateString(),
-                ...$attributes,
+                ...collect($attributes)->except(['kind', 'uses_form', 'uses_slider'])->all(),
             ],
         );
     }
 
-    private function media(ContentItem $contentItem, ?int $adminId): void
+    private function media(ContentItem $contentItem, ?int $adminId, string $locale): void
     {
+        $imagePath = SeederFiles::publicImage('seed-image-03.jpg', 'content/images', 'seeded-content-'.$locale.'.jpg');
+        $attachmentPath = SeederFiles::publicDocument('content-attachment.txt', 'content/attachments', 'seeded-content-'.$locale.'.txt');
+
         ContentImage::query()->updateOrCreate(
             [
                 'content_item_id' => $contentItem->id,
-                'image_path' => 'admin/cms/img/icons/modules/content.svg',
+                'image_path' => $imagePath,
             ],
             [
-                'folder' => 'admin/cms/img/icons/modules/',
-                'caption' => 'Seeded content image',
+                'folder' => 'storage/content/images/',
+                'caption' => $locale === 'nl' ? 'Voorbeeldafbeelding pagina' : 'Seeded content image',
+                'original_filename' => basename($imagePath),
+                'mime_type' => 'image/jpeg',
                 'sort_order' => 1,
                 'created_by' => $adminId,
                 'updated_by' => $adminId,
@@ -160,11 +232,11 @@ class ContentModuleSeeder extends Seeder
         ContentAttachment::query()->updateOrCreate(
             [
                 'content_item_id' => $contentItem->id,
-                'url' => 'admin/cms/img/logo-cms-white.svg',
+                'url' => $attachmentPath,
             ],
             [
-                'name' => 'Seeded attachment',
-                'type' => 'image/svg+xml',
+                'name' => $locale === 'nl' ? 'Voorbeeldbijlage' : 'Seeded attachment',
+                'type' => 'text/plain',
                 'sort_order' => 1,
                 'created_by' => $adminId,
                 'updated_by' => $adminId,
@@ -172,8 +244,25 @@ class ContentModuleSeeder extends Seeder
         );
     }
 
-    private function blocks(ContentItem $contentItem, ?int $adminId): void
+    private function blocks(ContentItem $contentItem, ?int $adminId, string $locale): void
     {
+        $blockImagePath = SeederFiles::publicImage('seed-image-04.jpg', 'content/blocks', 'seeded-content-block-'.$locale.'.jpg');
+
+        $texts = [
+            'nl' => [
+                'content' => '<p>Dit is een voorbeeldtekstblok voor de vernieuwde pagina-editor.</p>',
+                'alt' => 'Voorbeeldbestand voor paginablok',
+                'image_caption' => 'Voorbeeldafbeelding',
+                'video_caption' => 'Voorbeeldvideo',
+            ],
+            'en' => [
+                'content' => '<p>This is a seeded text block for the recreated page editor.</p>',
+                'alt' => 'Seeded content block asset',
+                'image_caption' => 'Seeded image block',
+                'video_caption' => 'Seeded video block',
+            ],
+        ][$locale];
+
         $contentItem->forceFill([
             'structured_blocks' => [
                 [
@@ -181,7 +270,7 @@ class ContentModuleSeeder extends Seeder
                     'uuid' => (string) Str::uuid(),
                     'layout' => '100',
                     'data' => [
-                        'content' => '<p>This is a seeded text block for the recreated content editor.</p>',
+                        'content' => $texts['content'],
                     ],
                     'settings' => [
                         'alignment' => 'left',
@@ -194,9 +283,9 @@ class ContentModuleSeeder extends Seeder
                     'uuid' => (string) Str::uuid(),
                     'layout' => '50',
                     'data' => [
-                        'image' => 'admin/cms/img/icons/modules/content.svg',
-                        'alt' => 'Seeded content block asset',
-                        'caption' => 'Seeded image block',
+                        'image' => $blockImagePath,
+                        'alt' => $texts['alt'],
+                        'caption' => $texts['image_caption'],
                     ],
                     'settings' => [
                         'layout' => 'default',
@@ -209,7 +298,7 @@ class ContentModuleSeeder extends Seeder
                     'layout' => '50',
                     'data' => [
                         'video_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                        'caption' => 'Seeded video block',
+                        'caption' => $texts['video_caption'],
                     ],
                     'settings' => [
                         'provider' => 'youtube',

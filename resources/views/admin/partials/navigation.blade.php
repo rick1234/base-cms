@@ -1,27 +1,12 @@
 @php
     $usesLegacyRoutes = request()->routeIs('cms.*');
-    $moduleRoute = $usesLegacyRoutes ? 'cms.modules.index' : 'admin.modules.show';
     $homeRoute = $usesLegacyRoutes ? 'cms.index' : 'admin.dashboard';
-    $screensByGroup = collect(config('cms_modules.screens'))->groupBy('group');
-    $navigationIcons = [
-        'content' => 'article',
-        'commerce' => 'inventory_2',
-        'media' => 'panorama',
-        'users' => 'group',
-        'locations' => 'store',
-        'events' => 'event',
-        'seo' => 'route',
-        'modules' => 'extension',
-        'configuration' => 'settings',
-        'localization' => 'translate',
-        'platform' => 'extension',
-        'website' => 'language',
-    ];
+    $navigationGroups = app(\App\Support\Admin\Dashboard\DashboardNavigationBuilder::class)->build($usesLegacyRoutes);
 @endphp
 
 <div class="btn-toggle-sidebar-button">
     <div class="btn-toggle-sidebar-button-icon">
-        <span class="admin-symbol admin-symbol-apps" aria-hidden="true"></span>
+        <x-admin.material-icon name="apps" />
     </div>
     <div class="btn-toggle-sidebar-button-label">{{ __('Menu') }}</div>
 </div>
@@ -38,40 +23,37 @@
         <li>
             <a class="navigation-root-link" href="{{ route($homeRoute) }}">
                 <span class="navigation-item-icon">
-                    <span class="admin-symbol admin-symbol-dashboard" aria-hidden="true"></span>
+                    <x-admin.material-icon name="home" />
                 </span>
                 <span class="navigation-item-title">{{ __('Home') }}</span>
             </a>
         </li>
     </ul>
 
-    @foreach (config('cms_modules.groups') as $group => $label)
-        @php $screens = $screensByGroup->get($group, collect()); @endphp
-
-        @if ($screens->isNotEmpty())
+    @foreach ($navigationGroups as $group)
+        @if ($group['modules']->isNotEmpty())
             <ul class="navigation-root-list">
                 <li class="navigation-root-item">
                     <details class="navigation-group">
                         <summary class="navigation-root-link navigation-group-summary">
                             <span class="navigation-item-icon">
-                                <x-admin.material-icon :name="$navigationIcons[$group] ?? config('cms_icons.fallback', 'extension')" />
+                                <x-admin.material-icon :name="$group['icon']" />
                             </span>
-                            <span class="navigation-item-title">{{ __($label) }}</span>
+                            <span class="navigation-item-title">{{ __($group['title']) }}</span>
                             <span class="navigation-item-chevron" aria-hidden="true">&rsaquo;</span>
                         </summary>
                         <ul class="navigation-submenu">
-                            @foreach ($screens->sortBy('name') as $screen)
-                                @php
-                                    $path = trim(str_replace('cms/', '', $screen['legacy_path']), '/');
-                                    $url = ! $usesLegacyRoutes && isset($screen['admin_route'])
-                                        ? route($screen['admin_route'])
-                                        : route($moduleRoute, $path);
-                                @endphp
-                                <li>
-                                    <a class="navigation-submenu-link" href="{{ $url }}">
-                                        <span class="navigation-item-title">{{ __($screen['name']) }}</span>
-                                    </a>
-                                </li>
+                            @foreach ($group['modules'] as $module)
+                                @foreach ($module['links'] as $link)
+                                    <li>
+                                        <a class="navigation-submenu-link" href="{{ $link['url'] }}">
+                                            <span class="navigation-item-icon">
+                                                <x-admin.material-icon :name="$link['icon']" />
+                                            </span>
+                                            <span class="navigation-item-title">{{ __($link['title']) }}</span>
+                                        </a>
+                                    </li>
+                                @endforeach
                             @endforeach
                         </ul>
                     </details>
@@ -94,10 +76,12 @@
             @if (($enabledLocales ?? collect())->count() > 1)
                 <div class="admin-language-switcher" aria-label="{{ __('Language') }}">
                     @foreach ($enabledLocales as $language)
+                        @php $languageLabel = method_exists($language, 'label') ? $language->label() : strtoupper($language->code); @endphp
                         <form method="post" action="{{ route('locale.update', ['locale' => $language->code]) }}">
                             @csrf
-                            <button class="admin-language-button {{ $currentLocale === $language->code ? 'is-active' : '' }}" type="submit" @disabled($currentLocale === $language->code)>
-                                {{ strtoupper($language->code) }}
+                            <button class="admin-language-button {{ $currentLocale === $language->code ? 'is-active' : '' }}" type="submit" title="{{ $languageLabel }}" @disabled($currentLocale === $language->code)>
+                                <x-language-flag :locale="$language->code" :label="$languageLabel" decorative />
+                                <span class="u-sr-only">{{ $languageLabel }}</span>
                             </button>
                         </form>
                     @endforeach
@@ -106,7 +90,7 @@
             <form method="post" action="{{ route('admin.logout') }}">
                 @csrf
                 <button class="logout-button" type="submit">
-                    <span class="flaticon-exit-to-app-button"></span>
+                    <x-admin.material-icon name="logout" />
                     {{ __('Uitloggen') }}
                 </button>
             </form>

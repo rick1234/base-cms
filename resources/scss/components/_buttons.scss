@@ -11,6 +11,7 @@
     font-weight: 700;
     gap: var(--space-2);
     justify-content: center;
+    line-height: 1;
     min-height: 2.5rem;
     padding: 0.6rem 0.9rem;
     text-decoration: none;
@@ -29,13 +30,17 @@
   .button-secondary,
   .btn-cancel {
     background: var(--color-surface);
+    border-color: var(--color-brand);
     color: var(--color-brand);
   }
 
   .button-danger,
-  .btn-remove {
+  .btn-remove,
+  .btn-delete,
+  .delete-image-button {
     background: var(--color-danger);
     border-color: var(--color-danger);
+    color: var(--color-surface);
   }
 
   .btn-add,
@@ -43,6 +48,44 @@
   .btn-save-and-stay {
     background: var(--color-success);
     border-color: var(--color-success);
+    color: var(--color-surface);
+  }
+
+  .btn-preview {
+    background: var(--color-preview);
+    border-color: var(--color-preview);
+    color: var(--color-surface);
+  }
+
+  .button-danger:hover,
+  .button-danger:focus-visible,
+  .btn-remove:hover,
+  .btn-remove:focus-visible,
+  .btn-delete:hover,
+  .btn-delete:focus-visible,
+  .delete-image-button:hover,
+  .delete-image-button:focus-visible {
+    background: color-mix(in srgb, var(--color-danger) 84%, var(--color-ink));
+    border-color: color-mix(in srgb, var(--color-danger) 84%, var(--color-ink));
+    color: var(--color-surface);
+  }
+
+  .btn-add:hover,
+  .btn-add:focus-visible,
+  .btn-save:hover,
+  .btn-save:focus-visible,
+  .btn-save-and-stay:hover,
+  .btn-save-and-stay:focus-visible {
+    background: color-mix(in srgb, var(--color-success) 84%, var(--color-ink));
+    border-color: color-mix(in srgb, var(--color-success) 84%, var(--color-ink));
+    color: var(--color-surface);
+  }
+
+  .btn-preview:hover,
+  .btn-preview:focus-visible {
+    background: color-mix(in srgb, var(--color-preview) 84%, var(--color-ink));
+    border-color: color-mix(in srgb, var(--color-preview) 84%, var(--color-ink));
+    color: var(--color-surface);
   }
 
   .button-link {

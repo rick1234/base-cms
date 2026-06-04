@@ -34,34 +34,54 @@ use App\Http\Controllers\Admin\Roles\RoleController;
 use App\Http\Controllers\Admin\Translations\TranslationController;
 use App\Http\Controllers\Admin\Users\UserCategoryController;
 use App\Http\Controllers\Admin\Users\UserController;
+use App\Http\Controllers\Admin\Vacancies\VacancyCategoryController;
+use App\Http\Controllers\Admin\Vacancies\VacancyController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('admin')->name('admin.')->group(function (): void {
+$screenRoutes = static function (string $screen, Closure $routes): void {
+    Route::group(['admin_screen' => $screen], $routes);
+};
+
+$screenGroup = static function (string $screen, string $prefix, string $name, Closure $routes): void {
+    Route::group([
+        'prefix' => $prefix,
+        'as' => $name,
+        'admin_screen' => $screen,
+    ], $routes);
+};
+
+Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $screenRoutes): void {
     Route::middleware('guest')->group(function (): void {
         Route::get('login', [AdminLoginController::class, 'create'])->name('login');
         Route::post('login', [AdminLoginController::class, 'store'])->name('login.store');
     });
 
-    Route::middleware(['auth', 'can:access-admin'])->group(function (): void {
+    Route::middleware(['auth', 'can:access-admin'])->group(function () use ($screenGroup, $screenRoutes): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::post('logout', [AdminLoginController::class, 'destroy'])->name('logout');
 
-        Route::resource('pages', PageController::class)
-            ->except(['show', 'destroy'])
-            ->parameters(['pages' => 'page']);
+        $screenRoutes('content_items', function (): void {
+            Route::resource('pages', PageController::class)
+                ->except(['show', 'destroy'])
+                ->parameters(['pages' => 'page']);
+        });
 
-        Route::resource('domains', DomainController::class)
-            ->except(['show'])
-            ->parameters(['domains' => 'domain']);
+        $screenRoutes('domains', function (): void {
+            Route::resource('domains', DomainController::class)
+                ->except(['show'])
+                ->parameters(['domains' => 'domain']);
+        });
 
-        Route::resource('templates', WebsiteTemplateController::class)
-            ->except(['show'])
-            ->parameters(['templates' => 'websiteTemplate']);
-        Route::post('templates/{websiteTemplate}/generate', [WebsiteTemplateController::class, 'generate'])
-            ->whereNumber('websiteTemplate')
-            ->name('templates.generate');
+        $screenRoutes('website_templates', function (): void {
+            Route::resource('templates', WebsiteTemplateController::class)
+                ->except(['show'])
+                ->parameters(['templates' => 'websiteTemplate']);
+            Route::post('templates/{websiteTemplate}/generate', [WebsiteTemplateController::class, 'generate'])
+                ->whereNumber('websiteTemplate')
+                ->name('templates.generate');
+        });
 
-        Route::prefix('navigation')->name('navigation.')->group(function (): void {
+        $screenGroup('navigation', 'navigation', 'navigation.', function (): void {
             Route::get('link-types', [NavigationMenuController::class, 'linkTypes'])->name('link-types');
             Route::get('link-options', [NavigationMenuController::class, 'linkOptions'])->name('link-options');
             Route::get('/', [NavigationMenuController::class, 'index'])->name('index');
@@ -72,7 +92,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::delete('{navigationMenu}', [NavigationMenuController::class, 'destroy'])->whereNumber('navigationMenu')->name('destroy');
         });
 
-        Route::prefix('banner')->name('banners.')->group(function (): void {
+        $screenGroup('banners', 'banner', 'banners.', function () use ($screenGroup): void {
             Route::get('/', [BannerController::class, 'index'])->name('index');
             Route::get('index.php', [BannerController::class, 'index'])->name('legacy-index');
             Route::post('/', [BannerController::class, 'store'])->name('store');
@@ -80,6 +100,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
             Route::get('create', [BannerController::class, 'create'])->name('create');
             Route::get('{id}/edit', [BannerController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [BannerController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['image', 'translations'])
+                ->name('edit.tab');
             Route::post('{id?}', [BannerController::class, 'save'])->whereNumber('id')->name('save');
             Route::get('edit', [BannerController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [BannerController::class, 'save'])->name('legacy-save-clean');
@@ -98,7 +122,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/uploadBulkBanner', [BannerController::class, 'uploadBulk'])->name('bulk.ajax-upload');
             Route::post('ajax/uploadBulkBanner.php', [BannerController::class, 'uploadBulk'])->name('legacy-bulk.ajax-upload');
 
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('banner_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [BannerCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [BannerCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [BannerCategoryController::class, 'store'])->name('store');
@@ -123,7 +147,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('form')->name('forms.')->group(function (): void {
+        $screenGroup('forms', 'form', 'forms.', function () use ($screenGroup): void {
             Route::get('/', [FormController::class, 'index'])->name('index');
             Route::get('index.php', [FormController::class, 'index'])->name('legacy-index');
             Route::post('/', [FormController::class, 'store'])->name('store');
@@ -131,6 +155,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
             Route::get('create', [FormController::class, 'create'])->name('create');
             Route::get('{id}/edit', [FormController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [FormController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['template', 'recipients', 'response', 'builder'])
+                ->name('edit.tab');
             Route::post('{id?}', [FormController::class, 'save'])->whereNumber('id')->name('save');
             Route::get('edit', [FormController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [FormController::class, 'save'])->name('legacy-save-clean');
@@ -148,7 +176,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/duplicateItem', [FormController::class, 'duplicate'])->name('duplicate');
             Route::post('ajax/duplicateItem.php', [FormController::class, 'duplicate'])->name('legacy-duplicate');
 
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('form_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [FormCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [FormCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [FormCategoryController::class, 'store'])->name('store');
@@ -173,7 +201,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('catalogus')->name('catalog.')->group(function (): void {
+        $screenGroup('catalog_products', 'catalogus', 'catalog.', function () use ($screenGroup): void {
             Route::get('/', [CatalogProductController::class, 'index'])->name('index');
             Route::get('index.php', [CatalogProductController::class, 'index'])->name('legacy-index');
             Route::post('/', [CatalogProductController::class, 'store'])->name('store');
@@ -243,7 +271,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/uploadAfbeelding', [CatalogProductController::class, 'uploadImage'])->name('image.upload');
             Route::post('ajax/uploadAfbeelding.php', [CatalogProductController::class, 'uploadImage'])->name('legacy-image.upload');
 
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('catalog_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [CatalogCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [CatalogCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [CatalogCategoryController::class, 'store'])->name('store');
@@ -257,7 +285,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 Route::post('edit.php', [CatalogCategoryController::class, 'save'])->name('legacy-save');
             });
 
-            Route::prefix('merken')->name('brands.')->group(function (): void {
+            $screenGroup('catalog_brands', 'merken', 'brands.', function (): void {
                 Route::get('/', [CatalogBrandController::class, 'index'])->name('index');
                 Route::get('index.php', [CatalogBrandController::class, 'index'])->name('legacy-index');
                 Route::post('/', [CatalogBrandController::class, 'store'])->name('store');
@@ -272,7 +300,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 Route::delete('{record}', [CatalogBrandController::class, 'destroy'])->whereNumber('record')->name('destroy');
             });
 
-            Route::prefix('promotie')->name('promotions.')->group(function (): void {
+            $screenGroup('catalog_promotions', 'promotie', 'promotions.', function (): void {
                 Route::get('/', [CatalogPromotionController::class, 'index'])->name('index');
                 Route::get('index.php', [CatalogPromotionController::class, 'index'])->name('legacy-index');
                 Route::post('/', [CatalogPromotionController::class, 'store'])->name('store');
@@ -287,7 +315,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 Route::delete('{record}', [CatalogPromotionController::class, 'destroy'])->whereNumber('record')->name('destroy');
             });
 
-            Route::prefix('actiecodes')->name('coupons.')->group(function (): void {
+            $screenGroup('catalog_coupons', 'actiecodes', 'coupons.', function (): void {
                 Route::get('/', [CatalogCouponController::class, 'index'])->name('index');
                 Route::get('index.php', [CatalogCouponController::class, 'index'])->name('legacy-index');
                 Route::post('/', [CatalogCouponController::class, 'store'])->name('store');
@@ -302,7 +330,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 Route::delete('{catalogCoupon}', [CatalogCouponController::class, 'destroy'])->whereNumber('catalogCoupon')->name('destroy');
             });
 
-            Route::prefix('review')->name('reviews.')->group(function (): void {
+            $screenGroup('catalog_reviews', 'review', 'reviews.', function (): void {
                 Route::get('/', [CatalogReviewController::class, 'index'])->name('index');
                 Route::get('index.php', [CatalogReviewController::class, 'index'])->name('legacy-index');
                 Route::post('/', [CatalogReviewController::class, 'store'])->name('store');
@@ -328,7 +356,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('faq')->name('faq.')->group(function (): void {
+        $screenGroup('faq_items', 'faq', 'faq.', function () use ($screenGroup): void {
             Route::get('/', [FaqItemController::class, 'index'])->name('index');
             Route::get('index.php', [FaqItemController::class, 'index'])->name('legacy-index');
             Route::post('/', [FaqItemController::class, 'store'])->name('store');
@@ -342,34 +370,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::get('edit.php', [FaqItemController::class, 'edit'])->name('legacy-edit');
             Route::post('edit.php', [FaqItemController::class, 'save'])->name('legacy-save');
 
-            Route::get('{id}/images', [FaqItemController::class, 'images'])->whereNumber('id')->name('images');
-            Route::post('{id}/images', [FaqItemController::class, 'uploadImage'])->whereNumber('id')->name('images.upload');
-            Route::get('editAfbeeldingen', [FaqItemController::class, 'images'])->name('legacy-images-clean');
-            Route::get('editAfbeeldingen.php', [FaqItemController::class, 'images'])->name('legacy-images');
-            Route::post('editAfbeeldingen', [FaqItemController::class, 'uploadImage'])->name('legacy-images.upload-clean');
-            Route::post('editAfbeeldingen.php', [FaqItemController::class, 'uploadImage'])->name('legacy-images.upload');
-
-            Route::get('{id}/videos', [FaqItemController::class, 'videos'])->whereNumber('id')->name('videos');
-            Route::post('{id}/videos', [FaqItemController::class, 'saveVideos'])->whereNumber('id')->name('videos.save');
-            Route::get('editVideo', [FaqItemController::class, 'videos'])->name('legacy-videos-clean');
-            Route::post('editVideo', [FaqItemController::class, 'saveVideos'])->name('legacy-videos.save-clean');
-            Route::get('editVideo.php', [FaqItemController::class, 'videos'])->name('legacy-videos');
-            Route::post('editVideo.php', [FaqItemController::class, 'saveVideos'])->name('legacy-videos.save');
-
             Route::post('ajax/duplicateItem', [FaqItemController::class, 'duplicate'])->name('duplicate');
             Route::post('ajax/duplicateItem.php', [FaqItemController::class, 'duplicate'])->name('legacy-duplicate');
-            Route::post('ajax/deleteAfbeelding', [FaqItemController::class, 'deleteImage'])->name('image.delete');
-            Route::post('ajax/deleteAfbeelding.php', [FaqItemController::class, 'deleteImage'])->name('legacy-image.delete');
-            Route::post('ajax/updateAfbeeldingnaam', [FaqItemController::class, 'updateImageName'])->name('image.update-name');
-            Route::post('ajax/updateAfbeeldingnaam.php', [FaqItemController::class, 'updateImageName'])->name('legacy-image.update-name');
-            Route::post('ajax/updateSortIndex', [FaqItemController::class, 'updateImageSort'])->name('image.update-sort');
-            Route::post('ajax/updateSortIndex.php', [FaqItemController::class, 'updateImageSort'])->name('legacy-image.update-sort');
-            Route::post('ajax/uploadFotoalbumAfbeelding', [FaqItemController::class, 'uploadImage'])->name('image.upload');
-            Route::post('ajax/uploadFotoalbumAfbeelding.php', [FaqItemController::class, 'uploadImage'])->name('legacy-image.upload');
-            Route::post('ajax/deleteVideo', [FaqItemController::class, 'deleteVideo'])->name('video.delete');
-            Route::post('ajax/deleteVideo.php', [FaqItemController::class, 'deleteVideo'])->name('legacy-video.delete');
 
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('faq_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [FaqCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [FaqCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [FaqCategoryController::class, 'store'])->name('store');
@@ -394,7 +398,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('download')->name('downloads.')->group(function (): void {
+        $screenGroup('downloads', 'download', 'downloads.', function () use ($screenGroup): void {
             Route::get('/', [DownloadController::class, 'index'])->name('index');
             Route::get('index.php', [DownloadController::class, 'index'])->name('legacy-index');
             Route::post('/', [DownloadController::class, 'store'])->name('store');
@@ -402,6 +406,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
             Route::get('create', [DownloadController::class, 'create'])->name('create');
             Route::get('{id}/edit', [DownloadController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [DownloadController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['storage', 'invites', 'log', 'qr'])
+                ->name('edit.tab');
             Route::post('{id?}', [DownloadController::class, 'save'])->whereNumber('id')->name('save');
             Route::get('edit', [DownloadController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [DownloadController::class, 'save'])->name('legacy-save-clean');
@@ -412,8 +420,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/deleteBestand.php', [DownloadController::class, 'deleteFile'])->name('legacy-file.delete');
             Route::post('ajax/generateLink', [DownloadController::class, 'generateLink'])->name('link.generate');
             Route::post('ajax/generateLink.php', [DownloadController::class, 'generateLink'])->name('legacy-link.generate');
+            Route::post('{download}/invites', [DownloadController::class, 'sendInvites'])->whereNumber('download')->name('invites.send');
+            Route::post('{download}/storage-test', [DownloadController::class, 'testStorage'])->whereNumber('download')->name('storage.test');
+            Route::get('{download}/qr.svg', [DownloadController::class, 'qr'])->whereNumber('download')->name('qr.svg');
 
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('download_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [DownloadCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [DownloadCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [DownloadCategoryController::class, 'store'])->name('store');
@@ -438,13 +449,54 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('isolanden')->name('countries.')->group(function (): void {
+        $screenGroup('vacancies', 'vacatures', 'vacancies.', function () use ($screenGroup): void {
+            Route::get('/', [VacancyController::class, 'index'])->name('index');
+            Route::get('index.php', [VacancyController::class, 'index'])->name('legacy-index');
+            Route::post('/', [VacancyController::class, 'store'])->name('store');
+            Route::post('index.php', [VacancyController::class, 'store'])->name('legacy-store');
+
+            Route::get('create', [VacancyController::class, 'create'])->name('create');
+            Route::get('{id}/edit', [VacancyController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [VacancyController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['seo', 'form'])
+                ->name('edit.tab');
+            Route::post('{id?}', [VacancyController::class, 'save'])->whereNumber('id')->name('save');
+            Route::get('edit', [VacancyController::class, 'edit'])->name('legacy-edit-clean');
+            Route::post('edit', [VacancyController::class, 'save'])->name('legacy-save-clean');
+            Route::get('edit.php', [VacancyController::class, 'edit'])->name('legacy-edit');
+            Route::post('edit.php', [VacancyController::class, 'save'])->name('legacy-save');
+
+            $screenGroup('vacancy_categories', 'categorieen', 'categories.', function (): void {
+                Route::get('/', [VacancyCategoryController::class, 'index'])->name('index');
+                Route::get('index.php', [VacancyCategoryController::class, 'index'])->name('legacy-index');
+                Route::post('/', [VacancyCategoryController::class, 'store'])->name('store');
+                Route::post('index.php', [VacancyCategoryController::class, 'store'])->name('legacy-store');
+                Route::get('create', [VacancyCategoryController::class, 'create'])->name('create');
+                Route::get('{id}/edit', [VacancyCategoryController::class, 'edit'])->whereNumber('id')->name('edit');
+                Route::post('{id?}', [VacancyCategoryController::class, 'save'])->whereNumber('id')->name('save');
+                Route::get('edit', [VacancyCategoryController::class, 'edit'])->name('legacy-edit-clean');
+                Route::post('edit', [VacancyCategoryController::class, 'save'])->name('legacy-save-clean');
+                Route::get('edit.php', [VacancyCategoryController::class, 'edit'])->name('legacy-edit');
+                Route::post('edit.php', [VacancyCategoryController::class, 'save'])->name('legacy-save');
+            });
+
+            Route::delete('categorieen/{vacancyCategory}', [VacancyCategoryController::class, 'destroy'])
+                ->whereNumber('vacancyCategory')
+                ->name('categories.destroy');
+            Route::put('{vacancy}', [VacancyController::class, 'update'])
+                ->whereNumber('vacancy')
+                ->name('update');
+            Route::delete('{vacancy}', [VacancyController::class, 'destroy'])
+                ->whereNumber('vacancy')
+                ->name('destroy');
+        });
+
+        $screenGroup('countries', 'landen', 'countries.', function () use ($screenGroup): void {
             Route::get('/', [CountryController::class, 'index'])->name('index');
             Route::get('index.php', [CountryController::class, 'index'])->name('legacy-index');
             Route::post('/', [CountryController::class, 'store'])->name('store');
             Route::post('index.php', [CountryController::class, 'store'])->name('legacy-store');
-            Route::post('sync', [CountryController::class, 'sync'])->name('sync');
-            Route::post('sync.php', [CountryController::class, 'sync'])->name('legacy-sync');
 
             Route::get('create', [CountryController::class, 'create'])->name('create');
             Route::get('{id}/edit', [CountryController::class, 'edit'])->whereNumber('id')->name('edit');
@@ -454,7 +506,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::get('edit.php', [CountryController::class, 'edit'])->name('legacy-edit');
             Route::post('edit.php', [CountryController::class, 'save'])->name('legacy-save');
 
-            Route::prefix('talen')->name('languages.')->group(function (): void {
+            $screenGroup('countries', 'talen', 'languages.', function (): void {
                 Route::get('/', [LanguageController::class, 'index'])->name('index');
                 Route::get('index.php', [LanguageController::class, 'index'])->name('legacy-index');
                 Route::post('/', [LanguageController::class, 'updateSettings'])->name('save-settings');
@@ -477,7 +529,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('vestigingen')->name('locations.')->group(function (): void {
+        $screenGroup('locations', 'vestigingen', 'locations.', function () use ($screenGroup): void {
             Route::get('/', [LocationController::class, 'index'])->name('index');
             Route::get('index.php', [LocationController::class, 'index'])->name('legacy-index');
             Route::post('/', [LocationController::class, 'store'])->name('store');
@@ -485,6 +537,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
             Route::get('create', [LocationController::class, 'create'])->name('create');
             Route::get('{id}/edit', [LocationController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [LocationController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['location'])
+                ->name('edit.tab');
             Route::post('{id?}', [LocationController::class, 'save'])->whereNumber('id')->name('save');
             Route::get('edit', [LocationController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [LocationController::class, 'save'])->name('legacy-save-clean');
@@ -520,7 +576,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/deleteOpeningstijd', [LocationController::class, 'deleteOpeningHour'])->name('opening-hour.delete');
             Route::post('ajax/deleteOpeningstijd.php', [LocationController::class, 'deleteOpeningHour'])->name('legacy-opening-hour.delete');
 
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('location_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [LocationCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [LocationCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [LocationCategoryController::class, 'store'])->name('store');
@@ -545,7 +601,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('redirect')->name('redirects.')->group(function (): void {
+        $screenGroup('redirects', 'redirect', 'redirects.', function (): void {
             Route::get('/', [RedirectController::class, 'index'])->name('index');
             Route::get('index.php', [RedirectController::class, 'index'])->name('legacy-index');
             Route::post('/', [RedirectController::class, 'store'])->name('store');
@@ -572,13 +628,17 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('content')->name('content.')->group(function (): void {
+        $screenGroup('content_items', 'content', 'content.', function () use ($screenGroup): void {
             Route::get('/', [ContentItemController::class, 'index'])->name('index');
             Route::get('index.php', [ContentItemController::class, 'index'])->name('legacy-index');
             Route::post('/', [ContentItemController::class, 'store'])->name('store');
 
             Route::get('create', [ContentItemController::class, 'create'])->name('create');
             Route::get('{id}/edit', [ContentItemController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [ContentItemController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['seo', 'form'])
+                ->name('edit.tab');
             Route::post('{id?}', [ContentItemController::class, 'save'])->whereNumber('id')->name('save');
             Route::get('edit', [ContentItemController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [ContentItemController::class, 'save'])->name('legacy-save-clean');
@@ -604,7 +664,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/updateAfbeeldingnaam', [ContentItemController::class, 'updateImageName'])->name('image.update-name');
             Route::post('ajax/updateSortIndex', [ContentItemController::class, 'updateImageSort'])->name('image.update-sort');
             Route::post('ajax/uploadFotoalbumAfbeelding', [ContentItemController::class, 'uploadImage'])->name('image.upload');
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('content_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [ContentCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [ContentCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [ContentCategoryController::class, 'store'])->name('store');
@@ -616,13 +676,6 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 Route::post('edit', [ContentCategoryController::class, 'save'])->name('legacy-save-clean');
                 Route::get('edit.php', [ContentCategoryController::class, 'edit'])->name('legacy-edit');
                 Route::post('edit.php', [ContentCategoryController::class, 'save'])->name('legacy-save');
-
-                Route::get('{id}/slider', [ContentCategoryController::class, 'slider'])->whereNumber('id')->name('slider');
-                Route::post('{id}/slider', [ContentCategoryController::class, 'saveSlider'])->whereNumber('id')->name('slider.save');
-                Route::get('editSlider', [ContentCategoryController::class, 'slider'])->name('legacy-slider-clean');
-                Route::post('editSlider', [ContentCategoryController::class, 'saveSlider'])->name('legacy-slider-save-clean');
-                Route::get('editSlider.php', [ContentCategoryController::class, 'slider'])->name('legacy-slider');
-                Route::post('editSlider.php', [ContentCategoryController::class, 'saveSlider'])->name('legacy-slider-save');
 
                 Route::post('ajax/deleteAfbeelding', [ContentCategoryController::class, 'deleteImage'])->name('image.delete');
                 Route::post('ajax/updateAfbeeldingnaam', [ContentCategoryController::class, 'updateImageName'])->name('image.update-name');
@@ -639,7 +692,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('evenementen')->name('events.')->group(function (): void {
+        $screenGroup('events', 'evenementen', 'events.', function () use ($screenGroup): void {
             Route::get('/', [EventController::class, 'index'])->name('index');
             Route::get('index.php', [EventController::class, 'index'])->name('legacy-index');
             Route::post('/', [EventController::class, 'store'])->name('store');
@@ -647,14 +700,16 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
             Route::get('create', [EventController::class, 'create'])->name('create');
             Route::get('{id}/edit', [EventController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [EventController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['schedule', 'form', 'attachments', 'images', 'seo'])
+                ->name('edit.tab');
             Route::post('{id?}', [EventController::class, 'save'])->whereNumber('id')->name('save');
             Route::get('edit', [EventController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [EventController::class, 'save'])->name('legacy-save-clean');
             Route::get('edit.php', [EventController::class, 'edit'])->name('legacy-edit');
             Route::post('edit.php', [EventController::class, 'save'])->name('legacy-save');
 
-            Route::post('ajax/duplicateItem', [EventController::class, 'duplicate'])->name('duplicate');
-            Route::post('ajax/duplicateItem.php', [EventController::class, 'duplicate'])->name('legacy-duplicate');
             Route::post('ajax/deleteAfbeelding', [EventController::class, 'deleteImage'])->name('image.delete');
             Route::post('ajax/deleteAfbeelding.php', [EventController::class, 'deleteImage'])->name('legacy-image.delete');
             Route::post('ajax/deleteImage', [EventController::class, 'deleteImage'])->name('image.delete-file');
@@ -668,7 +723,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/deleteOnderdeel', [EventController::class, 'deletePart'])->name('part.delete');
             Route::post('ajax/deleteOnderdeel.php', [EventController::class, 'deletePart'])->name('legacy-part.delete');
 
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('event_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [EventCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [EventCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [EventCategoryController::class, 'store'])->name('store');
@@ -695,7 +750,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('users')->name('users.')->group(function (): void {
+        $screenGroup('users', 'users', 'users.', function () use ($screenGroup): void {
             Route::get('/', [UserController::class, 'index'])->name('index');
             Route::get('index.php', [UserController::class, 'index'])->name('legacy-index');
             Route::post('/', [UserController::class, 'store'])->name('store');
@@ -712,7 +767,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::post('ajax/deleteAfbeelding', [UserController::class, 'deleteImage'])->name('image.delete');
             Route::post('ajax/deleteAfbeelding.php', [UserController::class, 'deleteImage'])->name('legacy-image.delete');
 
-            Route::prefix('categorieen')->name('categories.')->group(function (): void {
+            $screenGroup('user_categories', 'categorieen', 'categories.', function (): void {
                 Route::get('/', [UserCategoryController::class, 'index'])->name('index');
                 Route::get('index.php', [UserCategoryController::class, 'index'])->name('legacy-index');
                 Route::post('/', [UserCategoryController::class, 'store'])->name('store');
@@ -738,7 +793,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
                 ->name('destroy');
         });
 
-        Route::prefix('roles')->name('roles.')->group(function (): void {
+        $screenGroup('roles', 'roles', 'roles.', function (): void {
             Route::get('/', [RoleController::class, 'index'])->name('index');
             Route::get('index.php', [RoleController::class, 'index'])->name('legacy-index');
             Route::post('/', [RoleController::class, 'store'])->name('store');
@@ -754,7 +809,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::delete('{role}', [RoleController::class, 'destroy'])->whereNumber('role')->name('destroy');
         });
 
-        Route::prefix('translations')->name('translations.')->group(function (): void {
+        $screenGroup('translations', 'translations', 'translations.', function (): void {
             Route::get('/', [TranslationController::class, 'index'])->name('index');
             Route::get('index.php', [TranslationController::class, 'index'])->name('legacy-index');
             Route::post('bulk', [TranslationController::class, 'bulkUpdate'])->name('bulk');

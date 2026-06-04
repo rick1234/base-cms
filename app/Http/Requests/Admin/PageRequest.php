@@ -24,8 +24,6 @@ class PageRequest extends FormRequest
      */
     public function rules(): array
     {
-        $page = $this->route('page');
-
         return [
             'domain_id' => ['nullable', 'integer', 'exists:domains,id'],
             'parent_id' => ['nullable', 'integer', 'exists:cms_pages,id'],
@@ -36,9 +34,6 @@ class PageRequest extends FormRequest
                 'max:255',
                 'alpha_dash',
                 Rule::notIn(config('cms.reserved_slugs')),
-                Rule::unique('cms_pages', 'slug')
-                    ->where(fn ($query) => $query->where('domain_id', $this->input('domain_id')))
-                    ->ignore($page?->id),
             ],
             'navigation_label' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string'],

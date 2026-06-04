@@ -29,11 +29,9 @@ class ButtonBlock extends BasePageBlock
         return [
             TextInput::make('data.label')
                 ->label(__('Label'))
-                ->required()
                 ->maxLength(80),
             TextInput::make('data.url')
                 ->label(__('URL'))
-                ->required()
                 ->regex('/^(https?:\\/\\/|mailto:|tel:|\\/).+/i')
                 ->maxLength(255),
             Select::make('settings.style')

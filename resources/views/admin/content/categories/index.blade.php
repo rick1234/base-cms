@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', __('Content Categories'))
+@section('title', __('Page Categories'))
 
 @section('body')
     <div class="site-wrapper-container">
@@ -9,10 +9,13 @@
         </div>
 
         <div class="main has-buttons">
+            <div class="buttons-container align-right">
+                @include('admin.partials.category-related-items-button')
+            </div>
 
             <div class="main-section">
                 @include('admin.content.partials.page-header', [
-                    'title' => __('Content Categories'),
+                    'title' => __('Page Categories'),
                     'section' => __('Categorieen overzicht'),
                 ])
 

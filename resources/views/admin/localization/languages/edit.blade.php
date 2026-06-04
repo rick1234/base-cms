@@ -16,16 +16,16 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <button class="btn btn-save" form="language-form" type="submit">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan') }}
                 </button>
                 <button class="btn btn-save-and-stay" form="language-form" name="saveAndStay" type="submit" value="1">
-                    <span class="flaticon-save-button"></span>
+                    <x-admin.material-icon name="save" />
                     {{ __('Opslaan en blijven') }}
                 </button>
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -72,7 +72,10 @@
                                         <label for="code">{{ __('Code') }}</label>
                                     </div>
                                     <div class="form-item-input">
-                                        <input id="code" name="code" maxlength="16" type="text" value="{{ old('code', $language->code) }}" required>
+                                        <div class="language-code-field">
+                                            <x-admin.language-flag :locale="old('code', $language->code ?: app()->getLocale())" :label="old('code', $language->code ?: app()->getLocale())" />
+                                            <input id="code" name="code" maxlength="16" type="text" value="{{ old('code', $language->code) }}" required>
+                                        </div>
                                         @include('admin.content.partials.field-error', ['field' => 'code'])
                                     </div>
                                 </div>
@@ -109,7 +112,10 @@
                                         <label for="fallback_locale">{{ __('Fallback locale') }}</label>
                                     </div>
                                     <div class="form-item-input">
-                                        <input id="fallback_locale" name="fallback_locale" maxlength="16" type="text" value="{{ old('fallback_locale', $language->fallback_locale) }}">
+                                        <div class="language-code-field">
+                                            <x-admin.language-flag :locale="old('fallback_locale', $language->fallback_locale ?: $language->code ?: app()->getLocale())" :label="old('fallback_locale', $language->fallback_locale ?: $language->code ?: app()->getLocale())" />
+                                            <input id="fallback_locale" name="fallback_locale" maxlength="16" type="text" value="{{ old('fallback_locale', $language->fallback_locale) }}">
+                                        </div>
                                         @include('admin.content.partials.field-error', ['field' => 'fallback_locale'])
                                     </div>
                                 </div>
@@ -156,7 +162,7 @@
 
             @if ($isExisting)
                 <div class="author-container">
-                    <span><strong>{{ __('Auteur') }}:</strong> {{ $language->created_by ?? '-' }}</span>
+                    <span><strong>{{ __('Gemaakt door') }}:</strong> {{ $language->creator?->fullName() ?? '-' }}</span>
                     <span><strong>{{ __('Gemaakt op') }}:</strong> {{ optional($language->created_at)->format('d-m-Y H:i') }}</span>
                     @if ($language->updated_at)
                         <span><strong>{{ __('Aangepast op') }}:</strong> {{ $language->updated_at->format('d-m-Y H:i') }}</span>

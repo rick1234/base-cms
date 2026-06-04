@@ -56,7 +56,7 @@ class PageController extends Controller
     {
         $upsertPage->handle($request->validated(), $request->user(), $page);
 
-        flash(__('Page updated.'))->success();
+        flash(__('Page saved.'))->success();
 
         return redirect()
             ->route('admin.pages.edit', $page);

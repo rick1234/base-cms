@@ -15,11 +15,7 @@ return new class extends Migration
             $table->string('currency_code', 3)->nullable()->after('numeric_code')->index();
             $table->string('region_code', 8)->nullable()->after('currency_code')->index();
             $table->boolean('charges_vat')->default(false)->after('region_code');
-            $table->unsignedInteger('shipping_general_cents')->nullable()->after('charges_vat');
-            $table->unsignedInteger('shipping_envelope_cents')->nullable()->after('shipping_general_cents');
-            $table->unsignedInteger('shipping_small_box_cents')->nullable()->after('shipping_envelope_cents');
-            $table->unsignedInteger('shipping_big_box_cents')->nullable()->after('shipping_small_box_cents');
-            $table->json('timezones')->nullable()->after('shipping_big_box_cents');
+            $table->json('timezones')->nullable()->after('charges_vat');
             $table->string('source_locale', 16)->default('en')->after('timezones');
             $table->boolean('is_enabled')->default(true)->after('source_locale')->index();
         });
@@ -71,10 +67,6 @@ return new class extends Migration
                 'currency_code',
                 'region_code',
                 'charges_vat',
-                'shipping_general_cents',
-                'shipping_envelope_cents',
-                'shipping_small_box_cents',
-                'shipping_big_box_cents',
                 'timezones',
                 'source_locale',
                 'is_enabled',

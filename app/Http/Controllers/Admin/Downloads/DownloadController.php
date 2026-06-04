@@ -6,21 +6,35 @@ use App\Actions\Admin\Downloads\UpsertDownload;
 use App\Http\Controllers\Admin\Concerns\UsesEditViewForCreate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Downloads\DownloadFileRequest;
+use App\Http\Requests\Admin\Downloads\DownloadInviteRequest;
 use App\Http\Requests\Admin\Downloads\DownloadRequest;
+use App\Mail\DownloadInviteMail;
 use App\Models\Cms\Download;
 use App\Models\Cms\DownloadCategory;
 use App\Support\Admin\Downloads\DownloadFileManager;
+use App\Support\Admin\Downloads\DownloadStorageSecurityCheck;
 use App\Support\Downloads\DownloadLinkIssuer;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 
 class DownloadController extends Controller
 {
     use UsesEditViewForCreate;
+
+    /**
+     * @var list<string>
+     */
+    private const EDIT_TABS = ['storage', 'invites', 'log', 'qr'];
 
     public function index(Request $request): View
     {
@@ -81,19 +95,32 @@ class DownloadController extends Controller
         return redirect()->route($this->routeName('edit'), ['id' => $download->id]);
     }
 
-    public function edit(Request $request): View
+    public function edit(Request $request): View|RedirectResponse
     {
+        if ($redirect = $this->redirectQueryTabToRoute($request)) {
+            return $redirect;
+        }
+
         $download = $this->downloadFromRequest($request);
-        $download?->load('categories');
+        $download?->load(['categories', 'accessTokens' => fn ($query) => $query->latest()]);
+        $activeTab = $this->activeTab($request, $download);
+
+        if ($activeTab === 'storage') {
+            abort_unless($request->user()?->can('access-superuser'), 403);
+        }
+
+        $editableDownload = $download ?? new Download([
+            'status' => 'active',
+            'active_from' => now(),
+            'file_disk' => 'local',
+            'link_expires_after_minutes' => 60,
+        ]);
 
         return view('admin.downloads.edit', [
-            'download' => $download ?? new Download([
-                'status' => 'active',
-                'active_from' => now(),
-                'file_disk' => 'local',
-                'link_expires_after_minutes' => 60,
-            ]),
+            'download' => $editableDownload,
+            'activeTab' => $activeTab,
             'categories' => $this->categories(),
+            'accessTokens' => $download?->accessTokens ?? collect(),
             'routeNames' => $this->routeNames(),
             'pageName' => __('Edit download'),
             'backUrl' => route($this->routeName('index')),
@@ -112,7 +139,7 @@ class DownloadController extends Controller
 
         flash(__('Download saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $download->id]);
+        return redirect()->route($this->editRouteName($request->input('active_tab')), $this->editRedirectParameters($download, $request->input('active_tab')));
     }
 
     public function update(Download $download, DownloadRequest $request, UpsertDownload $upsert): RedirectResponse
@@ -126,7 +153,7 @@ class DownloadController extends Controller
 
         flash(__('Download saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $download->id]);
+        return redirect()->route($this->editRouteName($request->input('active_tab')), $this->editRedirectParameters($download, $request->input('active_tab')));
     }
 
     public function destroy(Download $download): RedirectResponse
@@ -157,7 +184,7 @@ class DownloadController extends Controller
         $download = Download::query()->findOrFail($request->integer('id'));
         abort_unless($download->hasFile(), 404);
 
-        $url = $issuer->issue($download);
+        $url = $issuer->issue($download, createdBy: $request->user()?->id);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -171,11 +198,69 @@ class DownloadController extends Controller
         return back();
     }
 
+    public function sendInvites(Download $download, DownloadInviteRequest $request, DownloadLinkIssuer $issuer): RedirectResponse
+    {
+        foreach ($request->emails() as $email) {
+            $url = $issuer->issue($download, $email, 'invite', $request->user()?->id);
+
+            Mail::to($email)->send(new DownloadInviteMail($download, $url, $request->messageText()));
+        }
+
+        flash(trans_choice('{1} Download invite sent.|[2,*] Download invites sent.', count($request->emails())))->success();
+
+        return redirect()->route($this->editRouteName('invites'), $this->editRedirectParameters($download, 'invites'));
+    }
+
+    public function testStorage(Download $download, Request $request, DownloadStorageSecurityCheck $check): RedirectResponse
+    {
+        abort_unless($request->user()?->can('access-superuser'), 403);
+
+        $result = $check->run($download);
+        $storageTestSessionKey = 'download_storage_test_result';
+        session()->flash($storageTestSessionKey, $result);
+
+        if ($result['passed']) {
+            flash(__('Download storage test passed.'))->success();
+        } else {
+            flash(__('Download storage test found issues.'))->error();
+        }
+
+        return redirect()->route($this->editRouteName('storage'), $this->editRedirectParameters($download, 'storage'));
+    }
+
+    public function qr(Download $download): Response
+    {
+        abort_unless($download->hasFile(), 404);
+
+        $renderer = new ImageRenderer(
+            new RendererStyle(360),
+            new SvgImageBackEnd,
+        );
+        $writer = new Writer($renderer);
+        $svg = $writer->writeString(route('frontend.downloads.show', ['download' => $download->publicRouteKey()]));
+
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml',
+            'Cache-Control' => 'private, max-age=300',
+        ]);
+    }
+
     private function downloadFromRequest(Request $request): ?Download
     {
         $id = (int) ($request->route('id') ?: $request->integer('id'));
 
         return $id > 0 ? Download::query()->findOrFail($id) : null;
+    }
+
+    private function activeTab(Request $request, ?Download $download): string
+    {
+        $tab = $request->route('tab') ?: $request->query('tab');
+
+        if (! $download instanceof Download || ! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return 'general';
+        }
+
+        return $tab;
     }
 
     /**
@@ -244,16 +329,67 @@ class DownloadController extends Controller
             'store' => $this->routeName('store'),
             'create' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('create'),
             'edit' => $this->routeName('edit'),
+            'edit.tab' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('edit.tab'),
             'save' => $this->routeName('save'),
             'update' => $this->routeName('update'),
             'destroy' => $this->routeName('destroy'),
             'file.delete' => $this->routeName('file.delete'),
             'link.generate' => $this->routeName('link.generate'),
+            'invites.send' => $this->routeName('invites.send'),
+            'storage.test' => $this->routeName('storage.test'),
+            'qr.svg' => $this->routeName('qr.svg'),
         ];
     }
 
     private function routeName(string $name): string
     {
         return (request()->routeIs('cms.*') ? 'cms.downloads.' : 'admin.downloads.').$name;
+    }
+
+    private function editRouteName(mixed $activeTab = null): string
+    {
+        if (! request()->routeIs('cms.*') && is_string($activeTab) && in_array($activeTab, self::EDIT_TABS, true)) {
+            return $this->routeName('edit.tab');
+        }
+
+        return $this->routeName('edit');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function editRedirectParameters(Download $download, mixed $activeTab = null): array
+    {
+        $parameters = ['id' => $download->id];
+
+        if (is_string($activeTab) && in_array($activeTab, self::EDIT_TABS, true)) {
+            $parameters['tab'] = $activeTab;
+        }
+
+        return $parameters;
+    }
+
+    private function redirectQueryTabToRoute(Request $request): ?RedirectResponse
+    {
+        if (request()->routeIs('cms.*') || $request->route('tab')) {
+            return null;
+        }
+
+        $tab = $request->query('tab');
+
+        if (! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return null;
+        }
+
+        $id = (int) ($request->route('id') ?: $request->integer('id'));
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return redirect()->route($this->routeName('edit.tab'), [
+            'id' => $id,
+            'tab' => $tab,
+        ]);
     }
 }

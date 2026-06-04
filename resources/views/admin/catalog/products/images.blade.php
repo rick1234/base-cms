@@ -11,8 +11,8 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -38,8 +38,8 @@
                         <div class="form-item-input">
                             <input id="catalog_image" name="image" type="file" accept="image/*" required>
                             <input name="caption" type="text" placeholder="{{ __('Titel') }}">
-                            <button class="btn" type="submit">
-                                <span class="flaticon-add-plus-button"></span>
+                            <button class="btn btn-add" type="submit">
+                                <x-admin.material-icon name="add" />
                                 {{ __('Uploaden') }}
                             </button>
                         </div>

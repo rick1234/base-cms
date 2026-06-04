@@ -25,8 +25,8 @@
         <div class="main has-buttons">
             <div class="buttons-container">
                 <div class="buttons-container align-right">
-                    <button class="btn btn-add" form="template-form" type="submit">
-                        <span class="flaticon-save-file-option"></span>
+                    <button class="btn btn-save" form="template-form" type="submit">
+                        <x-admin.material-icon name="save" />
                         {{ __('Opslaan') }}
                     </button>
                     @if ($template->exists)
@@ -39,7 +39,7 @@
                         </form>
                     @endif
                     <a class="btn" href="{{ route('admin.templates.index') }}">
-                        <span class="flaticon-back-arrow"></span>
+                        <x-admin.material-icon name="arrow_back" />
                         {{ __('Terug') }}
                     </a>
                     @if ($deleteAction)
@@ -47,7 +47,7 @@
                             @csrf
                             @method('delete')
                             <button class="btn btn-delete" type="submit">
-                                <span class="flaticon-delete-button"></span>
+                                <x-admin.material-icon name="delete" />
                                 {{ __('Verwijderen') }}
                             </button>
                         </form>
@@ -63,12 +63,6 @@
                         </div>
                         <strong>{{ $pageTitle }}</strong>
                     </div>
-                </div>
-
-                <div class="breadcrumbs">
-                    <a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a> &rsaquo;
-                    <a href="{{ route('admin.templates.index') }}">{{ __('Website Templates') }}</a> &rsaquo;
-                    {{ $pageTitle }}
                 </div>
 
                 <form id="template-form" class="edit-form" method="post" action="{{ $action }}">
@@ -124,9 +118,13 @@
                     @if ($template->exists)
                         <p class="form-item-description">{{ __('These paths are generated from the technical name. Change them only for a deliberate custom template location.') }}</p>
 
-                        @foreach (['stylesheet_path', 'asset_path', 'view_path'] as $field)
+                        @foreach ([
+                            'stylesheet_path' => 'Stylesheet path',
+                            'asset_path' => 'Asset path',
+                            'view_path' => 'View path',
+                        ] as $field => $label)
                             <div class="form-item">
-                                <div class="form-item-label"><label for="{{ $field }}">{{ str($field)->replace('_', ' ')->title() }}</label></div>
+                                <div class="form-item-label"><label for="{{ $field }}">{{ __($label) }}</label></div>
                                 <div class="form-item-input">
                                     <input id="{{ $field }}" name="{{ $field }}" type="text" value="{{ old($field, $template->{$field}) }}">
                                     @error($field)<span class="error">{{ $message }}</span>@enderror
@@ -147,9 +145,21 @@
 
                     <h2 class="title">{{ __('Default settings') }}</h2>
 
-                    @foreach (['primary_color', 'secondary_color', 'tertiary_color', 'accent_color', 'surface_color', 'canvas_color', 'light_color', 'grey_color', 'dark_color', 'ink_color', 'muted_ink_color'] as $setting)
+                    @foreach ([
+                        'primary_color' => 'Primary color',
+                        'secondary_color' => 'Secondary color',
+                        'tertiary_color' => 'Tertiary color',
+                        'accent_color' => 'Accent color',
+                        'surface_color' => 'Surface color',
+                        'canvas_color' => 'Canvas color',
+                        'light_color' => 'Light color',
+                        'grey_color' => 'Grey color',
+                        'dark_color' => 'Dark color',
+                        'ink_color' => 'Ink color',
+                        'muted_ink_color' => 'Muted ink color',
+                    ] as $setting => $label)
                         <div class="form-item">
-                            <div class="form-item-label"><label for="default_settings_{{ $setting }}">{{ str($setting)->replace('_', ' ')->title() }}</label></div>
+                            <div class="form-item-label"><label for="default_settings_{{ $setting }}">{{ __($label) }}</label></div>
                             <div class="form-item-input">
                                 <input id="default_settings_{{ $setting }}" name="default_settings[{{ $setting }}]" type="text" value="{{ old('default_settings.'.$setting, $settings[$setting] ?? '') }}" data-coloris data-color-field inputmode="text" maxlength="7" pattern="^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" autocomplete="off">
                                 @error('default_settings.'.$setting)<span class="error">{{ $message }}</span>@enderror
@@ -157,9 +167,18 @@
                         </div>
                     @endforeach
 
-                    @foreach (['base_font_family', 'heading_font_family', 'button_radius', 'content_width', 'wrapper_width', 'logo_width', 'logo_height', 'hero_height'] as $setting)
+                    @foreach ([
+                        'base_font_family' => 'Base font family',
+                        'heading_font_family' => 'Heading font family',
+                        'button_radius' => 'Button radius',
+                        'content_width' => 'Content width',
+                        'wrapper_width' => 'Wrapper width',
+                        'logo_width' => 'Logo width',
+                        'logo_height' => 'Logo height',
+                        'hero_height' => 'Hero height',
+                    ] as $setting => $label)
                         <div class="form-item">
-                            <div class="form-item-label"><label for="default_settings_{{ $setting }}">{{ str($setting)->replace('_', ' ')->title() }}</label></div>
+                            <div class="form-item-label"><label for="default_settings_{{ $setting }}">{{ __($label) }}</label></div>
                             <div class="form-item-input">
                                 <input id="default_settings_{{ $setting }}" name="default_settings[{{ $setting }}]" type="text" value="{{ old('default_settings.'.$setting, $settings[$setting] ?? '') }}">
                                 @error('default_settings.'.$setting)<span class="error">{{ $message }}</span>@enderror

@@ -15,10 +15,6 @@ class Country extends CmsModel
     {
         return array_merge(parent::casts(), [
             'charges_vat' => 'boolean',
-            'shipping_general_cents' => 'integer',
-            'shipping_envelope_cents' => 'integer',
-            'shipping_small_box_cents' => 'integer',
-            'shipping_big_box_cents' => 'integer',
             'timezones' => 'array',
             'is_enabled' => 'boolean',
         ]);

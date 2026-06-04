@@ -1,0 +1,4 @@
+Demo service guide
+==================
+
+This generated fixture represents a public guide used by the download module seeder.

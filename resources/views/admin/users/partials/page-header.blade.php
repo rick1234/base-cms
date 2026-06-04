@@ -6,12 +6,3 @@
         <strong>{{ $section ?? $title }}</strong>
     </div>
 </div>
-
-<div class="breadcrumbs">
-    <a href="{{ route(request()->routeIs('cms.*') ? 'cms.dashboard' : 'admin.dashboard') }}">{{ __('Home') }}</a>
-    &rsaquo;
-    <a href="{{ $usersUrl ?? route(request()->routeIs('cms.*') ? 'cms.users.index' : 'admin.users.index') }}">{{ __('Users') }}</a>
-    @isset($section)
-        &rsaquo; {{ $section }}
-    @endisset
-</div>

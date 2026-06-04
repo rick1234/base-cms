@@ -30,6 +30,106 @@ if (siteMenuButton instanceof HTMLButtonElement && siteMenuPanel instanceof HTML
 siteMenuCloseButton?.addEventListener('click', () => setSiteMenuOpen(false));
 siteMenuOverlay?.addEventListener('click', () => setSiteMenuOpen(false));
 
+document.querySelectorAll('[data-language-modal]').forEach((widget) => {
+    const trigger = widget.querySelector('[data-language-modal-trigger]');
+    const dialog = widget.querySelector('[data-language-modal-dialog]');
+
+    if (! (trigger instanceof HTMLButtonElement) || ! (dialog instanceof HTMLElement)) {
+        return;
+    }
+
+    let returnFocusTarget = null;
+
+    const focusableSelector = [
+        'button:not([disabled])',
+        'a[href]',
+        'input:not([disabled])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+
+    const focusableElements = () => Array.from(dialog.querySelectorAll(focusableSelector))
+        .filter((element) => element instanceof HTMLElement && element.offsetParent !== null);
+
+    const closeLanguageModal = () => {
+        if (dialog.hidden) {
+            return;
+        }
+
+        dialog.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+
+        if (returnFocusTarget instanceof HTMLElement) {
+            returnFocusTarget.focus();
+        } else {
+            trigger.focus();
+        }
+
+        returnFocusTarget = null;
+    };
+
+    const openLanguageModal = () => {
+        returnFocusTarget = document.activeElement instanceof HTMLElement ? document.activeElement : trigger;
+        dialog.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+
+        const firstChoice = dialog.querySelector('.language-modal-option:not(:disabled)');
+        const firstFocusable = firstChoice instanceof HTMLElement ? firstChoice : focusableElements()[0];
+
+        firstFocusable?.focus();
+    };
+
+    trigger.addEventListener('click', () => {
+        if (dialog.hidden) {
+            openLanguageModal();
+
+            return;
+        }
+
+        closeLanguageModal();
+    });
+
+    dialog.querySelectorAll('[data-language-modal-close]').forEach((closeButton) => {
+        closeButton.addEventListener('click', closeLanguageModal);
+    });
+
+    dialog.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeLanguageModal();
+
+            return;
+        }
+
+        if (event.key !== 'Tab') {
+            return;
+        }
+
+        const elements = focusableElements();
+
+        if (elements.length === 0) {
+            event.preventDefault();
+
+            return;
+        }
+
+        const firstElement = elements[0];
+        const lastElement = elements[elements.length - 1];
+
+        if (event.shiftKey && document.activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus();
+
+            return;
+        }
+
+        if (! event.shiftKey && document.activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
+        }
+    });
+});
+
 if (document.querySelector('[data-coloris]')) {
     Coloris.init();
     Coloris({
@@ -62,6 +162,16 @@ if (document.querySelector('[data-coloris]')) {
 const googleFontPreviewInputs = document.querySelectorAll('[data-google-font-preview-input]');
 
 const cssString = (value) => String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+let cropperModulePromise = null;
+
+const loadCropper = async () => {
+    cropperModulePromise ??= import('cropperjs');
+
+    return (await cropperModulePromise).default;
+};
+
+const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
 const googleFontPreviewFamily = (value) => {
     if (! value || typeof value !== 'string') {
@@ -220,6 +330,65 @@ document.addEventListener('click', (event) => {
     }
 
     closeButton.closest('[data-flash-message]')?.remove();
+});
+
+document.querySelectorAll('[data-wysiwyg-editor]').forEach((editor) => {
+    if (! (editor instanceof HTMLElement)) {
+        return;
+    }
+
+    const surface = editor.querySelector('[data-wysiwyg-surface]');
+    const input = editor.querySelector('[data-wysiwyg-input]');
+
+    if (! (surface instanceof HTMLElement) || ! (input instanceof HTMLTextAreaElement)) {
+        return;
+    }
+
+    const syncInput = () => {
+        const html = surface.innerHTML.trim();
+
+        input.value = html === '<br>' ? '' : surface.innerHTML;
+    };
+
+    editor.querySelectorAll('[data-wysiwyg-command]').forEach((button) => {
+        if (! (button instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        button.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+        });
+
+        button.addEventListener('click', () => {
+            const command = button.dataset.wysiwygCommand;
+
+            if (! command) {
+                return;
+            }
+
+            surface.focus();
+
+            if (command === 'createLink') {
+                const url = window.prompt(button.dataset.wysiwygPrompt || '');
+
+                if (! url) {
+                    return;
+                }
+
+                document.execCommand(command, false, url);
+                syncInput();
+
+                return;
+            }
+
+            document.execCommand(command, false, null);
+            syncInput();
+        });
+    });
+
+    surface.addEventListener('input', syncInput);
+    editor.closest('form')?.addEventListener('submit', syncInput);
+    syncInput();
 });
 
 const dragVisualClasses = [
@@ -402,8 +571,8 @@ const contentBlockItemKey = (item) => {
 
     const uuidField = item.querySelector('input[type="hidden"][wire\\:model$=".uuid"]');
 
-    return item.getAttribute('x-sortable-item')
-        || (uuidField instanceof HTMLInputElement ? uuidField.value : null)
+    return (uuidField instanceof HTMLInputElement ? uuidField.value : null)
+        || item.getAttribute('x-sortable-item')
         || item.getAttribute('wire:key');
 };
 
@@ -415,6 +584,26 @@ const rememberContentBlockWidth = (item, width) => {
     }
 
     contentBlockWidthByItemKey.set(key, normalizeContentBlockWidth(width));
+};
+
+const contentBlockWidthLabel = (width) => `${normalizeContentBlockWidth(width)}%`;
+
+const ensureContentBlockWidthIndicator = (item) => {
+    let indicator = item.querySelector('[data-content-block-width-indicator]');
+
+    if (! (indicator instanceof HTMLElement)) {
+        indicator = document.createElement('span');
+        indicator.className = 'content-block-width-indicator';
+        indicator.dataset.contentBlockWidthIndicator = 'true';
+        indicator.setAttribute('aria-hidden', 'true');
+        item.append(indicator);
+    }
+
+    return indicator;
+};
+
+const setContentBlockWidthIndicator = (item, label) => {
+    ensureContentBlockWidthIndicator(item).textContent = label;
 };
 
 const cacheContentBlockBuilderWidths = (root = document) => {
@@ -434,10 +623,42 @@ const cacheContentBlockBuilderWidths = (root = document) => {
 };
 
 const applyContentBlockWidthClass = (item, width) => {
+    const normalizedWidth = normalizeContentBlockWidth(width);
+
     item.classList.remove(...contentBlockWidthClasses);
-    item.classList.add(`content-block-builder-item--width-${width}`);
-    item.dataset.contentBlockWidth = String(width);
-    rememberContentBlockWidth(item, width);
+    item.classList.add(`content-block-builder-item--width-${normalizedWidth}`);
+    item.dataset.contentBlockWidth = String(normalizedWidth);
+    item.dataset.contentBlockWidthLabel = contentBlockWidthLabel(normalizedWidth);
+    item.style.setProperty('--content-block-width-percent', String(normalizedWidth));
+    item.style.setProperty('--content-block-width-size', `${normalizedWidth}%`);
+    setContentBlockWidthIndicator(item, item.dataset.contentBlockWidthLabel);
+    rememberContentBlockWidth(item, normalizedWidth);
+};
+
+const setContentBlockWidthPreview = (item, width) => {
+    const normalizedWidth = normalizeContentBlockWidth(width);
+
+    item.dataset.contentBlockPreviewWidth = String(normalizedWidth);
+    item.dataset.contentBlockPreviewLabel = contentBlockWidthLabel(normalizedWidth);
+    item.style.setProperty('--content-block-width-preview-percent', String(normalizedWidth));
+    item.style.setProperty('--content-block-width-preview-size', `${normalizedWidth}%`);
+    setContentBlockWidthIndicator(item, item.dataset.contentBlockPreviewLabel);
+};
+
+const clearContentBlockWidthPreview = (item) => {
+    item.removeAttribute('data-content-block-preview-width');
+    item.removeAttribute('data-content-block-preview-label');
+    item.style.removeProperty('--content-block-width-preview-percent');
+    item.style.removeProperty('--content-block-width-preview-size');
+    setContentBlockWidthIndicator(item, item.dataset.contentBlockWidthLabel ?? contentBlockWidthLabel(item.dataset.contentBlockWidth));
+};
+
+const highlightCommittedContentBlockWidth = (item) => {
+    item.classList.add('is-width-committed');
+
+    window.setTimeout(() => {
+        item.classList.remove('is-width-committed');
+    }, 650);
 };
 
 const ensureContentBlockWidthSlider = (item, select) => {
@@ -455,7 +676,7 @@ const ensureContentBlockWidthSlider = (item, select) => {
         decreaseButton.setAttribute('aria-label', 'Decrease block width');
 
         const decreaseIcon = document.createElement('span');
-        decreaseIcon.className = 'admin-material-icon';
+        decreaseIcon.className = 'mso';
         decreaseIcon.setAttribute('aria-hidden', 'true');
         decreaseIcon.textContent = 'remove';
 
@@ -475,7 +696,7 @@ const ensureContentBlockWidthSlider = (item, select) => {
         increaseButton.setAttribute('aria-label', 'Increase block width');
 
         const increaseIcon = document.createElement('span');
-        increaseIcon.className = 'admin-material-icon';
+        increaseIcon.className = 'mso';
         increaseIcon.setAttribute('aria-hidden', 'true');
         increaseIcon.textContent = 'add';
 
@@ -516,10 +737,18 @@ const commitContentBlockWidthRange = (range) => {
     }
 
     const width = normalizeContentBlockWidth(range.value);
+    const builder = item.closest('[data-content-block-builder]') ?? document;
 
     range.value = String(width);
+    setContentBlockWidthPreview(item, width);
     updateContentBlockWidth(item, width, true);
+    highlightCommittedContentBlockWidth(item);
     item.classList.remove('is-width-resizing');
+    clearContentBlockWidthPreview(item);
+    scheduleContentBlockWidthSync(builder, {
+        commitCached: true,
+        preferCached: true,
+    });
 
     if (activeContentBlockWidthRange === range) {
         activeContentBlockWidthRange = null;
@@ -750,9 +979,15 @@ document.addEventListener('click', (event) => {
 
         if (item instanceof HTMLElement && slider instanceof HTMLInputElement && Number.isFinite(step)) {
             const width = normalizeContentBlockWidth(Number.parseInt(slider.value ?? '50', 10) + step);
+            const builder = item.closest('[data-content-block-builder]') ?? document;
 
             slider.value = String(width);
             updateContentBlockWidth(item, width, true);
+            highlightCommittedContentBlockWidth(item);
+            scheduleContentBlockWidthSync(builder, {
+                commitCached: true,
+                preferCached: true,
+            });
         }
 
         return;
@@ -778,7 +1013,17 @@ document.addEventListener('input', (event) => {
         return;
     }
 
-    event.target.closest('.fi-fo-builder-item')?.classList.add('is-width-resizing');
+    const item = event.target.closest('.fi-fo-builder-item');
+
+    if (! (item instanceof HTMLElement)) {
+        return;
+    }
+
+    const width = normalizeContentBlockWidth(event.target.value);
+
+    event.target.value = String(width);
+    setContentBlockWidthPreview(item, width);
+    item.classList.add('is-width-resizing');
 });
 
 let activeContentBlockWidthRange = null;
@@ -789,7 +1034,12 @@ document.addEventListener('pointerdown', (event) => {
     }
 
     activeContentBlockWidthRange = event.target;
-    event.target.closest('.fi-fo-builder-item')?.classList.add('is-width-resizing');
+    const item = event.target.closest('.fi-fo-builder-item');
+
+    if (item instanceof HTMLElement) {
+        setContentBlockWidthPreview(item, event.target.value);
+        item.classList.add('is-width-resizing');
+    }
 });
 
 ['pointerup', 'pointercancel'].forEach((eventName) => {
@@ -802,6 +1052,10 @@ document.addEventListener('pointerdown', (event) => {
 
         document.querySelectorAll('.fi-fo-builder-item.is-width-resizing').forEach((item) => {
             item.classList.remove('is-width-resizing');
+
+            if (item instanceof HTMLElement) {
+                clearContentBlockWidthPreview(item);
+            }
         });
     });
 });
@@ -818,6 +1072,158 @@ document.addEventListener('change', (event) => {
     }
 
     scheduleContentBlockWidthSync(event.target.closest('[data-content-block-builder]') ?? document);
+});
+
+const contentBlockEditorElement = () => document.querySelector('[data-content-block-editor]');
+
+const contentBlockEditorSaveButton = (editor) => editor?.querySelector('[data-content-block-editor-save]')
+    ?? editor?.querySelector('.content-block-editor-toolbar .btn-save');
+
+const contentBlockAutoSaveError = (editor) => editor instanceof HTMLElement
+    ? editor.dataset.contentBlockAutoSaveError
+    : null;
+
+document.addEventListener('click', (event) => {
+    if (! (event.target instanceof Element)) {
+        return;
+    }
+
+    const toolbarSaveButton = event.target.closest('[data-content-block-toolbar-save]');
+
+    if (! (toolbarSaveButton instanceof HTMLButtonElement)) {
+        return;
+    }
+
+    const editor = contentBlockEditorElement();
+    const saveButton = contentBlockEditorSaveButton(editor);
+
+    if (! (editor instanceof HTMLElement) || ! (saveButton instanceof HTMLButtonElement)) {
+        return;
+    }
+
+    toolbarSaveButton.disabled = true;
+    toolbarSaveButton.setAttribute('aria-busy', 'true');
+
+    const cleanup = () => {
+        window.clearTimeout(timeout);
+        toolbarSaveButton.disabled = false;
+        toolbarSaveButton.removeAttribute('aria-busy');
+    };
+
+    const timeout = window.setTimeout(() => {
+        window.removeEventListener('content-block-saved', cleanup);
+
+        const message = contentBlockAutoSaveError(editor);
+
+        if (message) {
+            window.alert(message);
+        }
+
+        cleanup();
+    }, 10000);
+
+    window.addEventListener('content-block-saved', cleanup, { once: true });
+    saveButton.click();
+});
+
+const submitContentItemFormAfterBlockSave = (form, submitter = null) => {
+    const editor = contentBlockEditorElement();
+    const saveButton = contentBlockEditorSaveButton(editor);
+
+    if (! (editor instanceof HTMLElement) || ! (saveButton instanceof HTMLButtonElement)) {
+        return false;
+    }
+
+    if (form.dataset.contentBlockSubmitting === 'true') {
+        return true;
+    }
+
+    const saveAndStayField = form.querySelector('input[name="saveAndStay"]');
+
+    if (saveAndStayField instanceof HTMLInputElement) {
+        saveAndStayField.value = submitter instanceof HTMLButtonElement && submitter.name === 'saveAndStay'
+            ? (submitter.value || '1')
+            : '0';
+    }
+
+    form.dataset.contentBlockSubmitting = 'true';
+
+    if (submitter instanceof HTMLButtonElement) {
+        submitter.disabled = true;
+        submitter.setAttribute('aria-busy', 'true');
+    }
+
+    const cleanup = () => {
+        delete form.dataset.contentBlockSubmitting;
+
+        if (submitter instanceof HTMLButtonElement) {
+            submitter.disabled = false;
+            submitter.removeAttribute('aria-busy');
+        }
+    };
+
+    const continueSubmit = () => {
+        window.clearTimeout(timeout);
+        form.dataset.contentBlockSubmitReady = 'true';
+        window.setTimeout(() => {
+            delete form.dataset.contentBlockSubmitReady;
+        }, 0);
+        cleanup();
+
+        try {
+            if (typeof form.requestSubmit === 'function') {
+                if (submitter instanceof HTMLButtonElement) {
+                    form.requestSubmit(submitter);
+                } else {
+                    form.requestSubmit();
+                }
+
+                return;
+            }
+        } catch {
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+
+                return;
+            }
+        }
+
+        form.submit();
+    };
+
+    const timeout = window.setTimeout(() => {
+        window.removeEventListener('content-block-saved', continueSubmit);
+        cleanup();
+
+        const message = contentBlockAutoSaveError(editor);
+
+        if (message) {
+            window.alert(message);
+        }
+    }, 10000);
+
+    window.addEventListener('content-block-saved', continueSubmit, { once: true });
+    saveButton.click();
+
+    return true;
+};
+
+document.addEventListener('submit', (event) => {
+    if (! (event.target instanceof HTMLFormElement) || event.target.getAttribute('id') !== 'content-item-form') {
+        return;
+    }
+
+    if (event.target.dataset.contentBlockSubmitReady === 'true') {
+        return;
+    }
+
+    if (! document.querySelector('[data-content-block-builder]')) {
+        return;
+    }
+
+    if (submitContentItemFormAfterBlockSave(event.target, event.submitter instanceof HTMLButtonElement ? event.submitter : null)) {
+        event.preventDefault();
+    }
 });
 
 window.addEventListener('load', () => scheduleContentBlockWidthSync());
@@ -873,6 +1279,292 @@ const readableFileSize = (bytes) => {
     return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 };
 
+const imageMimeType = (file) => {
+    if (['image/jpeg', 'image/png', 'image/webp'].includes(file?.type)) {
+        return file.type;
+    }
+
+    return 'image/jpeg';
+};
+
+const imageExtension = (mimeType) => ({
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+})[mimeType] ?? 'jpg';
+
+const editedImageFileName = (file, mimeType, suffix = 'edited') => {
+    const baseName = fileNameWithoutExtension(file?.name ?? 'image') || 'image';
+
+    return `${baseName}-${suffix}.${imageExtension(mimeType)}`;
+};
+
+const renderImageEditorFileList = (input, list, form) => {
+    list.replaceChildren();
+
+    const files = Array.from(input.files ?? []);
+
+    list.hidden = files.length === 0;
+
+    if (files.length === 0) {
+        return;
+    }
+
+    const title = document.createElement('strong');
+    title.textContent = files.length === 1
+        ? (form.dataset.filesSelectedSingular ?? '')
+        : (form.dataset.filesSelectedPlural ?? '');
+
+    const items = document.createElement('ul');
+
+    files.forEach((file) => {
+        const item = document.createElement('li');
+        item.textContent = `${file.name} (${readableFileSize(file.size)})`;
+        items.append(item);
+    });
+
+    list.append(title, items);
+};
+
+const initializeContentImageEditors = (root = document) => {
+    root.querySelectorAll('[data-content-image-editor]').forEach((form) => {
+        if (! (form instanceof HTMLFormElement) || form.dataset.contentImageEditorReady === 'true') {
+            return;
+        }
+
+        const input = form.querySelector('[data-content-image-editor-input]');
+        const fileList = form.querySelector('[data-content-image-editor-file-list]');
+        const panel = form.querySelector('[data-content-image-editor-panel]');
+        const cropperStage = form.querySelector('[data-content-image-editor-cropper]');
+        const fileName = form.querySelector('[data-content-image-editor-file-name]');
+        const ratioSelect = form.querySelector('[data-content-image-editor-ratio]');
+        const uploadButton = form.querySelector('[data-content-image-editor-upload]');
+        const status = form.querySelector('[data-content-image-editor-status]');
+        const statusTitle = form.querySelector('[data-content-image-editor-status-title]');
+        const statusCopy = form.querySelector('[data-content-image-editor-status-copy]');
+        let cropper = null;
+        let editedFile = null;
+        let editedFileUrl = null;
+
+        if (! (input instanceof HTMLInputElement)
+            || ! (fileList instanceof HTMLElement)
+            || ! (panel instanceof HTMLElement)
+            || ! (cropperStage instanceof HTMLElement)
+            || ! (uploadButton instanceof HTMLButtonElement)
+        ) {
+            return;
+        }
+
+        form.dataset.contentImageEditorReady = 'true';
+
+        const setStatus = (isVisible, title = '', copy = '') => {
+            if (! (status instanceof HTMLElement)) {
+                return;
+            }
+
+            status.hidden = ! isVisible;
+
+            if (statusTitle instanceof HTMLElement && title) {
+                statusTitle.textContent = title;
+            }
+
+            if (statusCopy instanceof HTMLElement && copy) {
+                statusCopy.textContent = copy;
+            }
+        };
+
+        const destroyCropper = () => {
+            cropper?.destroy?.();
+            cropper = null;
+            cropperStage.replaceChildren();
+
+            if (editedFileUrl) {
+                URL.revokeObjectURL(editedFileUrl);
+                editedFileUrl = null;
+            }
+        };
+
+        const closeEditor = () => {
+            destroyCropper();
+            editedFile = null;
+            panel.hidden = true;
+            setStatus(false);
+        };
+
+        const applyAspectRatio = () => {
+            if (! cropper || ! (ratioSelect instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            const selection = cropper.getCropperSelection?.();
+
+            if (! selection) {
+                return;
+            }
+
+            const ratio = ratioSelect.value;
+            const [width, height] = ratio.split(':').map((value) => Number.parseFloat(value));
+
+            selection.aspectRatio = Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
+                ? width / height
+                : Number.NaN;
+            selection.$render?.();
+        };
+
+        const openEditor = async (file) => {
+            closeEditor();
+            editedFile = file;
+            editedFileUrl = URL.createObjectURL(file);
+
+            const Cropper = await loadCropper();
+            const image = new Image();
+            image.src = editedFileUrl;
+            image.alt = file.name;
+
+            cropper = new Cropper(image, {
+                container: cropperStage,
+            });
+
+            if (fileName instanceof HTMLElement) {
+                fileName.textContent = `${file.name} (${readableFileSize(file.size)})`;
+            }
+
+            panel.hidden = false;
+
+            cropper.getCropperImage?.()?.$ready?.(() => {
+                applyAspectRatio();
+            });
+        };
+
+        const selectedFiles = () => Array.from(input.files ?? []).filter((file) => file.type.startsWith('image/'));
+
+        input.addEventListener('change', () => {
+            const files = selectedFiles();
+
+            renderImageEditorFileList(input, fileList, form);
+
+            if (files.length === 1) {
+                openEditor(files[0]);
+
+                return;
+            }
+
+            closeEditor();
+        });
+
+        ratioSelect?.addEventListener('change', applyAspectRatio);
+
+        form.querySelectorAll('[data-content-image-editor-action]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const action = button.dataset.contentImageEditorAction;
+                const image = cropper?.getCropperImage?.();
+
+                if (action === 'close') {
+                    closeEditor();
+
+                    return;
+                }
+
+                if (! image) {
+                    return;
+                }
+
+                if (action === 'rotate-left') {
+                    image.$rotate('-90deg');
+                } else if (action === 'rotate-right') {
+                    image.$rotate('90deg');
+                } else if (action === 'zoom-out') {
+                    image.$zoom(-0.1);
+                } else if (action === 'zoom-in') {
+                    image.$zoom(0.1);
+                } else if (action === 'reset' && editedFile) {
+                    openEditor(editedFile);
+                }
+            });
+        });
+
+        uploadButton.addEventListener('click', async () => {
+            const selection = cropper?.getCropperSelection?.();
+
+            if (! selection || ! editedFile) {
+                return;
+            }
+
+            setStatus(true, form.dataset.processingTitle, form.dataset.processingCopy);
+            uploadButton.disabled = true;
+
+            try {
+                const mimeType = imageMimeType(editedFile);
+                const canvas = await selection.$toCanvas({
+                    beforeDraw: mimeType === 'image/jpeg'
+                        ? (context, canvasElement) => {
+                            context.fillStyle = '#ffffff';
+                            context.fillRect(0, 0, canvasElement.width, canvasElement.height);
+                        }
+                        : undefined,
+                });
+                const blob = await new Promise((resolve) => {
+                    canvas.toBlob(resolve, mimeType, 0.92);
+                });
+
+                if (! (blob instanceof Blob)) {
+                    throw new Error(form.dataset.exportErrorMessage || form.dataset.uploadErrorMessage || '');
+                }
+
+                const formData = new FormData();
+                formData.append('image', blob, editedImageFileName(editedFile, mimeType, form.dataset.editedFileSuffix || 'edited'));
+                formData.append('caption', fileNameWithoutExtension(editedFile.name).replace(/[-_]+/g, ' '));
+
+                setStatus(true, form.dataset.uploadingTitle, form.dataset.uploadingCopy);
+
+                const response = await fetch(form.dataset.uploadUrl || form.action, {
+                    body: formData,
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrfToken(),
+                    },
+                    method: 'POST',
+                });
+
+                if (! response.ok) {
+                    throw new Error((await response.json().catch(() => null))?.message || form.dataset.uploadErrorMessage || '');
+                }
+
+                window.location.reload();
+            } catch (error) {
+                setStatus(true, form.dataset.uploadErrorMessage || '', error.message || form.dataset.uploadErrorMessage || '');
+                uploadButton.disabled = false;
+            }
+        });
+    });
+};
+
+initializeContentImageEditors();
+
+document.addEventListener('livewire:navigated', () => initializeContentImageEditors());
+
+if (document.body) {
+    const contentImageEditorObserver = new MutationObserver((mutations) => {
+        const shouldInitialize = mutations.some((mutation) => Array.from(mutation.addedNodes).some((node) => {
+            if (! (node instanceof Element)) {
+                return false;
+            }
+
+            return node.matches('[data-content-image-editor]')
+                || Boolean(node.querySelector('[data-content-image-editor]'));
+        }));
+
+        if (shouldInitialize) {
+            initializeContentImageEditors();
+        }
+    });
+
+    contentImageEditorObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
+}
+
 const renderSelectedAttachments = (input, list) => {
     list.replaceChildren();
 
@@ -885,8 +1577,9 @@ const renderSelectedAttachments = (input, list) => {
         item.className = 'attachment-selection-item';
 
         const icon = document.createElement('span');
-        icon.className = 'admin-symbol admin-symbol-attachment';
+        icon.className = 'mso attachment-selection-icon';
         icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = 'attach_file';
 
         const content = document.createElement('div');
         content.className = 'attachment-selection-content';
@@ -1155,6 +1848,841 @@ document.querySelectorAll('[data-domain-social-sortable-list]').forEach((list) =
     });
 });
 
+document.querySelectorAll('[data-form-builder]').forEach((builder) => {
+    const canvas = builder.querySelector('[data-form-builder-canvas]');
+    const hiddenInputs = builder.querySelector('[data-form-builder-inputs]');
+    const emptyState = builder.querySelector('[data-form-builder-empty]');
+    const modal = builder.querySelector('[data-form-builder-modal]');
+    const optionsPanel = builder.querySelector('[data-form-builder-options-panel]');
+
+    if (! (canvas instanceof HTMLOListElement) || ! (hiddenInputs instanceof HTMLElement) || ! (modal instanceof HTMLElement)) {
+        return;
+    }
+
+    const dropSurface = canvas.closest('.form-builder-canvas-panel') ?? canvas;
+
+    const parseJson = (value, fallback) => {
+        try {
+            return value ? JSON.parse(value) : fallback;
+        } catch {
+            return fallback;
+        }
+    };
+
+    const fieldTypes = parseJson(builder.dataset.fieldTypes, {});
+    const fieldIcons = parseJson(builder.dataset.fieldIcons, {});
+    const initialBlocks = parseJson(builder.dataset.initialBlocks, []);
+    const labels = {
+        defaultBlockTitle: 'Form',
+        defaultFieldLabel: 'New field',
+        deleteField: 'Delete field',
+        decreaseFieldWidth: 'Decrease field width',
+        dropFields: 'No fields yet',
+        editField: 'Edit field',
+        fieldWidth: 'Field width',
+        increaseFieldWidth: 'Increase field width',
+        moveField: 'Move field',
+        optionOne: 'Option 1',
+        optionTwo: 'Option 2',
+        ...parseJson(builder.dataset.formBuilderLabels, {}),
+    };
+    const optionTypes = new Set(['select', 'radio', 'checkbox', 'image-set-choice', 'image_set_choice']);
+    const fields = [];
+    const fieldByKey = new Map();
+    const firstBlock = initialBlocks[0] ?? {};
+    const firstRow = initialBlocks.flatMap((block) => block.rows ?? [])[0] ?? {};
+    let editingKey = null;
+    let draggedFieldKey = null;
+    let draggedPaletteType = null;
+    let pendingDropTargetKey = null;
+    let pendingDropPosition = 'after';
+
+    const materialIcon = (name) => {
+        const icon = document.createElement('span');
+
+        icon.className = 'mso';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = name;
+
+        return icon;
+    };
+
+    const inputName = (value) => String(value ?? '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        || 'field';
+
+    const boolValue = (value, fallback = false) => {
+        if (value === undefined || value === null || value === '') {
+            return fallback;
+        }
+
+        return value === true || value === 'true' || value === '1' || value === 1;
+    };
+
+    const fieldKey = () => `form-field-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const labelForType = (type) => fieldTypes[type] ?? labels.defaultFieldLabel;
+    const supportsOptions = (field) => optionTypes.has(field.type);
+    const normalizeFieldWidth = (value) => {
+        const parsed = Number.parseInt(value ?? '100', 10);
+        const width = Number.isFinite(parsed) ? parsed : 100;
+
+        return Math.min(100, Math.max(10, Math.round(width / 5) * 5));
+    };
+    const fieldWidthClass = (width) => `form-builder-canvas-item--width-${normalizeFieldWidth(width)}`;
+    const applyFieldWidthClass = (item, width) => {
+        item.className = item.className
+            .split(/\s+/)
+            .filter((className) => className && ! className.startsWith('form-builder-canvas-item--width-'))
+            .join(' ');
+        item.classList.add(fieldWidthClass(width));
+        item.dataset.fieldWidth = String(normalizeFieldWidth(width));
+    };
+
+    const normalizeField = (field, index = 0) => {
+        const type = field.type === 'image_set_choice' ? 'image-set-choice' : (field.type || 'input');
+        const label = field.label || labelForType(type);
+
+        return {
+            client_id: field.client_id || fieldKey(),
+            id: field.id || null,
+            name: field.name || inputName(label),
+            label,
+            type,
+            help_text: field.help_text || '',
+            is_required: boolValue(field.is_required),
+            sort_order: Number(field.sort_order || index + 1),
+            validation_rules: field.validation_rules || '',
+            placeholder: field.placeholder || '',
+            default_value: field.default_value || '',
+            label_visible: boolValue(field.label_visible, true),
+            width: normalizeFieldWidth(field.width),
+            custom_error_message: field.custom_error_message || '',
+            information: field.information || '',
+            css_class: field.css_class || '',
+            options: Array.isArray(field.options) ? field.options.map((option, optionIndex) => ({
+                id: option.id || null,
+                label: option.label || '',
+                value: option.value || inputName(option.label || `option_${optionIndex + 1}`),
+                sort_order: Number(option.sort_order || optionIndex + 1),
+                image_path: option.image_path || '',
+                description: option.description || '',
+            })) : [],
+        };
+    };
+
+    const defaultOptions = (type) => optionTypes.has(type)
+        ? [
+            { label: labels.optionOne, value: 'option_1', sort_order: 1 },
+            { label: labels.optionTwo, value: 'option_2', sort_order: 2 },
+        ]
+        : [];
+
+    const createField = (type) => normalizeField({
+        type,
+        label: labelForType(type),
+        name: inputName(labelForType(type)),
+        options: defaultOptions(type),
+    }, fields.length);
+
+    const flattenInitialFields = () => {
+        initialBlocks.forEach((block) => {
+            (block.rows ?? []).forEach((row) => {
+                (row.fields ?? []).forEach((field) => fields.push(normalizeField(field, fields.length)));
+            });
+        });
+    };
+
+    const syncFieldMap = () => {
+        fieldByKey.clear();
+        fields.forEach((field) => fieldByKey.set(field.client_id, field));
+    };
+
+    const orderedFields = () => Array.from(canvas.children)
+        .map((item) => item instanceof HTMLElement ? fieldByKey.get(item.dataset.fieldKey) : null)
+        .filter((field) => field);
+    const fieldItemByKey = (key) => Array.from(canvas.querySelectorAll('[data-field-key]'))
+        .find((item) => item instanceof HTMLElement && item.dataset.fieldKey === key);
+
+    const optionsText = (field) => (field.options ?? [])
+        .map((option) => [option.label, option.value].filter(Boolean).join('|'))
+        .join('\n');
+
+    const parseOptionsText = (value, previousOptions = []) => value
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line, index) => {
+            const [label, valuePart] = line.split('|');
+            const optionLabel = label.trim();
+
+            return {
+                id: previousOptions[index]?.id || null,
+                label: optionLabel,
+                value: (valuePart || '').trim() || inputName(optionLabel),
+                sort_order: index + 1,
+                image_path: previousOptions[index]?.image_path || '',
+                description: previousOptions[index]?.description || '',
+            };
+        });
+
+    const appendHidden = (name, value) => {
+        const input = document.createElement('input');
+
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value ?? '';
+        hiddenInputs.append(input);
+    };
+
+    const serialize = () => {
+        const currentFields = orderedFields();
+
+        hiddenInputs.replaceChildren();
+        appendHidden('blocks[0][title]', firstBlock.title || labels.defaultBlockTitle);
+        appendHidden('blocks[0][sort_order]', '1');
+
+        if (firstBlock.id) {
+            appendHidden('blocks[0][id]', firstBlock.id);
+        }
+
+        if (firstBlock.css_class) {
+            appendHidden('blocks[0][css_class]', firstBlock.css_class);
+        }
+
+        appendHidden('blocks[0][rows][0][sort_order]', '1');
+        appendHidden('blocks[0][rows][0][width]', firstRow.width || 100);
+
+        if (firstRow.id) {
+            appendHidden('blocks[0][rows][0][id]', firstRow.id);
+        }
+
+        if (firstRow.css_class) {
+            appendHidden('blocks[0][rows][0][css_class]', firstRow.css_class);
+        }
+
+        currentFields.forEach((field, fieldIndex) => {
+            const base = `blocks[0][rows][0][fields][${fieldIndex}]`;
+
+            if (field.id) {
+                appendHidden(`${base}[id]`, field.id);
+            }
+
+            appendHidden(`${base}[name]`, field.name);
+            appendHidden(`${base}[label]`, field.label);
+            appendHidden(`${base}[type]`, field.type);
+            appendHidden(`${base}[help_text]`, field.help_text);
+            appendHidden(`${base}[is_required]`, field.is_required ? '1' : '0');
+            appendHidden(`${base}[sort_order]`, fieldIndex + 1);
+            appendHidden(`${base}[validation_rules]`, field.validation_rules);
+            appendHidden(`${base}[placeholder]`, field.placeholder);
+            appendHidden(`${base}[default_value]`, field.default_value);
+            appendHidden(`${base}[label_visible]`, field.label_visible ? '1' : '0');
+            appendHidden(`${base}[width]`, field.width || 100);
+            appendHidden(`${base}[custom_error_message]`, field.custom_error_message);
+            appendHidden(`${base}[information]`, field.information);
+            appendHidden(`${base}[css_class]`, field.css_class);
+
+            (field.options ?? []).forEach((option, optionIndex) => {
+                const optionBase = `${base}[options][${optionIndex}]`;
+
+                if (option.id) {
+                    appendHidden(`${optionBase}[id]`, option.id);
+                }
+
+                appendHidden(`${optionBase}[label]`, option.label);
+                appendHidden(`${optionBase}[value]`, option.value);
+                appendHidden(`${optionBase}[sort_order]`, optionIndex + 1);
+                appendHidden(`${optionBase}[image_path]`, option.image_path);
+                appendHidden(`${optionBase}[description]`, option.description);
+            });
+        });
+
+        if (emptyState instanceof HTMLElement) {
+            emptyState.hidden = currentFields.length > 0;
+            emptyState.textContent = labels.dropFields;
+        }
+    };
+
+    const fieldSummary = (field) => [fieldTypes[field.type] ?? field.type, field.is_required ? '*' : null].filter(Boolean).join(' ');
+    const syncFieldWidthControls = (item, width) => {
+        const normalizedWidth = normalizeFieldWidth(width);
+
+        item.querySelectorAll('[data-form-builder-width-range]').forEach((input) => {
+            if (input instanceof HTMLInputElement) {
+                input.value = String(normalizedWidth);
+            }
+        });
+    };
+    const updateFieldWidth = (item, width) => {
+        const field = fieldByKey.get(item.dataset.fieldKey);
+
+        if (! field) {
+            return;
+        }
+
+        field.width = normalizeFieldWidth(width);
+        applyFieldWidthClass(item, field.width);
+        syncFieldWidthControls(item, field.width);
+        serialize();
+    };
+    const renderWidthControl = (field) => {
+        const control = document.createElement('div');
+        control.className = 'form-builder-width-control';
+        control.dataset.formBuilderWidthControl = 'true';
+
+        const decreaseButton = document.createElement('button');
+        decreaseButton.className = 'form-builder-width-step-button';
+        decreaseButton.type = 'button';
+        decreaseButton.dataset.formBuilderWidthStep = '-5';
+        decreaseButton.setAttribute('aria-label', labels.decreaseFieldWidth);
+
+        const decreaseIcon = materialIcon('remove');
+
+        const slider = document.createElement('input');
+        slider.className = 'form-builder-width-slider';
+        slider.type = 'range';
+        slider.min = '10';
+        slider.max = '100';
+        slider.step = '5';
+        slider.value = String(normalizeFieldWidth(field.width));
+        slider.dataset.formBuilderWidthRange = 'true';
+        slider.setAttribute('aria-label', labels.fieldWidth);
+
+        const increaseButton = document.createElement('button');
+        increaseButton.className = 'form-builder-width-step-button';
+        increaseButton.type = 'button';
+        increaseButton.dataset.formBuilderWidthStep = '5';
+        increaseButton.setAttribute('aria-label', labels.increaseFieldWidth);
+
+        const increaseIcon = materialIcon('add');
+
+        decreaseButton.append(decreaseIcon);
+        increaseButton.append(increaseIcon);
+        control.append(decreaseButton, slider, increaseButton);
+
+        return control;
+    };
+
+    const renderField = (field) => {
+        const item = document.createElement('li');
+
+        item.className = 'form-builder-canvas-item';
+        item.dataset.fieldKey = field.client_id;
+        applyFieldWidthClass(item, field.width);
+
+        const main = document.createElement('button');
+        main.className = 'form-builder-canvas-main';
+        main.type = 'button';
+        main.dataset.formBuilderOpenField = 'true';
+
+        const copy = document.createElement('span');
+        copy.className = 'form-builder-canvas-copy';
+
+        const title = document.createElement('strong');
+        title.textContent = field.label || labels.defaultFieldLabel;
+
+        const meta = document.createElement('span');
+        meta.textContent = fieldSummary(field);
+
+        copy.append(title, meta);
+        main.append(materialIcon(fieldIcons[field.type] ?? 'input'), copy);
+
+        const handle = document.createElement('button');
+        handle.className = 'form-builder-drag-handle';
+        handle.type = 'button';
+        handle.draggable = true;
+        handle.dataset.formBuilderDragHandle = 'true';
+        handle.setAttribute('aria-label', labels.moveField);
+        handle.append(materialIcon('drag_indicator'));
+
+        item.append(main, handle, renderWidthControl(field));
+
+        return item;
+    };
+
+    const renderCanvas = () => {
+        canvas.replaceChildren();
+        fields.forEach((field) => canvas.append(renderField(field)));
+        serialize();
+    };
+
+    const openModal = (field) => {
+        editingKey = field.client_id;
+
+        modal.querySelectorAll('[data-form-builder-setting]').forEach((input) => {
+            const key = input.dataset.formBuilderSetting;
+
+            if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+                input.checked = boolValue(field[key], key === 'label_visible');
+            } else if (key === 'options_text' && (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement)) {
+                input.value = optionsText(field);
+            } else if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement || input instanceof HTMLTextAreaElement) {
+                input.value = field[key] ?? '';
+            }
+        });
+
+        if (optionsPanel instanceof HTMLElement) {
+            optionsPanel.hidden = ! supportsOptions(field);
+        }
+
+        modal.hidden = false;
+        modal.querySelector('[data-form-builder-setting="label"]')?.focus();
+    };
+
+    const closeModal = () => {
+        modal.hidden = true;
+        editingKey = null;
+    };
+
+    const saveModal = () => {
+        const field = fieldByKey.get(editingKey);
+
+        if (! field) {
+            closeModal();
+
+            return;
+        }
+
+        modal.querySelectorAll('[data-form-builder-setting]').forEach((input) => {
+            const key = input.dataset.formBuilderSetting;
+
+            if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+                field[key] = input.checked;
+            } else if (key === 'options_text' && (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement)) {
+                field.options = parseOptionsText(input.value, field.options);
+            } else if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement || input instanceof HTMLTextAreaElement) {
+                field[key] = key === 'width' ? normalizeFieldWidth(input.value || 100) : input.value;
+            }
+        });
+
+        field.name = field.name || inputName(field.label);
+        field.options = supportsOptions(field) ? field.options : [];
+        syncFieldMap();
+        renderCanvas();
+        closeModal();
+    };
+
+    const addField = (type, target = null, position = 'after') => {
+        const field = createField(type);
+        const targetKey = target instanceof HTMLElement ? target.dataset.fieldKey : null;
+        const targetIndex = targetKey ? fields.findIndex((candidate) => candidate.client_id === targetKey) : -1;
+
+        if (targetIndex === -1) {
+            fields.push(field);
+        } else {
+            fields.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, field);
+        }
+
+        syncFieldMap();
+        renderCanvas();
+        openModal(field);
+    };
+
+    const moveField = (sourceKey, target = null, position = 'after') => {
+        const sourceIndex = fields.findIndex((field) => field.client_id === sourceKey);
+
+        if (sourceIndex === -1) {
+            return;
+        }
+
+        const [field] = fields.splice(sourceIndex, 1);
+        const targetKey = target instanceof HTMLElement ? target.dataset.fieldKey : null;
+        const targetIndex = targetKey ? fields.findIndex((candidate) => candidate.client_id === targetKey) : -1;
+
+        if (targetIndex === -1) {
+            fields.push(field);
+        } else {
+            fields.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, field);
+        }
+
+        renderCanvas();
+    };
+
+    const dropPosition = (target, event) => {
+        const box = target.getBoundingClientRect();
+
+        return event.clientY < box.top + box.height / 2 ? 'before' : 'after';
+    };
+
+    const restoreEmptyState = () => {
+        if (emptyState instanceof HTMLElement) {
+            emptyState.hidden = orderedFields().length > 0 || canvas.querySelector('[data-form-builder-drop-preview]') !== null;
+        }
+    };
+
+    const draggedWidth = () => draggedFieldKey
+        ? normalizeFieldWidth(fieldByKey.get(draggedFieldKey)?.width)
+        : 100;
+
+    const clearDropState = (includeDragging = false) => {
+        canvas.classList.remove('is-form-builder-drag-over');
+        canvas.querySelectorAll('.is-form-builder-drop-before, .is-form-builder-drop-after').forEach((element) => {
+            element.classList.remove('is-form-builder-drop-before', 'is-form-builder-drop-after');
+        });
+        canvas.querySelector('[data-form-builder-drop-preview]')?.remove();
+        pendingDropTargetKey = null;
+        pendingDropPosition = 'after';
+
+        if (includeDragging) {
+            canvas.querySelectorAll('.is-form-builder-dragging').forEach((element) => {
+                element.classList.remove('is-form-builder-dragging');
+            });
+        }
+
+        restoreEmptyState();
+    };
+
+    const renderDropPreview = (target = null, position = 'after') => {
+        canvas.querySelector('[data-form-builder-drop-preview]')?.remove();
+        canvas.classList.add('is-form-builder-drag-over');
+
+        const preview = document.createElement('li');
+        preview.className = 'form-builder-drop-preview';
+        preview.dataset.formBuilderDropPreview = 'true';
+        preview.setAttribute('aria-hidden', 'true');
+        applyFieldWidthClass(preview, draggedWidth());
+        pendingDropTargetKey = target instanceof HTMLElement ? target.dataset.fieldKey : null;
+        pendingDropPosition = position;
+
+        if (target instanceof HTMLElement) {
+            target.classList.add(position === 'before' ? 'is-form-builder-drop-before' : 'is-form-builder-drop-after');
+            target[position === 'before' ? 'before' : 'after'](preview);
+        } else {
+            canvas.append(preview);
+        }
+
+        restoreEmptyState();
+    };
+
+    builder.querySelectorAll('[data-form-builder-add]').forEach((button) => {
+        button.addEventListener('click', () => addField(button.dataset.formBuilderAdd || 'input'));
+        button.addEventListener('dragstart', (event) => {
+            draggedPaletteType = button.dataset.formBuilderAdd || 'input';
+            event.dataTransfer?.setData('text/plain', draggedPaletteType);
+            event.dataTransfer?.setData('application/x-form-builder-type', draggedPaletteType);
+        });
+        button.addEventListener('dragend', () => {
+            draggedPaletteType = null;
+            clearDropState(true);
+        });
+    });
+
+    canvas.addEventListener('click', (event) => {
+        if (! (event.target instanceof Element)) {
+            return;
+        }
+
+        const widthStepButton = event.target.closest('[data-form-builder-width-step]');
+
+        if (widthStepButton instanceof HTMLButtonElement) {
+            const item = widthStepButton.closest('[data-field-key]');
+            const slider = item?.querySelector('[data-form-builder-width-range]');
+            const step = Number.parseInt(widthStepButton.dataset.formBuilderWidthStep ?? '0', 10);
+
+            if (item instanceof HTMLElement && slider instanceof HTMLInputElement && Number.isFinite(step)) {
+                const width = normalizeFieldWidth(Number.parseInt(slider.value || '100', 10) + step);
+
+                item.classList.add('is-width-resizing');
+                updateFieldWidth(item, width);
+                window.setTimeout(() => item.classList.remove('is-width-resizing'), 220);
+            }
+
+            return;
+        }
+
+        const item = event.target.closest('[data-field-key]');
+
+        if (
+            ! (item instanceof HTMLElement)
+            || event.target.closest('[data-form-builder-drag-handle]')
+            || event.target.closest('[data-form-builder-width-control]')
+        ) {
+            return;
+        }
+
+        const field = fieldByKey.get(item.dataset.fieldKey);
+
+        if (field) {
+            openModal(field);
+        }
+    });
+
+    canvas.addEventListener('input', (event) => {
+        if (! (event.target instanceof HTMLInputElement) || ! event.target.matches('[data-form-builder-width-range]')) {
+            return;
+        }
+
+        const item = event.target.closest('[data-field-key]');
+
+        if (item instanceof HTMLElement) {
+            item.classList.add('is-width-resizing');
+            updateFieldWidth(item, event.target.value);
+        }
+    });
+
+    canvas.addEventListener('change', (event) => {
+        if (! (event.target instanceof HTMLInputElement) || ! event.target.matches('[data-form-builder-width-range]')) {
+            return;
+        }
+
+        event.target.closest('[data-field-key]')?.classList.remove('is-width-resizing');
+    });
+
+    canvas.addEventListener('dragstart', (event) => {
+        const handle = event.target instanceof Element ? event.target.closest('[data-form-builder-drag-handle]') : null;
+
+        if (! (handle instanceof HTMLElement)) {
+            event.preventDefault();
+
+            return;
+        }
+
+        const item = handle.closest('[data-field-key]');
+
+        if (! (item instanceof HTMLElement)) {
+            return;
+        }
+
+        draggedFieldKey = item.dataset.fieldKey;
+        item.classList.add('is-form-builder-dragging');
+        event.dataTransfer?.setData('text/plain', draggedFieldKey || '');
+        event.dataTransfer?.setData('application/x-form-builder-field', draggedFieldKey || '');
+    });
+
+    dropSurface.addEventListener('dragover', (event) => {
+        if (! draggedFieldKey && ! draggedPaletteType) {
+            return;
+        }
+
+        event.preventDefault();
+        clearDropState(false);
+
+        const target = event.target instanceof Element ? event.target.closest('[data-field-key]') : null;
+
+        if (target instanceof HTMLElement && target.dataset.fieldKey === draggedFieldKey) {
+            return;
+        }
+
+        if (! (target instanceof HTMLElement)) {
+            renderDropPreview();
+
+            return;
+        }
+
+        renderDropPreview(target, dropPosition(target, event));
+    });
+
+    dropSurface.addEventListener('drop', (event) => {
+        if (! draggedFieldKey && ! draggedPaletteType) {
+            return;
+        }
+
+        event.preventDefault();
+
+        let target = event.target instanceof Element ? event.target.closest('[data-field-key]') : null;
+        let position = target instanceof HTMLElement ? dropPosition(target, event) : 'after';
+
+        if ((! (target instanceof HTMLElement) || target.dataset.fieldKey === draggedFieldKey) && pendingDropTargetKey) {
+            target = fieldItemByKey(pendingDropTargetKey) ?? null;
+            position = pendingDropPosition;
+        }
+
+        if (draggedFieldKey && target instanceof HTMLElement && target.dataset.fieldKey === draggedFieldKey) {
+            draggedFieldKey = null;
+            draggedPaletteType = null;
+            clearDropState(true);
+
+            return;
+        }
+
+        if (draggedPaletteType) {
+            addField(draggedPaletteType, target, position);
+        } else if (draggedFieldKey) {
+            moveField(draggedFieldKey, target, position);
+        }
+
+        draggedFieldKey = null;
+        draggedPaletteType = null;
+        clearDropState(true);
+    });
+
+    canvas.addEventListener('dragend', () => {
+        draggedFieldKey = null;
+        clearDropState(true);
+    });
+
+    builder.addEventListener('submit', serialize);
+    builder.querySelectorAll('[data-form-builder-close]').forEach((button) => button.addEventListener('click', closeModal));
+    builder.querySelector('[data-form-builder-save-settings]')?.addEventListener('click', saveModal);
+    builder.querySelector('[data-form-builder-setting="type"]')?.addEventListener('change', (event) => {
+        if (optionsPanel instanceof HTMLElement && event.target instanceof HTMLSelectElement) {
+            optionsPanel.hidden = ! optionTypes.has(event.target.value);
+        }
+    });
+    builder.querySelector('[data-form-builder-delete-field]')?.addEventListener('click', () => {
+        const index = fields.findIndex((field) => field.client_id === editingKey);
+
+        if (index !== -1) {
+            fields.splice(index, 1);
+        }
+
+        syncFieldMap();
+        renderCanvas();
+        closeModal();
+    });
+    modal.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+
+    flattenInitialFields();
+    syncFieldMap();
+    renderCanvas();
+});
+
+document.querySelectorAll('[data-form-managed-list]').forEach((list) => {
+    if (! (list instanceof HTMLElement)) {
+        return;
+    }
+
+    const listName = list.dataset.formManagedList;
+    const template = list.querySelector(`[data-form-managed-list-template="${listName}"]`);
+
+    const nextIndex = () => {
+        const current = Number.parseInt(list.dataset.formManagedListNextIndex ?? '0', 10);
+        const next = Number.isFinite(current) ? current : 0;
+
+        list.dataset.formManagedListNextIndex = String(next + 1);
+
+        return next;
+    };
+
+    const currentRowCount = () => list.querySelectorAll('[data-form-managed-list-row]:not(.is-marked-for-delete)').length;
+
+    const addRow = () => {
+        if (! (template instanceof HTMLTemplateElement)) {
+            return;
+        }
+
+        const index = nextIndex();
+        const html = template.innerHTML
+            .replaceAll('__INDEX__', String(index))
+            .replaceAll('__SORT__', String(currentRowCount() + 1));
+        const container = document.createElement('div');
+
+        container.innerHTML = html.trim();
+
+        const row = container.firstElementChild;
+
+        if (! (row instanceof HTMLElement)) {
+            return;
+        }
+
+        template.before(row);
+        row.querySelector('input:not([type="hidden"]), select, textarea')?.focus();
+    };
+
+    list.addEventListener('click', (event) => {
+        if (! (event.target instanceof Element)) {
+            return;
+        }
+
+        const deleteButton = event.target.closest('[data-form-managed-list-delete]');
+
+        if (! (deleteButton instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const row = deleteButton.closest('[data-form-managed-list-row]');
+
+        if (! (row instanceof HTMLElement)) {
+            return;
+        }
+
+        const idInput = row.querySelector('input[name$="[id]"]');
+        const deleteInput = row.querySelector('[data-form-managed-list-delete-input]');
+
+        if (idInput instanceof HTMLInputElement && idInput.value !== '' && deleteInput instanceof HTMLInputElement) {
+            deleteInput.value = '1';
+            row.classList.add('is-marked-for-delete');
+
+            return;
+        }
+
+        row.remove();
+    });
+
+    document.querySelectorAll(`[data-form-managed-list-add="${listName}"]`).forEach((button) => {
+        button.addEventListener('click', addRow);
+    });
+});
+
+document.addEventListener('focusin', (event) => {
+    if (! (event.target instanceof HTMLInputElement) && ! (event.target instanceof HTMLTextAreaElement)) {
+        return;
+    }
+
+    if (! event.target.matches('[data-mail-builder-insertable]')) {
+        return;
+    }
+
+    const builder = event.target.closest('[data-response-mail-builder]');
+
+    if (! (builder instanceof HTMLElement)) {
+        return;
+    }
+
+    builder.querySelectorAll('[data-mail-builder-insertable][data-mail-builder-active="true"]').forEach((field) => {
+        field.removeAttribute('data-mail-builder-active');
+    });
+
+    event.target.dataset.mailBuilderActive = 'true';
+});
+
+document.addEventListener('click', (event) => {
+    if (! (event.target instanceof Element)) {
+        return;
+    }
+
+    const tokenButton = event.target.closest('[data-mail-placeholder-token]');
+
+    if (! (tokenButton instanceof HTMLButtonElement)) {
+        return;
+    }
+
+    const builder = tokenButton.closest('[data-response-mail-builder]');
+    const token = tokenButton.dataset.mailPlaceholderToken;
+
+    if (! (builder instanceof HTMLElement) || ! token) {
+        return;
+    }
+
+    const target = builder.querySelector('[data-mail-builder-insertable][data-mail-builder-active="true"]')
+        ?? builder.querySelector('textarea[data-mail-builder-insertable]')
+        ?? builder.querySelector('input[data-mail-builder-insertable]');
+
+    if (! (target instanceof HTMLInputElement) && ! (target instanceof HTMLTextAreaElement)) {
+        return;
+    }
+
+    const start = target.selectionStart ?? target.value.length;
+    const end = target.selectionEnd ?? start;
+    const prefix = target.value.slice(0, start);
+    const suffix = target.value.slice(end);
+
+    target.value = `${prefix}${token}${suffix}`;
+    target.selectionStart = start + token.length;
+    target.selectionEnd = start + token.length;
+    target.focus();
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
 document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
     if (! (builder instanceof HTMLFormElement)) {
         return;
@@ -1172,6 +2700,8 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
     const customTitleInput = builder.querySelector('[data-navigation-custom-title]');
     const customUrlInput = builder.querySelector('[data-navigation-custom-url]');
     const linkOptionsUrl = builder.dataset.linkOptionsUrl;
+    const linkTypesUrl = builder.dataset.linkTypesUrl;
+    const allLanguagesInput = builder.querySelector('[data-navigation-all-languages]');
 
     if (
         ! (rootList instanceof HTMLOListElement)
@@ -1185,6 +2715,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         || ! (customTitleInput instanceof HTMLInputElement)
         || ! (customUrlInput instanceof HTMLInputElement)
         || ! linkOptionsUrl
+        || ! linkTypesUrl
     ) {
         return;
     }
@@ -1197,10 +2728,26 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         }
     };
 
-    const linkTypes = parseJson(builder.dataset.linkTypes, []);
-    const typeByKey = new Map(linkTypes.map((type) => [type.key, type]));
-    const defaultSelectorType = linkTypes.find((type) => type.key !== 'custom')?.key ?? linkTypes[0]?.key ?? 'custom';
-    let selectedType = defaultSelectorType;
+    let linkTypes = parseJson(builder.dataset.linkTypes, []);
+    const labels = {
+        active: 'Active',
+        changeLink: 'Change link',
+        customUrl: 'Custom URL',
+        editSource: 'Edit source',
+        linkedItem: 'Linked item',
+        moveItem: 'Move item',
+        navigationTitle: 'Navigation title',
+        noResults: 'No results found.',
+        removeItem: 'Remove item',
+        searchFailed: 'Search failed.',
+        searching: 'Searching...',
+        select: 'Select',
+        useSubcategoriesAsSubmenu: 'Use subcategories as submenu',
+        ...parseJson(builder.dataset.navigationLabels, {}),
+    };
+    let typeByKey = new Map(linkTypes.map((type) => [type.key, type]));
+    const defaultSelectorType = () => linkTypes.find((type) => type.key !== 'custom')?.key ?? linkTypes[0]?.key ?? 'custom';
+    let selectedType = defaultSelectorType();
     let editingItem = null;
     let draggedItem = null;
     let searchTimer = null;
@@ -1210,7 +2757,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
     const materialIcon = (name) => {
         const icon = document.createElement('span');
 
-        icon.className = 'admin-material-icon';
+        icon.className = 'mso';
         icon.setAttribute('aria-hidden', 'true');
         icon.textContent = name;
 
@@ -1223,6 +2770,22 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         }
 
         return value === true || value === 'true' || value === '1' || value === 1;
+    };
+
+    const selectedLocale = () => {
+        const checkedLocale = builder.querySelector('input[name="locale"]:checked');
+
+        if (checkedLocale instanceof HTMLInputElement && checkedLocale.value) {
+            return checkedLocale.value;
+        }
+
+        return builder.dataset.navigationLocale || '';
+    };
+
+    const allLanguages = () => allLanguagesInput instanceof HTMLInputElement && allLanguagesInput.checked;
+
+    const refreshTypeMap = () => {
+        typeByKey = new Map(linkTypes.map((type) => [type.key, type]));
     };
 
     const readItem = (item) => {
@@ -1241,6 +2804,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
             expand_children: expandInput instanceof HTMLInputElement ? expandInput.checked : false,
             target_label: item.dataset.targetLabel || null,
             target_type_label: item.dataset.targetTypeLabel || null,
+            source_edit_url: item.dataset.sourceEditUrl || null,
             is_category: item.dataset.isCategory === 'true',
             children: childList instanceof HTMLOListElement
                 ? Array.from(childList.children).filter((child) => child instanceof HTMLLIElement).map(readItem)
@@ -1262,10 +2826,10 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
 
     const targetSummary = (item) => {
         if (item.link_type === 'custom') {
-            return item.custom_url || 'Custom URL';
+            return item.custom_url || labels.customUrl;
         }
 
-        return [item.target_type_label, item.target_label].filter(Boolean).join(': ') || 'Linked item';
+        return [item.target_type_label, item.target_label].filter(Boolean).join(': ') || labels.linkedItem;
     };
 
     const renderItem = (item) => {
@@ -1281,8 +2845,14 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         li.dataset.targetLabel = item.target_label ?? item.label ?? item.title ?? '';
         li.dataset.targetTypeLabel = item.target_type_label ?? type?.label ?? '';
 
+        const sourceEditUrl = item.source_edit_url ?? item.admin_url ?? item.edit_url ?? '';
+
         if (item.link_id) {
             li.dataset.linkId = String(item.link_id);
+        }
+
+        if (sourceEditUrl) {
+            li.dataset.sourceEditUrl = sourceEditUrl;
         }
 
         if (item.custom_url) {
@@ -1297,7 +2867,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         handle.type = 'button';
         handle.draggable = true;
         handle.dataset.navigationDragHandle = 'true';
-        handle.setAttribute('aria-label', 'Move item');
+        handle.setAttribute('aria-label', labels.moveItem);
         handle.append(materialIcon('drag_indicator'));
 
         const body = document.createElement('div');
@@ -1308,7 +2878,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         titleInput.type = 'text';
         titleInput.value = item.title ?? item.target_label ?? item.label ?? '';
         titleInput.dataset.navigationItemTitle = 'true';
-        titleInput.setAttribute('aria-label', 'Navigation title');
+        titleInput.setAttribute('aria-label', labels.navigationTitle);
 
         const meta = document.createElement('div');
         meta.className = 'navigation-builder-item-meta';
@@ -1327,7 +2897,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
             urlInput.type = 'text';
             urlInput.value = item.custom_url ?? '';
             urlInput.dataset.navigationItemCustomUrl = 'true';
-            urlInput.setAttribute('aria-label', 'Custom URL');
+            urlInput.setAttribute('aria-label', labels.customUrl);
             body.append(urlInput);
         }
 
@@ -1342,7 +2912,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         activeInput.checked = boolValue(item.is_active, true);
         activeInput.dataset.navigationItemActive = 'true';
 
-        activeLabel.append(activeInput, document.createTextNode('Active'));
+        activeLabel.append(activeInput, document.createTextNode(labels.active));
         options.append(activeLabel);
 
         if (li.dataset.isCategory === 'true') {
@@ -1354,22 +2924,35 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
             expandInput.checked = boolValue(item.expand_children);
             expandInput.dataset.navigationItemExpand = 'true';
 
-            expandLabel.append(expandInput, document.createTextNode('Use subcategories as submenu'));
+            expandLabel.append(expandInput, document.createTextNode(labels.useSubcategoriesAsSubmenu));
             options.append(expandLabel);
+        }
+
+        if (sourceEditUrl && linkType !== 'custom') {
+            const editSourceLink = document.createElement('a');
+
+            editSourceLink.className = 'config-button';
+            editSourceLink.href = sourceEditUrl;
+            editSourceLink.target = '_blank';
+            editSourceLink.rel = 'noopener';
+            editSourceLink.setAttribute('aria-label', labels.editSource);
+            editSourceLink.title = labels.editSource;
+            editSourceLink.append(materialIcon('edit_square'));
+            options.append(editSourceLink);
         }
 
         const changeButton = document.createElement('button');
         changeButton.className = 'config-button';
         changeButton.type = 'button';
         changeButton.dataset.navigationChangeLink = 'true';
-        changeButton.setAttribute('aria-label', 'Change link');
+        changeButton.setAttribute('aria-label', labels.changeLink);
         changeButton.append(materialIcon('link'));
 
         const removeButton = document.createElement('button');
         removeButton.className = 'config-button';
         removeButton.type = 'button';
         removeButton.dataset.navigationRemoveItem = 'true';
-        removeButton.setAttribute('aria-label', 'Remove item');
+        removeButton.setAttribute('aria-label', labels.removeItem);
         removeButton.append(materialIcon('delete'));
 
         options.append(changeButton, removeButton);
@@ -1433,6 +3016,38 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         });
     };
 
+    const loadTypes = async () => {
+        const url = new URL(linkTypesUrl, window.location.origin);
+
+        url.searchParams.set('locale', selectedLocale());
+
+        if (allLanguages()) {
+            url.searchParams.set('all_languages', '1');
+        }
+
+        try {
+            const response = await fetch(url.toString(), {
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+            const data = await response.json();
+
+            if (Array.isArray(data.types)) {
+                linkTypes = data.types;
+                refreshTypeMap();
+
+                if (! typeByKey.has(selectedType)) {
+                    selectedType = defaultSelectorType();
+                }
+
+                renderTypes();
+            }
+        } catch {
+            renderTypes();
+        }
+    };
+
     const renderResults = (results) => {
         resultsContainer.replaceChildren();
 
@@ -1440,7 +3055,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
             const empty = document.createElement('p');
 
             empty.className = 'navigation-selector-empty';
-            empty.textContent = 'No results found.';
+            empty.textContent = labels.noResults;
             resultsContainer.append(empty);
 
             return;
@@ -1457,12 +3072,21 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
             title.textContent = result.label;
 
             const meta = document.createElement('span');
-            meta.textContent = [result.type_label, result.url].filter(Boolean).join(' - ');
+            meta.textContent = [result.locale_label, result.type_label, result.url].filter(Boolean).join(' - ');
+
+            if (result.flag_url) {
+                const flag = document.createElement('img');
+
+                flag.className = 'navigation-selector-result-flag';
+                flag.src = result.flag_url;
+                flag.alt = result.locale_label || '';
+                content.append(flag);
+            }
 
             const button = document.createElement('button');
             button.className = 'btn';
             button.type = 'button';
-            button.textContent = 'Select';
+            button.textContent = labels.select;
             button.addEventListener('click', () => {
                 addItem({
                     title: result.label,
@@ -1473,6 +3097,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
                     expand_children: false,
                     target_label: result.label,
                     target_type_label: result.type_label,
+                    source_edit_url: result.source_edit_url,
                     is_category: result.is_category,
                     children: [],
                 });
@@ -1490,12 +3115,17 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
             return;
         }
 
-        resultsContainer.textContent = 'Searching...';
+        resultsContainer.textContent = labels.searching;
 
         const url = new URL(linkOptionsUrl, window.location.origin);
 
         url.searchParams.set('type', selectedType);
         url.searchParams.set('q', searchInput.value);
+        url.searchParams.set('locale', selectedLocale());
+
+        if (allLanguages()) {
+            url.searchParams.set('all_languages', '1');
+        }
 
         try {
             const response = await fetch(url.toString(), {
@@ -1507,7 +3137,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
 
             renderResults(Array.isArray(data.results) ? data.results : []);
         } catch {
-            resultsContainer.textContent = 'Search failed.';
+            resultsContainer.textContent = labels.searchFailed;
         }
     };
 
@@ -1517,7 +3147,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
     };
 
     const selectType = (type) => {
-        selectedType = type;
+        selectedType = typeByKey.has(type) ? type : defaultSelectorType();
         renderTypes();
         customPanel.hidden = selectedType !== 'custom';
         searchPanel.hidden = selectedType === 'custom';
@@ -1530,12 +3160,12 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
 
     const openModal = (item = null) => {
         editingItem = item;
-        selectedType = item?.dataset.linkType ?? defaultSelectorType;
+        selectedType = item?.dataset.linkType ?? defaultSelectorType();
         customTitleInput.value = '';
         customUrlInput.value = '';
         searchInput.value = '';
         modal.hidden = false;
-        selectType(selectedType);
+        loadTypes().then(() => selectType(selectedType));
 
         if (selectedType === 'custom') {
             customTitleInput.focus();
@@ -1616,6 +3246,21 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
 
     searchInput.addEventListener('input', scheduleSearch);
 
+    if (allLanguagesInput instanceof HTMLInputElement) {
+        allLanguagesInput.addEventListener('change', () => {
+            loadTypes().then(() => selectType(selectedType));
+        });
+    }
+
+    builder.querySelectorAll('input[name="locale"]').forEach((localeInput) => {
+        localeInput.addEventListener('change', () => {
+            if (localeInput instanceof HTMLInputElement && localeInput.checked) {
+                builder.dataset.navigationLocale = localeInput.value;
+                loadTypes().then(() => selectType(selectedType));
+            }
+        });
+    });
+
     builder.querySelector('[data-navigation-add-custom]')?.addEventListener('click', () => {
         const customUrl = customUrlInput.value.trim();
         const customTitle = customTitleInput.value.trim() || customUrl;
@@ -1634,7 +3279,7 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
             is_active: true,
             expand_children: false,
             target_label: customTitle,
-            target_type_label: 'Custom URL',
+            target_type_label: labels.customUrl,
             is_category: false,
             children: [],
         });
@@ -1732,6 +3377,222 @@ document.querySelectorAll('[data-navigation-builder]').forEach((builder) => {
         draggedItem = null;
     });
 
+    refreshTypeMap();
     renderTypes();
     renderItems(parseJson(builder.dataset.initialItems, []));
+});
+
+const unsavedBackSnapshotField = (field) => {
+    const type = field instanceof HTMLInputElement ? field.type.toLowerCase() : field.tagName.toLowerCase();
+
+    if (field instanceof HTMLInputElement && ['button', 'image', 'reset', 'submit'].includes(type)) {
+        return null;
+    }
+
+    if (field.disabled || ['_method', '_token'].includes(field.name)) {
+        return null;
+    }
+
+    let value = field.value;
+
+    if (field instanceof HTMLInputElement && ['checkbox', 'radio'].includes(type)) {
+        value = field.checked;
+    } else if (field instanceof HTMLInputElement && type === 'file') {
+        value = Array.from(field.files ?? []).map((file) => `${file.name}:${file.size}:${file.lastModified}`);
+    } else if (field instanceof HTMLSelectElement && field.multiple) {
+        value = Array.from(field.selectedOptions).map((option) => option.value);
+    }
+
+    return [
+        field.name || field.id || field.getAttribute('aria-label') || field.tagName,
+        type,
+        value,
+    ];
+};
+
+const unsavedBackSnapshotForm = (form) => JSON.stringify(
+    Array.from(form.querySelectorAll('input, select, textarea'))
+        .map(unsavedBackSnapshotField)
+        .filter((field) => field !== null),
+);
+
+const unsavedBackTrackedForms = new Map();
+
+const registerUnsavedBackForm = (form) => {
+    if (unsavedBackTrackedForms.has(form) || form.matches('[data-dirty-ignore]') || form.closest('[data-dirty-ignore]')) {
+        return;
+    }
+
+    unsavedBackTrackedForms.set(form, unsavedBackSnapshotForm(form));
+    form.addEventListener('submit', () => {
+        form.dataset.dirtySubmitting = 'true';
+        window.setTimeout(() => {
+            delete form.dataset.dirtySubmitting;
+        }, 1500);
+    });
+};
+
+document.querySelectorAll('form').forEach((form) => {
+    if (form instanceof HTMLFormElement) {
+        registerUnsavedBackForm(form);
+    }
+});
+
+const hasUnsavedBackChanges = () => {
+    let isDirty = false;
+
+    unsavedBackTrackedForms.forEach((snapshot, form) => {
+        if (isDirty || ! form.isConnected || form.dataset.dirtySubmitting === 'true') {
+            return;
+        }
+
+        isDirty = unsavedBackSnapshotForm(form) !== snapshot;
+    });
+
+    return isDirty;
+};
+
+let unsavedBackModal = null;
+let unsavedBackPendingUrl = null;
+let unsavedBackReturnFocus = null;
+
+const unsavedBackBodyConfig = () => {
+    const { dataset } = document.body;
+
+    if (! dataset.unsavedBackTitle || ! dataset.unsavedBackMessage || ! dataset.unsavedBackConfirm || ! dataset.unsavedBackCancel) {
+        return null;
+    }
+
+    return {
+        cancel: dataset.unsavedBackCancel,
+        confirm: dataset.unsavedBackConfirm,
+        message: dataset.unsavedBackMessage,
+        module: dataset.unsavedBackModule || '',
+        title: dataset.unsavedBackTitle,
+    };
+};
+
+const closeUnsavedBackModal = () => {
+    if (! unsavedBackModal) {
+        return;
+    }
+
+    unsavedBackModal.hidden = true;
+    document.body.classList.remove('has-unsaved-back-modal');
+    unsavedBackPendingUrl = null;
+
+    if (unsavedBackReturnFocus instanceof HTMLElement) {
+        unsavedBackReturnFocus.focus();
+    }
+
+    unsavedBackReturnFocus = null;
+};
+
+const buildUnsavedBackModal = () => {
+    if (unsavedBackModal) {
+        return unsavedBackModal;
+    }
+
+    const modal = document.createElement('div');
+    const titleId = 'unsaved-back-modal-title';
+    const descriptionId = 'unsaved-back-modal-description';
+
+    modal.className = 'unsaved-back-modal';
+    modal.hidden = true;
+    modal.dataset.unsavedBackModal = 'true';
+    modal.innerHTML = `
+        <div class="unsaved-back-modal-backdrop" data-unsaved-back-close></div>
+        <section class="unsaved-back-modal-panel" role="dialog" aria-modal="true" aria-labelledby="${titleId}" aria-describedby="${descriptionId}">
+            <div class="unsaved-back-modal-body">
+                <h2 class="unsaved-back-modal-title" id="${titleId}"></h2>
+                <p class="unsaved-back-modal-description" id="${descriptionId}"></p>
+            </div>
+            <div class="unsaved-back-modal-actions">
+                <button class="btn btn-cancel" type="button" data-unsaved-back-close></button>
+                <button class="btn btn-remove" type="button" data-unsaved-back-confirm></button>
+            </div>
+        </section>
+    `;
+
+    modal.querySelectorAll('[data-unsaved-back-close]').forEach((button) => {
+        button.addEventListener('click', closeUnsavedBackModal);
+    });
+
+    modal.querySelector('[data-unsaved-back-confirm]')?.addEventListener('click', () => {
+        if (! unsavedBackPendingUrl) {
+            closeUnsavedBackModal();
+
+            return;
+        }
+
+        window.location.assign(unsavedBackPendingUrl);
+    });
+
+    document.body.append(modal);
+    unsavedBackModal = modal;
+
+    return modal;
+};
+
+const openUnsavedBackModal = (url, returnFocus) => {
+    const config = unsavedBackBodyConfig();
+
+    if (! config) {
+        window.location.assign(url);
+
+        return;
+    }
+
+    const modal = buildUnsavedBackModal();
+    const title = modal.querySelector('.unsaved-back-modal-title');
+    const description = modal.querySelector('.unsaved-back-modal-description');
+    const cancel = modal.querySelector('[data-unsaved-back-close].btn');
+    const confirm = modal.querySelector('[data-unsaved-back-confirm]');
+
+    if (title instanceof HTMLElement) {
+        title.textContent = config.title;
+    }
+
+    if (description instanceof HTMLElement) {
+        description.textContent = config.message.split(':module').join(config.module);
+    }
+
+    if (cancel instanceof HTMLButtonElement) {
+        cancel.textContent = config.cancel;
+    }
+
+    if (confirm instanceof HTMLButtonElement) {
+        confirm.textContent = config.confirm;
+    }
+
+    unsavedBackPendingUrl = url;
+    unsavedBackReturnFocus = returnFocus;
+    modal.hidden = false;
+    document.body.classList.add('has-unsaved-back-modal');
+    confirm?.focus();
+};
+
+document.addEventListener('click', (event) => {
+    if (! (event.target instanceof Element)) {
+        return;
+    }
+
+    const link = event.target.closest('a.btn-cancel[href]');
+
+    if (! (link instanceof HTMLAnchorElement) || link.target && link.target !== '_self') {
+        return;
+    }
+
+    if (! hasUnsavedBackChanges()) {
+        return;
+    }
+
+    event.preventDefault();
+    openUnsavedBackModal(link.href, link);
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && unsavedBackModal && ! unsavedBackModal.hidden) {
+        closeUnsavedBackModal();
+    }
 });

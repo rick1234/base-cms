@@ -5,7 +5,6 @@ namespace App\Actions\Admin\Locations;
 use App\Models\Cms\Location;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 
 class UpsertLocation
 {
@@ -33,14 +32,9 @@ class UpsertLocation
             'status',
             'active_from',
             'active_until',
-            'sort_order',
         ]);
 
-        $attributes['metadata'] = [
-            'slug' => $data['slug'] ?? Str::slug((string) ($data['name'] ?? '')),
-            'seo_title' => $data['seo_title'] ?? null,
-            'meta_description' => $data['meta_description'] ?? null,
-        ];
+        $attributes['metadata'] = null;
 
         if (! $location->exists) {
             $attributes['created_by'] = $actor?->getAuthIdentifier();

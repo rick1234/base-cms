@@ -40,7 +40,7 @@ return [
         'show_usp_bar' => true,
         'sticky_header' => true,
         'show_hero' => true,
-        'show_footer_credit' => true,
+        'show_footer_credit' => false,
         'search_enabled' => false,
         'usp_items' => [
             'Responsive maatwerk',
@@ -53,8 +53,6 @@ return [
         'footer_social_text' => 'Volg ons op social media en blijf op de hoogte.',
         'footer_content_title' => 'Over ons',
         'footer_content_text' => 'Een modern Laravel basisplatform voor maatwerk websites.',
-        'footer_credit_label' => 'HPU internet services',
-        'footer_credit_url' => 'https://hpu.nl/',
         'social_placement' => 'footer',
         'contact_form_placement' => 'footer',
     ],

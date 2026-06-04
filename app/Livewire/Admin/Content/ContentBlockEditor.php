@@ -6,6 +6,7 @@ use App\Cms\PageBlocks\Contracts\PageBlock;
 use App\Cms\PageBlocks\LegacyContentBlockConverter;
 use App\Cms\PageBlocks\PageBlockRegistry;
 use App\Models\Cms\ContentItem;
+use App\Models\Cms\Event;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -28,7 +29,11 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
     use InteractsWithActions;
     use InteractsWithForms;
 
-    public int $contentItemId;
+    public ?int $contentItemId = null;
+
+    public ?int $eventId = null;
+
+    public string $ownerType = 'content';
 
     /**
      * @var array{blocks: array<int, mixed>}
@@ -41,15 +46,18 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
 
     public bool $usesLegacySource = false;
 
-    public function mount(int $contentItemId): void
+    public function mount(?int $contentItemId = null, ?int $eventId = null, string $ownerType = 'content'): void
     {
         $this->ensureAuthorized();
 
         $this->contentItemId = $contentItemId;
-        $contentItem = $this->contentItem();
-        $blocks = $contentItem->structured_blocks ?? [];
+        $this->eventId = $eventId;
+        $this->ownerType = $eventId !== null ? 'event' : $ownerType;
+        $record = $this->record();
+        $blocks = $record->structured_blocks ?? [];
 
-        if ($blocks === [] && $contentItem->blocks()->exists()) {
+        if ($this->isContentOwner() && $blocks === [] && $this->contentItem()->blocks()->exists()) {
+            $contentItem = $this->contentItem();
             $blocks = app(LegacyContentBlockConverter::class)->convert($contentItem);
             $this->usesLegacySource = $blocks !== [];
         }
@@ -105,6 +113,12 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
                     ])
                     ->moveUpAction(fn (Action $action): Action => $action->label(__('Move up')))
                     ->moveDownAction(fn (Action $action): Action => $action->label(__('Move down')))
+                    ->collapseAction(fn (Action $action): Action => $action
+                        ->label(__('Collapse block'))
+                        ->icon(Heroicon::ChevronUp))
+                    ->expandAction(fn (Action $action): Action => $action
+                        ->label(__('Expand block'))
+                        ->icon(Heroicon::ChevronDown))
                     ->collapseAllAction(fn (Action $action): Action => $action->label(__('Collapse all')))
                     ->expandAllAction(fn (Action $action): Action => $action->label(__('Expand all')))
                     ->addActionAlignment(Alignment::Start)
@@ -121,19 +135,20 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
         $this->ensureAuthorized();
 
         $state = $this->form->getState();
-        $contentItem = $this->contentItem();
+        $record = $this->record();
 
         $update = [
             'structured_blocks' => $this->normalizeForStorage($state['blocks'] ?? []),
             'updated_by' => auth()->id(),
         ];
 
-        if ($this->usesLegacySource && blank($contentItem->legacy_block_snapshot)) {
+        if ($this->isContentOwner() && $this->usesLegacySource && blank($record->legacy_block_snapshot)) {
+            $contentItem = $this->contentItem();
             $update['legacy_block_snapshot'] = app(LegacyContentBlockConverter::class)->snapshot($contentItem);
             $update['legacy_blocks_migrated_at'] = now();
         }
 
-        $contentItem->forceFill($update)->save();
+        $record->forceFill($update)->save();
 
         $this->usesLegacySource = false;
         $this->message = __('Content blocks saved.');
@@ -174,22 +189,23 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
             return;
         }
 
-        $contentItem = $this->contentItem();
+        $record = $this->record();
         $update = [
             'structured_blocks' => $this->mergeSavedBlock(
-                is_array($contentItem->structured_blocks) ? $contentItem->structured_blocks : [],
+                is_array($record->structured_blocks) ? $record->structured_blocks : [],
                 $normalizedBlock,
                 $this->currentBuilderUuidOrder(),
             ),
             'updated_by' => auth()->id(),
         ];
 
-        if ($this->usesLegacySource && blank($contentItem->legacy_block_snapshot)) {
+        if ($this->isContentOwner() && $this->usesLegacySource && blank($record->legacy_block_snapshot)) {
+            $contentItem = $this->contentItem();
             $update['legacy_block_snapshot'] = app(LegacyContentBlockConverter::class)->snapshot($contentItem);
             $update['legacy_blocks_migrated_at'] = now();
         }
 
-        $contentItem->forceFill($update)->save();
+        $record->forceFill($update)->save();
 
         $this->message = __('Block saved.');
         $this->dispatch('content-block-saved', itemKey: (string) $itemKey, uuid: (string) $normalizedBlock['uuid']);
@@ -208,6 +224,30 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
     private function contentItem(): ContentItem
     {
         return ContentItem::query()->findOrFail($this->contentItemId);
+    }
+
+    private function event(): Event
+    {
+        return Event::query()->findOrFail($this->eventId);
+    }
+
+    private function record(): ContentItem|Event
+    {
+        if ($this->isEventOwner()) {
+            return $this->event();
+        }
+
+        return $this->contentItem();
+    }
+
+    private function isContentOwner(): bool
+    {
+        return $this->ownerType === 'content';
+    }
+
+    private function isEventOwner(): bool
+    {
+        return $this->ownerType === 'event';
     }
 
     private function localizeDirectAddAction(Action $action, string $label): Action

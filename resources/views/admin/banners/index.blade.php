@@ -11,15 +11,15 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a class="btn btn-add" href="{{ route($routeNames['create']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Toevoegen') }}
                 </a>
                 <a class="btn btn-add" href="{{ route($routeNames['bulk']) }}">
-                    <span class="flaticon-add-plus-button"></span>
+                    <x-admin.material-icon name="add" />
                     {{ __('Snel toevoegen') }}
                 </a>
                 <a class="btn" href="{{ route(request()->routeIs('cms.*') ? 'cms.banners.categories.index' : 'admin.banners.categories.index') }}">
-                    <span class="flaticon-folder-symbol"></span>
+                    <x-admin.material-icon name="folder" />
                     {{ __('Categorieen') }}
                 </a>
             </div>
@@ -35,10 +35,10 @@
                         <div class="overview-item id">
                             Id
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item preview">{{ __('Banner') }}</div>
@@ -46,10 +46,10 @@
                         <div class="overview-item title">
                             {{ __('Titel') }}
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'title', 'sorttype' => 'desc'])) }}">
-                                <span class="flaticon-up-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'title', 'sorttype' => 'asc'])) }}">
-                                <span class="flaticon-downwards-arrow-key"></span>
+                                <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
                         <div class="overview-item status">{{ __('Status') }}</div>
@@ -60,7 +60,7 @@
                         <div class="overview-row filters">
                             <div class="overview-item id">
                                 <input name="id" type="text" value="{{ request('id') }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item preview"></div>
                             <div class="overview-item category">
@@ -73,7 +73,7 @@
                             </div>
                             <div class="overview-item title">
                                 <input name="title" type="text" value="{{ request('title', request('titel')) }}">
-                                <span class="flaticon-searching-magnifying-glass search-icon"></span>
+                                <x-admin.material-icon name="search" class="search-icon" />
                             </div>
                             <div class="overview-item status">
                                 <select name="status">
@@ -84,7 +84,7 @@
                             </div>
                             <div class="overview-item options">
                                 <button type="submit" title="{{ __('Zoeken') }}">
-                                    <span class="flaticon-searching-magnifying-glass"></span>
+                                    <x-admin.material-icon name="search" />
                                 </button>
                             </div>
                         </div>
@@ -95,10 +95,10 @@
                             <div class="overview-item id">
                                 @if ($selectedCategoryId)
                                     <a href="{{ route($routeNames['index'], array_merge(request()->query(), ['move' => $banner->id, 'direction' => 'down'])) }}">
-                                        <span class="flaticon-downwards-arrow-key"></span>
+                                        <x-admin.material-icon name="keyboard_arrow_down" />
                                     </a>
                                     <a href="{{ route($routeNames['index'], array_merge(request()->query(), ['move' => $banner->id, 'direction' => 'up'])) }}">
-                                        <span class="flaticon-up-arrow-key"></span>
+                                        <x-admin.material-icon name="keyboard_arrow_up" />
                                     </a>
                                 @endif
                                 {{ $banner->id }}
@@ -109,7 +109,7 @@
                                         <img src="{{ asset($banner->image_path) }}" alt="{{ $banner->metadata['alt_text'] ?? __('Banner voorbeeld') }}">
                                     </a>
                                 @else
-                                    <span class="admin-symbol admin-symbol-image-missing" aria-hidden="true"></span>
+                                    <x-admin.material-icon name="broken_image" />
                                 @endif
                             </div>
                             <div class="overview-item category">{{ $banner->categories->pluck('name')->join(', ') ?: '-' }}</div>
@@ -119,20 +119,13 @@
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $banner->id]) }}" title="{{ __('Bewerken') }}">
-                                    <span class="flaticon-create-new-pencil-button"></span>
+                                    <x-admin.material-icon name="edit" />
                                 </a>
-                                <form method="post" action="{{ route($routeNames['duplicate']) }}">
-                                    @csrf
-                                    <input type="hidden" name="itemId" value="{{ $banner->id }}">
-                                    <button type="submit" title="{{ __('Dupliceren') }}">
-                                        <span class="flaticon-add-to-queue-button"></span>
-                                    </button>
-                                </form>
                                 <form method="post" action="{{ route($routeNames['destroy'], $banner) }}">
                                     @csrf
                                     @method('delete')
                                     <button type="submit" title="{{ __('Verwijderen') }}">
-                                        <span class="flaticon-rubbish-bin-delete-button"></span>
+                                        <x-admin.material-icon name="delete" />
                                     </button>
                                 </form>
                             </div>

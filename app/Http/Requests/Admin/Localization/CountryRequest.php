@@ -34,10 +34,6 @@ class CountryRequest extends FormRequest
             'currency_code' => ['nullable', 'string', 'size:3'],
             'region_code' => ['nullable', 'string', Rule::in(array_keys($this->regionOptions()))],
             'charges_vat' => ['boolean'],
-            'shipping_general_cents' => ['nullable', 'integer', 'min:0', 'max:99999999'],
-            'shipping_envelope_cents' => ['nullable', 'integer', 'min:0', 'max:99999999'],
-            'shipping_small_box_cents' => ['nullable', 'integer', 'min:0', 'max:99999999'],
-            'shipping_big_box_cents' => ['nullable', 'integer', 'min:0', 'max:99999999'],
         ];
     }
 
@@ -63,10 +59,6 @@ class CountryRequest extends FormRequest
             'currency_code' => $this->filled('currency_code') ? Str::upper((string) $this->input('currency_code')) : null,
             'region_code' => $this->input('region_code', $this->input('regio')) ?: null,
             'charges_vat' => $this->boolean('charges_vat', $this->boolean('vat')),
-            'shipping_general_cents' => $this->input('shipping_general_cents', $this->input('algemeen')) ?: null,
-            'shipping_envelope_cents' => $this->input('shipping_envelope_cents', $this->input('envelope')) ?: null,
-            'shipping_small_box_cents' => $this->input('shipping_small_box_cents', $this->input('smallbox')) ?: null,
-            'shipping_big_box_cents' => $this->input('shipping_big_box_cents', $this->input('bigbox')) ?: null,
         ]);
     }
 

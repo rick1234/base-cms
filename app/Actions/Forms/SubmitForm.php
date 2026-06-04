@@ -46,9 +46,7 @@ class SubmitForm
         $rules = [];
         $messages = [];
 
-        if (($form->settings['honeypot_enabled'] ?? true) === true) {
-            $rules[$form->settings['honeypot_field'] ?? 'website'] = ['nullable', 'prohibited'];
-        }
+        $rules['website'] = ['nullable', 'prohibited'];
 
         foreach ($fields as $field) {
             $fieldRules = [];

@@ -52,7 +52,7 @@ class DomainTemplateSeeder extends Seeder
                     'show_usp_bar' => true,
                     'sticky_header' => true,
                     'show_hero' => true,
-                    'show_footer_credit' => true,
+                    'show_footer_credit' => false,
                     'usp_items' => [
                         'Responsive maatwerk',
                         'SEO vriendelijke basis',
@@ -63,8 +63,6 @@ class DomainTemplateSeeder extends Seeder
                     'footer_social_text' => 'Volg ons op social media en blijf op de hoogte.',
                     'footer_content_title' => 'Over ons',
                     'footer_content_text' => 'Een modern Laravel basisplatform voor maatwerk websites.',
-                    'footer_credit_label' => 'HPU internet services',
-                    'footer_credit_url' => 'https://hpu.nl/',
                     'social_placement' => 'footer',
                     'contact_form_placement' => 'none',
                 ],
@@ -79,6 +77,8 @@ class DomainTemplateSeeder extends Seeder
             'company_name' => 'Base CMS',
             'website_template_id' => $defaultTemplate->id,
             'default_locale' => 'nl',
+            'active_frontend_locales' => ['nl'],
+            'active_backend_locales' => ['nl', 'en'],
             'default_meta_description' => 'Local Herd domain for testing the Base CMS frontend.',
             'template_settings' => [
                 'primary_color' => '#ffa300',
@@ -94,6 +94,8 @@ class DomainTemplateSeeder extends Seeder
             'company_name' => 'Example BV',
             'website_template_id' => $defaultTemplate->id,
             'default_locale' => 'nl',
+            'active_frontend_locales' => ['nl'],
+            'active_backend_locales' => ['nl', 'en'],
             'default_meta_description' => 'Seeded Dutch domain for frontend domain switching.',
             'template_settings' => [
                 'primary_color' => '#1d4ed8',
@@ -104,12 +106,32 @@ class DomainTemplateSeeder extends Seeder
             'sort_order' => 1,
         ], ['example.nl']);
 
+        $englishDomain = $this->domain([
+            'host' => 'www.example.com',
+            'name' => 'Example Global',
+            'company_name' => 'Example Ltd',
+            'website_template_id' => $defaultTemplate->id,
+            'default_locale' => 'en',
+            'active_frontend_locales' => ['en'],
+            'active_backend_locales' => ['nl', 'en'],
+            'default_meta_description' => 'Seeded English domain for a full CMS platform demo.',
+            'template_settings' => [
+                'primary_color' => '#0f766e',
+                'secondary_color' => '#134e4a',
+                'accent_color' => '#f97316',
+                'button_style' => 'solid',
+            ],
+            'sort_order' => 2,
+        ], ['example.com']);
+
         $frenchDomain = $this->domain([
             'host' => 'www.example.fr',
             'name' => 'Example France',
             'company_name' => 'Example SARL',
             'website_template_id' => $defaultTemplate->id,
             'default_locale' => 'fr',
+            'active_frontend_locales' => ['fr'],
+            'active_backend_locales' => ['nl', 'en'],
             'default_meta_description' => 'Seeded French domain for frontend domain switching.',
             'template_settings' => [
                 'primary_color' => '#713f12',
@@ -118,11 +140,12 @@ class DomainTemplateSeeder extends Seeder
                 'button_style' => 'outline',
                 'title_style' => 'editorial',
             ],
-            'sort_order' => 2,
+            'sort_order' => 3,
         ], ['example.fr']);
 
         $this->page($localDomain, 'Base CMS Local', 'The Herd local domain is ready for frontend template testing.');
         $this->page($dutchDomain, 'Nederlandse website', 'Deze seeded domeinvariant gebruikt eigen content en template-instellingen.');
+        $this->page($englishDomain, 'English website', 'This seeded domain variant uses its own content and template settings.');
         $this->page($frenchDomain, 'Site francais', 'Cette variante de domaine utilise son propre contenu et ses propres reglages.');
     }
 

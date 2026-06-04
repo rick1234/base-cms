@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @php
-    $title = $contentItem ? __('Fotoalbum: :title', ['title' => $contentItem->title]) : __('Content images');
+    $title = $contentItem ? __('Fotoalbum: :title', ['title' => $contentItem->title]) : __('Page images');
 @endphp
 
 @section('title', $title)
@@ -15,8 +15,8 @@
         <div class="main has-buttons">
             <div class="buttons-container align-right">
                 <a href="{{ $contentItem ? route($routeNames['edit'], ['id' => $contentItem->id]) : $backUrl }}" class="btn btn-cancel">
-                    <span class="flaticon-undo-button"></span>
-                    {{ __('Annuleren') }}
+                    <x-admin.material-icon name="undo" />
+                    {{ __('Terug') }}
                 </a>
             </div>
 
@@ -36,8 +36,8 @@
 
                 @if (! $contentItem)
                     <div class="attachment-message">
-                        <span class="flaticon-rounded-info-button"></span>
-                        <em>{{ __('Sla het content item eerst op voordat u afbeeldingen toevoegt.') }}</em>
+                        <x-admin.material-icon name="info" />
+                        <em>{{ __('Save the page before adding images.') }}</em>
                     </div>
                 @else
                     <livewire:admin.content.content-image-album :content-item="$contentItem" />

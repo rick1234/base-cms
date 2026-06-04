@@ -9,12 +9,12 @@
                 </span>
                 <span class="upload-buttons">
                     <span class="drag-icon">
-                        <span class="flaticon-shuffle-mode-arrows"></span>
+                        <x-admin.material-icon name="drag_indicator" />
                     </span>
                     <form method="post" action="{{ route($deleteRoute, ['id' => $image->id]) }}">
                         @csrf
                         <button class="delete-icon" type="submit" title="{{ __('Verwijderen') }}">
-                            <span class="flaticon-rubbish-bin-delete-button"></span>
+                            <x-admin.material-icon name="delete" />
                         </button>
                     </form>
                 </span>
@@ -23,7 +23,7 @@
                         @csrf
                         <input name="uploadName" placeholder="{{ __('Titel') }}" type="text" value="{{ $image->caption }}">
                         <button class="save-upload-name" type="submit" title="{{ __('Opslaan') }}">
-                            <span class="flaticon-save-button"></span>
+                            <x-admin.material-icon name="save" />
                         </button>
                     </form>
                 </span>
@@ -32,7 +32,7 @@
     </div>
 @else
     <div class="attachment-message">
-        <span class="flaticon-rounded-info-button"></span>
+        <x-admin.material-icon name="info" />
         <em>{{ __('Er zijn (nog) geen afbeeldingen toegevoegd') }}.</em>
     </div>
 @endif

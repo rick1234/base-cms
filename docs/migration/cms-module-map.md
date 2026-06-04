@@ -65,7 +65,7 @@ The schema and screen source for this map is the legacy `D:\htdocs\basiscms\cms`
 
 ### Localization
 
-- Languages and countries: `talen`, `isotalen`, `isolanden`, `isolandcode`, `isolandbetalingswijze`, and `landen` became `languages`, `iso_languages`, `countries`, `country_codes`, and `country_payment_methods`.
+- Languages and countries: legacy country and language tables became `languages`, `iso_languages`, `countries`, `country_codes`, and `country_payment_methods`.
 - Translations: `translatekey`, `translatecontent`, and `translation` became `translation_keys`, `translation_values`, and `translations`.
 
 ## Import status

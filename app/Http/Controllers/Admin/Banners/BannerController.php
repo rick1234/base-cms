@@ -23,6 +23,11 @@ class BannerController extends Controller
 {
     use UsesEditViewForCreate;
 
+    /**
+     * @var list<string>
+     */
+    private const EDIT_TABS = ['image', 'translations'];
+
     public function index(Request $request): View|RedirectResponse
     {
         if ($this->shouldMoveBanner($request)) {
@@ -98,17 +103,24 @@ class BannerController extends Controller
         return redirect()->route($this->routeName('edit'), ['id' => $banner->id]);
     }
 
-    public function edit(Request $request): View
+    public function edit(Request $request): View|RedirectResponse
     {
+        if ($redirect = $this->redirectQueryTabToRoute($request)) {
+            return $redirect;
+        }
+
         $banner = $this->bannerFromRequest($request);
         $banner?->load(['categories', 'translations']);
+        $editableBanner = $banner ?? new Banner([
+            'status' => 'draft',
+            'starts_at' => now(),
+            'metadata' => ['target' => '_self'],
+        ]);
+        $activeTab = $this->activeTab($request, $banner);
 
         return view('admin.banners.edit', [
-            'banner' => $banner ?? new Banner([
-                'status' => 'draft',
-                'starts_at' => now(),
-                'metadata' => ['target' => '_self'],
-            ]),
+            'banner' => $editableBanner,
+            'activeTab' => $activeTab,
             'categories' => $this->categories(),
             'locales' => $this->locales(),
             'routeNames' => $this->routeNames(),
@@ -129,7 +141,10 @@ class BannerController extends Controller
 
         flash(__('Banner saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $banner->id]);
+        $activeTab = $request->validated('active_tab');
+
+        return redirect()
+            ->route($this->editRouteName($activeTab), $this->editRedirectParameters($banner, $activeTab));
     }
 
     public function update(Banner $banner, BannerRequest $request, UpsertBanner $upsert): RedirectResponse
@@ -143,7 +158,10 @@ class BannerController extends Controller
 
         flash(__('Banner saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $banner->id]);
+        $activeTab = $request->validated('active_tab');
+
+        return redirect()
+            ->route($this->editRouteName($activeTab), $this->editRedirectParameters($banner, $activeTab));
     }
 
     public function bulkUploader(): View
@@ -242,6 +260,17 @@ class BannerController extends Controller
         $id = (int) ($request->route('id') ?: $request->integer('id'));
 
         return $id > 0 ? Banner::query()->findOrFail($id) : null;
+    }
+
+    private function activeTab(Request $request, ?Banner $banner): string
+    {
+        $tab = $request->route('tab') ?: $request->query('tab');
+
+        if (! $banner instanceof Banner || ! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return 'general';
+        }
+
+        return $tab;
     }
 
     /**
@@ -395,6 +424,7 @@ class BannerController extends Controller
             'store' => $this->routeName('store'),
             'create' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('create'),
             'edit' => $this->routeName('edit'),
+            'edit.tab' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('edit.tab'),
             'save' => $this->routeName('save'),
             'destroy' => $this->routeName('destroy'),
             'duplicate' => $this->routeName('duplicate'),
@@ -407,5 +437,52 @@ class BannerController extends Controller
     private function routeName(string $name): string
     {
         return (request()->routeIs('cms.*') ? 'cms.banners.' : 'admin.banners.').$name;
+    }
+
+    private function editRouteName(?string $activeTab = null): string
+    {
+        if (! request()->routeIs('cms.*') && in_array($activeTab, self::EDIT_TABS, true)) {
+            return $this->routeName('edit.tab');
+        }
+
+        return $this->routeName('edit');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function editRedirectParameters(Banner $banner, ?string $activeTab = null): array
+    {
+        $parameters = ['id' => $banner->id];
+
+        if (in_array($activeTab, self::EDIT_TABS, true)) {
+            $parameters['tab'] = $activeTab;
+        }
+
+        return $parameters;
+    }
+
+    private function redirectQueryTabToRoute(Request $request): ?RedirectResponse
+    {
+        if (request()->routeIs('cms.*') || $request->route('tab')) {
+            return null;
+        }
+
+        $tab = $request->query('tab');
+
+        if (! is_string($tab) || ! in_array($tab, self::EDIT_TABS, true)) {
+            return null;
+        }
+
+        $id = (int) ($request->route('id') ?: $request->integer('id'));
+
+        if ($id < 1) {
+            return null;
+        }
+
+        return redirect()->route($this->routeName('edit.tab'), [
+            'id' => $id,
+            'tab' => $tab,
+        ]);
     }
 }

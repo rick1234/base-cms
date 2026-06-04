@@ -6,12 +6,3 @@
         <strong>{{ $section ?? $title }}</strong>
     </div>
 </div>
-
-<div class="breadcrumbs">
-    <a href="{{ route(request()->routeIs('cms.*') ? 'cms.dashboard' : 'admin.dashboard') }}">{{ __('Home') }}</a>
-    &rsaquo;
-    <a href="{{ route(request()->routeIs('cms.*') ? 'cms.forms.index' : 'admin.forms.index') }}">{{ __('Forms') }}</a>
-    @isset($section)
-        &rsaquo; {{ $section }}
-    @endisset
-</div>

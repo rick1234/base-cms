@@ -16,9 +16,21 @@
         </div>
     </div>
 
-    @foreach (['primary_color', 'secondary_color', 'tertiary_color', 'accent_color', 'surface_color', 'canvas_color', 'light_color', 'grey_color', 'dark_color', 'ink_color', 'muted_ink_color'] as $setting)
+    @foreach ([
+        'primary_color' => 'Primary color',
+        'secondary_color' => 'Secondary color',
+        'tertiary_color' => 'Tertiary color',
+        'accent_color' => 'Accent color',
+        'surface_color' => 'Surface color',
+        'canvas_color' => 'Canvas color',
+        'light_color' => 'Light color',
+        'grey_color' => 'Grey color',
+        'dark_color' => 'Dark color',
+        'ink_color' => 'Ink color',
+        'muted_ink_color' => 'Muted ink color',
+    ] as $setting => $label)
         <div class="form-item">
-            <div class="form-item-label"><label for="template_settings_{{ $setting }}">{{ str($setting)->replace('_', ' ')->title() }}</label></div>
+            <div class="form-item-label"><label for="template_settings_{{ $setting }}">{{ __($label) }}</label></div>
             <div class="form-item-input">
                 <input id="template_settings_{{ $setting }}" name="template_settings[{{ $setting }}]" type="text" value="{{ old('template_settings.'.$setting, $settings[$setting] ?? '') }}" data-coloris data-color-field inputmode="text" maxlength="7" pattern="^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" autocomplete="off">
                 @error('template_settings.'.$setting)<span class="error">{{ $message }}</span>@enderror
@@ -26,9 +38,18 @@
         </div>
     @endforeach
 
-    @foreach (['base_font_family', 'heading_font_family', 'button_radius', 'content_width', 'wrapper_width', 'logo_width', 'logo_height', 'hero_height'] as $setting)
+    @foreach ([
+        'base_font_family' => 'Base font family',
+        'heading_font_family' => 'Heading font family',
+        'button_radius' => 'Button radius',
+        'content_width' => 'Content width',
+        'wrapper_width' => 'Wrapper width',
+        'logo_width' => 'Logo width',
+        'logo_height' => 'Logo height',
+        'hero_height' => 'Hero height',
+    ] as $setting => $label)
         <div class="form-item">
-            <div class="form-item-label"><label for="template_settings_{{ $setting }}">{{ str($setting)->replace('_', ' ')->title() }}</label></div>
+            <div class="form-item-label"><label for="template_settings_{{ $setting }}">{{ __($label) }}</label></div>
             <div class="form-item-input">
                 <input id="template_settings_{{ $setting }}" name="template_settings[{{ $setting }}]" type="text" value="{{ old('template_settings.'.$setting, $settings[$setting] ?? '') }}">
                 @error('template_settings.'.$setting)<span class="error">{{ $message }}</span>@enderror

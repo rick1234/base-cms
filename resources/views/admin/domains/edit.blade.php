@@ -29,12 +29,12 @@
         <div class="main has-buttons">
             <div class="buttons-container">
                 <div class="buttons-container align-right">
-                    <button class="btn btn-add" form="domain-form" name="_next_step" type="submit" value="{{ $activeStep }}">
-                        <span class="flaticon-save-file-option"></span>
+                    <button class="btn btn-save" form="domain-form" name="_next_step" type="submit" value="{{ $activeStep }}">
+                        <x-admin.material-icon name="save" />
                         {{ __('Opslaan') }}
                     </button>
                     <a class="btn" href="{{ route('admin.domains.index') }}">
-                        <span class="flaticon-back-arrow"></span>
+                        <x-admin.material-icon name="arrow_back" />
                         {{ __('Terug') }}
                     </a>
                     @if ($deleteAction)
@@ -42,7 +42,7 @@
                             @csrf
                             @method('delete')
                             <button class="btn btn-delete" type="submit">
-                                <span class="flaticon-delete-button"></span>
+                                <x-admin.material-icon name="delete" />
                                 {{ __('Verwijderen') }}
                             </button>
                         </form>
@@ -58,12 +58,6 @@
                         </div>
                         <strong>{{ $pageTitle }}</strong>
                     </div>
-                </div>
-
-                <div class="breadcrumbs">
-                    <a href="{{ route('admin.dashboard') }}">{{ __('Home') }}</a> &rsaquo;
-                    <a href="{{ route('admin.domains.index') }}">{{ __('Domains') }}</a> &rsaquo;
-                    {{ $pageTitle }}
                 </div>
 
                 @include('admin.domains.partials.wizard-steps', [

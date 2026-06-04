@@ -7,18 +7,13 @@ use App\Actions\Admin\Faq\UpsertFaqItem;
 use App\Http\Controllers\Admin\Concerns\UsesEditViewForCreate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Faq\FaqItemRequest;
-use App\Http\Requests\Admin\Faq\FaqMediaRequest;
-use App\Http\Requests\Admin\Faq\FaqVideoRequest;
 use App\Models\Cms\FaqCategory;
-use App\Models\Cms\FaqImage;
 use App\Models\Cms\FaqItem;
-use App\Models\Cms\FaqVideo;
-use App\Support\Admin\Faq\FaqMediaManager;
+use App\Models\Cms\NavigationMenuItem;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -36,9 +31,7 @@ class FaqItemController extends Controller
 
         $categories = $this->categories();
         $categoryId = $request->integer('categoryId');
-        $query = FaqItem::query()
-            ->with('categories')
-            ->withCount(['attachments', 'images', 'videos']);
+        $query = FaqItem::query()->with('categories');
 
         if ($request->filled('id')) {
             $query->whereKey($request->integer('id'));
@@ -79,12 +72,7 @@ class FaqItemController extends Controller
 
     public function store(FaqItemRequest $request, UpsertFaqItem $upsert): RedirectResponse
     {
-        $faqItem = $upsert->handle(
-            $request->validated(),
-            $request->user(),
-            null,
-            $this->uploadedFiles($request->file('attachment_files') ?: $request->file('attachment')),
-        );
+        $faqItem = $upsert->handle($request->validated(), $request->user());
 
         flash(__('FAQ item created.'))->success();
 
@@ -94,15 +82,15 @@ class FaqItemController extends Controller
     public function edit(Request $request): View
     {
         $faqItem = $this->faqItemFromRequest($request);
-        $faqItem?->load(['attachments', 'categories', 'images', 'videos']);
+        $faqItem?->load('categories');
 
         return view('admin.faq.edit', [
             'faqItem' => $faqItem ?? new FaqItem([
                 'status' => 'draft',
                 'locale' => app()->getLocale(),
-                'active_from' => now(),
             ]),
             'categories' => $this->categories(),
+            'navigationItems' => $this->navigationItems(),
             'routeNames' => $this->routeNames(),
             'pageName' => __('Edit FAQ item'),
             'backUrl' => route($this->routeName('index')),
@@ -112,12 +100,7 @@ class FaqItemController extends Controller
 
     public function save(FaqItemRequest $request, UpsertFaqItem $upsert): RedirectResponse
     {
-        $faqItem = $upsert->handle(
-            $request->validated(),
-            $request->user(),
-            $request->faqItem(),
-            $this->uploadedFiles($request->file('attachment_files') ?: $request->file('attachment')),
-        );
+        $faqItem = $upsert->handle($request->validated(), $request->user(), $request->faqItem());
 
         flash(__('FAQ item saved.'))->success();
 
@@ -126,12 +109,7 @@ class FaqItemController extends Controller
 
     public function update(FaqItem $faqItem, FaqItemRequest $request, UpsertFaqItem $upsert): RedirectResponse
     {
-        $faqItem = $upsert->handle(
-            $request->validated(),
-            $request->user(),
-            $faqItem,
-            $this->uploadedFiles($request->file('attachment_files') ?: $request->file('attachment')),
-        );
+        $faqItem = $upsert->handle($request->validated(), $request->user(), $faqItem);
 
         flash(__('FAQ item saved.'))->success();
 
@@ -151,7 +129,7 @@ class FaqItemController extends Controller
     {
         $id = $request->integer('itemId') ?: $request->integer('item_id') ?: $request->integer('id');
         $faqItem = FaqItem::query()
-            ->with(['attachments', 'categories', 'images', 'videos'])
+            ->with('categories')
             ->findOrFail($id);
 
         $copy = $duplicate->handle($faqItem, $request->user());
@@ -169,176 +147,9 @@ class FaqItemController extends Controller
         ]);
     }
 
-    public function images(Request $request): View
-    {
-        $faqItem = $this->faqItemForUtility($request);
-
-        if (! $faqItem) {
-            return $this->utilityPlaceholder(__('FAQ images'));
-        }
-
-        $faqItem->load('images');
-
-        return view('admin.faq.images', [
-            'faqItem' => $faqItem,
-            'routeNames' => $this->routeNames(),
-            'pageName' => __('FAQ images'),
-            'backUrl' => route($this->routeName('edit'), ['id' => $faqItem->id]),
-        ]);
-    }
-
-    public function uploadImage(FaqMediaRequest $request, FaqMediaManager $mediaManager): JsonResponse|RedirectResponse
-    {
-        $faqItem = FaqItem::query()->findOrFail($request->integer('id') ?: $request->integer('faq_item_id'));
-        $file = $request->file('file') ?: $request->file('image');
-
-        abort_unless($file instanceof UploadedFile, 422);
-
-        $image = $mediaManager->storeImage($faqItem, $file, $request->string('caption')->toString() ?: null, $request->user());
-
-        if (! $request->expectsJson()) {
-            flash(__('Image uploaded.'))->success();
-
-            return back();
-        }
-
-        return response()->json([
-            'jsonrpc' => '2.0',
-            'status' => 'success',
-            'result' => $image->id,
-            'id' => $image->id,
-        ]);
-    }
-
-    public function updateImageName(FaqMediaRequest $request): JsonResponse|RedirectResponse
-    {
-        $image = FaqImage::query()->findOrFail($request->integer('uploadId') ?: $request->integer('id'));
-        $image->fill([
-            'caption' => $request->input('uploadName', $request->input('caption')),
-            'updated_by' => $request->user()?->id,
-        ])->save();
-
-        if (! $request->expectsJson()) {
-            flash(__('Name updated.'))->success();
-
-            return back();
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => __('Name updated.'),
-        ]);
-    }
-
-    public function updateImageSort(FaqMediaRequest $request, FaqMediaManager $mediaManager): JsonResponse|RedirectResponse
-    {
-        $ids = collect(explode(',', (string) $request->input('sort_index')))
-            ->map(fn (string $id): int => (int) trim($id))
-            ->filter()
-            ->values()
-            ->all();
-
-        $mediaManager->updateSortOrder(FaqImage::class, $ids, $request->user());
-
-        if (! $request->expectsJson()) {
-            flash(__('Sort order updated.'))->success();
-
-            return back();
-        }
-
-        return response()->json(['status' => 'success']);
-    }
-
-    public function deleteImage(FaqMediaRequest $request, FaqMediaManager $mediaManager): JsonResponse|RedirectResponse
-    {
-        $image = FaqImage::query()->findOrFail($request->integer('id'));
-        $mediaManager->deleteMedia($image, $request->user());
-
-        if (! $request->expectsJson()) {
-            flash(__('Image deleted.'))->success();
-
-            return back();
-        }
-
-        return response()->json(['status' => 'success']);
-    }
-
-    public function videos(Request $request): View
-    {
-        $faqItem = $this->faqItemForUtility($request);
-
-        if (! $faqItem) {
-            return $this->utilityPlaceholder(__('FAQ videos'));
-        }
-
-        $faqItem->load('videos');
-
-        return view('admin.faq.videos', [
-            'faqItem' => $faqItem,
-            'routeNames' => $this->routeNames(),
-            'pageName' => __('FAQ videos'),
-            'backUrl' => route($this->routeName('edit'), ['id' => $faqItem->id]),
-        ]);
-    }
-
-    public function saveVideos(FaqVideoRequest $request): RedirectResponse
-    {
-        $faqItem = FaqItem::query()->findOrFail($request->integer('id'));
-
-        foreach ((array) $request->validated('videos', []) as $index => $row) {
-            $video = $row['id'] ?? null
-                ? $faqItem->videos()->whereKey((int) $row['id'])->first()
-                : null;
-
-            if (! empty($row['delete']) || (blank($row['url'] ?? null) && $video)) {
-                $video?->delete();
-
-                continue;
-            }
-
-            if (blank($row['url'] ?? null)) {
-                continue;
-            }
-
-            $video ??= new FaqVideo(['faq_item_id' => $faqItem->id, 'created_by' => $request->user()?->id]);
-            $video->fill([
-                'title' => $row['title'] ?? null,
-                'url' => $row['url'],
-                'provider' => $row['provider'] ?? $this->videoProvider($row['url']),
-                'sort_order' => $index + 1,
-                'updated_by' => $request->user()?->id,
-            ])->save();
-        }
-
-        flash(__('FAQ videos saved.'))->success();
-
-        return redirect()->route($this->routeName('videos'), ['id' => $faqItem->id]);
-    }
-
-    public function deleteVideo(Request $request): JsonResponse|RedirectResponse
-    {
-        $video = FaqVideo::query()->findOrFail($request->integer('videoid') ?: $request->integer('video_id') ?: $request->integer('id'));
-        $video->delete();
-
-        if (! $request->expectsJson()) {
-            flash(__('Video deleted.'))->success();
-
-            return back();
-        }
-
-        return response()->json(['status' => 'success']);
-    }
-
     private function faqItemFromRequest(Request $request): ?FaqItem
     {
         $id = (int) ($request->route('id') ?: $request->integer('id'));
-
-        return $id > 0 ? FaqItem::query()->findOrFail($id) : null;
-    }
-
-    private function faqItemForUtility(Request $request): ?FaqItem
-    {
-        $id = (int) ($request->route('id') ?: $request->integer('id') ?: $request->integer('faq_item_id'));
 
         return $id > 0 ? FaqItem::query()->findOrFail($id) : null;
     }
@@ -352,6 +163,20 @@ class FaqItemController extends Controller
             ->withCount('faqItems')
             ->orderBy('sort_order')
             ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, NavigationMenuItem>
+     */
+    private function navigationItems(): Collection
+    {
+        return NavigationMenuItem::query()
+            ->with('menu')
+            ->orderBy('navigation_menu_id')
+            ->orderBy('parent_id')
+            ->orderBy('sort_order')
+            ->orderBy('title')
             ->get();
     }
 
@@ -433,28 +258,6 @@ class FaqItemController extends Controller
             ->update(['sort_order' => $current->sort_order]);
     }
 
-    private function videoProvider(string $url): ?string
-    {
-        if (str_contains($url, 'youtu')) {
-            return 'youtube';
-        }
-
-        if (str_contains($url, 'vimeo')) {
-            return 'vimeo';
-        }
-
-        return null;
-    }
-
-    private function utilityPlaceholder(string $pageName): View
-    {
-        return view('admin.faq.utility', [
-            'pageName' => $pageName,
-            'routeNames' => $this->routeNames(),
-            'backUrl' => route($this->routeName('index')),
-        ]);
-    }
-
     /**
      * @return array<string, string>
      */
@@ -468,35 +271,11 @@ class FaqItemController extends Controller
             'save' => $this->routeName('save'),
             'destroy' => $this->routeName('destroy'),
             'duplicate' => $this->routeName('duplicate'),
-            'images' => $this->routeName('images'),
-            'image.delete' => $this->routeName('image.delete'),
-            'image.update-name' => $this->routeName('image.update-name'),
-            'image.update-sort' => $this->routeName('image.update-sort'),
-            'image.upload' => $this->routeName('image.upload'),
-            'videos' => $this->routeName('videos'),
-            'videos.save' => $this->routeName('videos.save'),
-            'video.delete' => $this->routeName('video.delete'),
         ];
     }
 
     private function routeName(string $name): string
     {
         return (request()->routeIs('cms.*') ? 'cms.faq.' : 'admin.faq.').$name;
-    }
-
-    /**
-     * @return array<int, UploadedFile>
-     */
-    private function uploadedFiles(mixed $files): array
-    {
-        if ($files instanceof UploadedFile) {
-            return [$files];
-        }
-
-        if (! is_array($files)) {
-            return [];
-        }
-
-        return array_values(array_filter($files, fn (mixed $file): bool => $file instanceof UploadedFile));
     }
 }

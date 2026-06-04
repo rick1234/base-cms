@@ -8,21 +8,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('form_recipients', function (Blueprint $table): void {
-            $table->id();
-            $table->uuid('uuid')->nullable()->unique();
-            $table->unsignedBigInteger('legacy_id')->nullable()->index();
-            $table->unsignedBigInteger('form_id')->index();
-            $table->string('name')->nullable();
-            $table->string('email')->index();
-            $table->string('type')->default('to')->index();
-            $table->boolean('is_active')->default(true)->index();
-            $table->unsignedInteger('sort_order')->default(0)->index();
-            $table->json('settings')->nullable();
-            $table->foreignId('created_by')->nullable()->index();
-            $table->foreignId('updated_by')->nullable()->index();
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('form_recipients')) {
+            Schema::create('form_recipients', function (Blueprint $table): void {
+                $table->id();
+                $table->uuid('uuid')->nullable()->unique();
+                $table->unsignedBigInteger('legacy_id')->nullable()->index();
+                $table->unsignedBigInteger('form_id')->index();
+                $table->string('name')->nullable();
+                $table->string('email')->index();
+                $table->string('type')->default('to')->index();
+                $table->boolean('is_active')->default(true)->index();
+                $table->unsignedInteger('sort_order')->default(0)->index();
+                $table->json('settings')->nullable();
+                $table->foreignId('created_by')->nullable()->index();
+                $table->foreignId('updated_by')->nullable()->index();
+                $table->timestamps();
+            });
+        }
 
         Schema::table('form_field_options', function (Blueprint $table): void {
             if (! Schema::hasColumn('form_field_options', 'settings')) {

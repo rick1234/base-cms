@@ -34,19 +34,19 @@ class FaqItemRequest extends FormRequest
             'active_until' => ['nullable', 'date', 'after_or_equal:active_from'],
             'categories' => ['array'],
             'categories.*' => ['integer', 'exists:faq_categories,id'],
-            'attachment_files' => ['array'],
-            'attachment_files.*' => ['file', 'max:10240'],
-            'attachment_names' => ['array'],
-            'attachment_names.*' => ['nullable', 'string', 'max:255'],
-            'existing_attachments' => ['array'],
-            'existing_attachments.*.name' => ['nullable', 'string', 'max:255'],
-            'existing_attachments.*.sort_order' => ['nullable', 'integer', 'min:0'],
-            'existing_attachments.*.delete' => ['boolean'],
+            'more_info_navigation_item_id' => ['nullable', 'integer', 'exists:navigation_menu_items,id'],
+            'more_info_label' => ['nullable', 'string', 'max:255'],
+            'more_info_links_present' => ['nullable', 'boolean'],
+            'more_info_links' => ['nullable', 'array'],
+            'more_info_links.*.navigation_item_id' => ['nullable', 'integer', 'exists:navigation_menu_items,id'],
+            'more_info_links.*.label' => ['nullable', 'string', 'max:255'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
+        $moreInfoLinks = $this->normalizedMoreInfoLinks();
+
         $this->merge([
             'question' => $this->input('question', $this->input('vraag')),
             'body' => $this->input('body', $this->input('answer', $this->input('antwoord'))),
@@ -54,8 +54,9 @@ class FaqItemRequest extends FormRequest
             'active_from' => $this->normalizedDate('active_from', 'startdatum'),
             'active_until' => $this->normalizedDate('active_until', 'einddatum'),
             'categories' => $this->input('categories', $this->input('categorie', [])),
-            'attachment_files' => $this->file('attachment_files') ?: $this->file('attachment'),
-            'attachment_names' => $this->input('attachment_names', $this->input('attachmentNaam', [])),
+            'more_info_navigation_item_id' => $this->input('more_info_navigation_item_id', data_get($this->input('more_info'), 'navigation_item_id')),
+            'more_info_label' => $this->input('more_info_label', data_get($this->input('more_info'), 'label')),
+            'more_info_links' => $moreInfoLinks,
         ]);
     }
 
@@ -89,5 +90,40 @@ class FaqItemRequest extends FormRequest
         }
 
         return (string) $value;
+    }
+
+    /**
+     * @return list<array{navigation_item_id: mixed, label: mixed}>
+     */
+    private function normalizedMoreInfoLinks(): array
+    {
+        $links = $this->input('more_info_links');
+
+        if (is_array($links)) {
+            return collect($links)
+                ->filter(fn (mixed $link): bool => is_array($link))
+                ->map(fn (array $link): array => [
+                    'navigation_item_id' => $link['navigation_item_id'] ?? null,
+                    'label' => $link['label'] ?? null,
+                ])
+                ->values()
+                ->all();
+        }
+
+        if ($this->has('more_info_links_present')) {
+            return [];
+        }
+
+        $legacyNavigationItemId = $this->input('more_info_navigation_item_id', data_get($this->input('more_info'), 'navigation_item_id'));
+        $legacyLabel = $this->input('more_info_label', data_get($this->input('more_info'), 'label'));
+
+        if (blank($legacyNavigationItemId) && blank($legacyLabel)) {
+            return [];
+        }
+
+        return [[
+            'navigation_item_id' => $legacyNavigationItemId,
+            'label' => $legacyLabel,
+        ]];
     }
 }

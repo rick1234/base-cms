@@ -19,6 +19,7 @@ class UpsertForm
     {
         return DB::transaction(function () use ($data, $actor, $form): Form {
             $form ??= new Form;
+            $wasExisting = $form->exists;
 
             $attributes = Arr::only($data, [
                 'name',
@@ -35,7 +36,7 @@ class UpsertForm
             $attributes['slug'] = filled($attributes['slug'] ?? null)
                 ? Str::slug((string) $attributes['slug'])
                 : Str::slug((string) $attributes['name']);
-            $attributes['settings'] = $this->settings($data);
+            $attributes['settings'] = $this->settings($data, (array) ($form->settings ?? []));
 
             if (! $form->exists) {
                 $attributes['created_by'] = $actor?->getAuthIdentifier();
@@ -45,9 +46,22 @@ class UpsertForm
 
             $form->fill($attributes)->save();
 
-            $this->syncCategories($form, (array) ($data['categories'] ?? []));
-            $this->syncRecipients($form, (array) ($data['recipients'] ?? []), $actor);
-            $this->syncMessages($form, (array) ($data['messages'] ?? []), $actor);
+            if (array_key_exists('categories', $data)) {
+                $this->syncCategories($form, (array) ($data['categories'] ?? []));
+            }
+
+            if (array_key_exists('recipients', $data)) {
+                $this->syncRecipients($form, (array) ($data['recipients'] ?? []), $actor);
+            } elseif (! $wasExisting && filled($form->recipient_email)) {
+                $this->syncRecipients($form, [], $actor);
+            }
+
+            if (array_key_exists('messages', $data)) {
+                $this->syncMessages($form, (array) ($data['messages'] ?? []), $actor);
+            } elseif (! $wasExisting) {
+                $this->syncMessages($form, $this->defaultMessages($form), $actor);
+            }
+
             $this->ensureDefaultStructure($form, $actor);
 
             return $form->refresh();
@@ -58,19 +72,17 @@ class UpsertForm
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function settings(array $data): array
+    private function settings(array $data, array $currentSettings): array
     {
         return [
-            'show_title' => (bool) ($data['show_title'] ?? false),
-            'layout' => $data['layout'] ?? 'default',
-            'mail_template' => $data['mail_template'] ?? 'forms.default',
-            'store_submissions' => (bool) ($data['store_submissions'] ?? true),
-            'honeypot_enabled' => (bool) ($data['honeypot_enabled'] ?? true),
-            'honeypot_field' => $data['honeypot_field'] ?? 'website',
-            'confirmation_email_field' => $data['confirmation_email_field'] ?? null,
-            'redirect_url' => $data['redirect_url'] ?? null,
-            'from_email' => $data['from_email'] ?? null,
-            'from_name' => $data['from_name'] ?? null,
+            'show_title' => array_key_exists('show_title', $data) ? (bool) $data['show_title'] : (bool) ($currentSettings['show_title'] ?? true),
+            'layout' => $data['layout'] ?? ($currentSettings['layout'] ?? 'default'),
+            'mail_template' => $data['mail_template'] ?? ($currentSettings['mail_template'] ?? 'mail.forms.submission'),
+            'store_submissions' => array_key_exists('store_submissions', $data) ? (bool) $data['store_submissions'] : (bool) ($currentSettings['store_submissions'] ?? true),
+            'confirmation_email_field' => $data['confirmation_email_field'] ?? ($currentSettings['confirmation_email_field'] ?? null),
+            'redirect_url' => $data['redirect_url'] ?? ($currentSettings['redirect_url'] ?? null),
+            'from_email' => $data['from_email'] ?? ($currentSettings['from_email'] ?? null),
+            'from_name' => $data['from_name'] ?? ($currentSettings['from_name'] ?? null),
         ];
     }
 
@@ -182,7 +194,6 @@ class UpsertForm
                 'sort_order' => (int) ($row['sort_order'] ?? ($index + 1)),
                 'settings' => [
                     'layout' => $row['layout'] ?? null,
-                    'preheader' => $row['preheader'] ?? null,
                 ],
                 'updated_by' => $actor?->getAuthIdentifier(),
             ])->save();

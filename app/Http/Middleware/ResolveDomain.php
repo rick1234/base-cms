@@ -34,7 +34,10 @@ class ResolveDomain
         View::share('isDomainPreviewMode', $isPreviewMode);
         View::share('domainLocalHost', Domain::normalizeHost(config('cms_domains.local_domain')));
         View::share('frontendNavigationPages', $this->navigationPages($domain));
-        View::share('frontendNavigationItems', $this->navigation->tree('primary', $domain));
+        $navigationLocale = $this->navigationLocale($request, $domain);
+
+        View::share('frontendNavigationItems', $this->navigation->tree('primary', $domain, $navigationLocale));
+        View::share('frontendFooterNavigationItems', $this->navigation->tree('footer', $domain, $navigationLocale));
 
         return $next($request);
     }
@@ -65,5 +68,24 @@ class ResolveDomain
         return $domainPages
             ->concat($globalPages->reject(fn (Page $page): bool => in_array($page->slug, $domainSlugs, true)))
             ->values();
+    }
+
+    private function navigationLocale(Request $request, ?Domain $domain): string
+    {
+        foreach ([
+            $request->route('locale'),
+            $request->session()->get('locale'),
+            $request->user()?->locale,
+            $domain?->default_locale,
+            app()->getLocale(),
+        ] as $candidate) {
+            if (! is_string($candidate) || trim($candidate) === '') {
+                continue;
+            }
+
+            return strtolower(str_replace('_', '-', trim($candidate)));
+        }
+
+        return strtolower((string) config('app.locale', 'en'));
     }
 }

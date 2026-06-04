@@ -1,12 +1,12 @@
 <div class="main has-buttons">
     <div class="buttons-container align-right">
         <button class="btn" type="button" wire:click="syncTranslations" wire:loading.attr="disabled" wire:target="syncTranslations">
-            <span class="flaticon-refresh-button"></span>
+            <x-admin.material-icon name="refresh" />
             <span wire:loading.remove wire:target="syncTranslations">{{ __('Synchroniseren') }}</span>
             <span wire:loading wire:target="syncTranslations">{{ __('Synchroniseren...') }}</span>
         </button>
         <button class="btn btn-add" type="button" wire:click="newKey">
-            <span class="flaticon-add-plus-button"></span>
+            <x-admin.material-icon name="add" />
             {{ __('Toevoegen') }}
         </button>
     </div>
@@ -15,7 +15,7 @@
         <div class="content-album-message translation-live-message is-{{ $messageLevel }}" data-flash-message>
             <span>{{ $message }}</span>
             <button type="button" wire:click="$set('message', null)" aria-label="{{ __('Sluiten') }}">
-                <span class="flaticon-cancel-button"></span>
+                <x-admin.material-icon name="close" />
             </button>
         </div>
     @endif
@@ -32,7 +32,7 @@
                     <span class="content-admin-screen-label">{{ __($editorTitle) }}</span>
                 </div>
                 <button class="btn btn-cancel" type="button" wire:click="closeEditor">
-                    <span class="flaticon-close-button"></span>
+                    <x-admin.material-icon name="close" />
                     {{ __('Sluiten') }}
                 </button>
             </div>
@@ -129,7 +129,10 @@
                                     <div class="translation-value-panel" wire:key="translation-editor-value-{{ $language['code'] }}">
                                         <div class="form-item">
                                             <div class="form-item-label">
-                                                <label for="translation-value-{{ $language['code'] }}">{{ $language['label'] }}</label>
+                                                <label class="language-panel-title" for="translation-value-{{ $language['code'] }}">
+                                                    <x-admin.language-flag :locale="$language['code']" :label="$language['label']" decorative />
+                                                    {{ $language['label'] }}
+                                                </label>
                                             </div>
                                             <div class="form-item-input">
                                                 <textarea id="translation-value-{{ $language['code'] }}" wire:model.live.debounce.900ms="form.values.{{ $language['code'] }}.value"></textarea>
@@ -169,12 +172,12 @@
 
                             <div class="translation-live-actions">
                                 <button class="btn btn-save" type="submit" wire:loading.attr="disabled" wire:target="saveKey">
-                                    <span class="flaticon-save-button"></span>
+                                    <x-admin.material-icon name="save" />
                                     {{ __('Opslaan') }}
                                 </button>
                                 @if ($editingId)
                                     <button class="btn btn-remove" type="button" wire:click="deleteKey({{ $editingId }})" wire:confirm="{{ __('Deze vertaling verwijderen') }}">
-                                        <span class="flaticon-rubbish-bin-delete-button"></span>
+                                        <x-admin.material-icon name="delete" />
                                         {{ __('Verwijderen') }}
                                     </button>
                                 @endif
@@ -246,7 +249,12 @@
                 <div class="overview-item area">{{ __('Area') }}</div>
                 <div class="overview-item key">{{ __('Key') }}</div>
                 <div class="overview-item source">{{ __('Source') }}</div>
-                <div class="overview-item value">{{ strtoupper($locale) }} <span>{{ $selectedLanguage }}</span></div>
+                <div class="overview-item value">
+                    <span class="translation-language-heading">
+                        <x-admin.language-flag :locale="$locale" :label="$selectedLanguage" decorative />
+                        <span>{{ $selectedLanguage }}</span>
+                    </span>
+                </div>
                 <div class="overview-item status">{{ __('Status') }}</div>
                 <div class="overview-item options">{{ __('Opties') }}</div>
             </div>
@@ -272,10 +280,10 @@
                     </div>
                     <div class="overview-item options">
                         <button class="button-link" type="button" wire:click="editKey({{ $translationKey->id }})" title="{{ __('Bewerken') }}">
-                            <span class="flaticon-create-new-pencil-button"></span>
+                            <x-admin.material-icon name="edit" />
                         </button>
                         <button class="button-link" type="button" wire:click="deleteKey({{ $translationKey->id }})" wire:confirm="{{ __('Deze vertaling verwijderen') }}" title="{{ __('Verwijderen') }}">
-                            <span class="flaticon-rubbish-bin-delete-button"></span>
+                            <x-admin.material-icon name="delete" />
                         </button>
                     </div>
                 </div>
