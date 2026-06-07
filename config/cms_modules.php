@@ -35,15 +35,6 @@ $modules = [
         'description' => 'Banner images, categories, and translations.',
         'legacy_tables' => ['banner', 'bannercategorie', 'bannerbannercategorie', 'bannertranslation'],
     ],
-    'sliders' => [
-        'name' => 'Sliders',
-        'legacy_path' => 'cms/slider',
-        'group' => 'media',
-        'table' => 'sliders',
-        'title_column' => 'title',
-        'description' => 'Slider images, categories, links, and display windows.',
-        'legacy_tables' => ['slider', 'slidercategorie', 'sliderslidercategorie'],
-    ],
     'forms' => [
         'name' => 'Forms',
         'legacy_path' => 'cms/form',
@@ -194,7 +185,6 @@ $screens = [
             'index' => ['name' => 'Pages overview', 'type' => 'index'],
             'edit' => ['name' => 'Edit page', 'type' => 'edit'],
             'editAfbeeldingen' => ['name' => 'Page images', 'type' => 'edit', 'table' => 'content_images', 'title_column' => 'caption', 'legacy_tables' => ['contentitemafbeeldingen']],
-            'editSlider' => ['name' => 'Page slider', 'type' => 'edit', 'table' => 'sliders', 'title_column' => 'title', 'legacy_tables' => ['slider']],
         ],
     ],
     'content_categories' => [
@@ -349,33 +339,6 @@ $screens = [
         'pages' => [
             'index' => ['name' => 'Banner category overview', 'type' => 'index'],
             'edit' => ['name' => 'Edit banner category', 'type' => 'edit'],
-        ],
-    ],
-    'sliders' => [
-        'name' => 'Sliders',
-        'legacy_path' => 'cms/slider',
-        'group' => 'media',
-        'table' => 'sliders',
-        'title_column' => 'title',
-        'description' => 'Legacy slider overview and editor.',
-        'legacy_tables' => ['slider'],
-        'pages' => [
-            'index' => ['name' => 'Slider overview', 'type' => 'index'],
-            'edit' => ['name' => 'Edit slider', 'type' => 'edit'],
-        ],
-    ],
-    'slider_categories' => [
-        'name' => 'Slider Categories',
-        'parent_screen' => 'sliders',
-        'legacy_path' => 'cms/slider/categorieen',
-        'group' => 'media',
-        'table' => 'slider_categories',
-        'title_column' => 'name',
-        'description' => 'Legacy slider category overview and editor.',
-        'legacy_tables' => ['slidercategorie'],
-        'pages' => [
-            'index' => ['name' => 'Slider category overview', 'type' => 'index'],
-            'edit' => ['name' => 'Edit slider category', 'type' => 'edit'],
         ],
     ],
     'catalog_products' => [
@@ -764,8 +727,6 @@ $legacyClasses = [
     'Redirect' => 'redirects',
     'Review' => 'catalog_reviews',
     'Role' => 'roles',
-    'Slider' => 'sliders',
-    'SliderCategorie' => 'slider_categories',
     'Url' => 'urls',
     'Urlverwijzing' => 'url_references',
     'User' => 'users',

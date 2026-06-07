@@ -5,6 +5,9 @@
     $title = $isExisting ? __('Bewerk: :title', ['title' => $vacancy->title]) : __('Toevoegen');
     $linkedCategoryIds = old('categories', $isExisting ? $vacancy->categories->pluck('id')->all() : []);
     $metadata = (array) ($vacancy->metadata ?? []);
+    $selectedForm = $forms->firstWhere('id', (int) old('form_id', $vacancy->form_id));
+    $reactionCount = (int) ($vacancy->form?->submissions_count ?? $selectedForm?->submissions_count ?? 0);
+    $formSubmissionsRouteName = request()->routeIs('cms.*') ? 'cms.forms.submissions' : 'admin.forms.submissions';
 @endphp
 
 @section('title', $title)
@@ -121,6 +124,34 @@
 
                                     <div class="form-item">
                                         <div class="form-item-label">
+                                            <label for="vacancy_type">{{ __('Vacancy type') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <select id="vacancy_type" name="vacancy_type">
+                                                <option value="paid" @selected(old('vacancy_type', $metadata['vacancy_type'] ?? 'paid') === 'paid')>{{ __('Paid position') }}</option>
+                                                <option value="volunteer" @selected(old('vacancy_type', $metadata['vacancy_type'] ?? null) === 'volunteer')>{{ __('Volunteer position') }}</option>
+                                            </select>
+                                            @include('admin.content.partials.field-error', ['field' => 'vacancy_type'])
+                                        </div>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <div class="form-item-label">
+                                            <label for="work_mode">{{ __('Work mode') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <select id="work_mode" name="work_mode">
+                                                <option value="">{{ __('Selecteer') }}</option>
+                                                <option value="on-site" @selected(old('work_mode', $metadata['work_mode'] ?? null) === 'on-site')>{{ __('On site') }}</option>
+                                                <option value="hybrid" @selected(old('work_mode', $metadata['work_mode'] ?? null) === 'hybrid')>{{ __('Hybrid') }}</option>
+                                                <option value="remote" @selected(old('work_mode', $metadata['work_mode'] ?? null) === 'remote')>{{ __('Remote') }}</option>
+                                            </select>
+                                            @include('admin.content.partials.field-error', ['field' => 'work_mode'])
+                                        </div>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <div class="form-item-label">
                                             <label for="hours">{{ __('Uren') }}</label>
                                         </div>
                                         <div class="form-item-input">
@@ -131,11 +162,53 @@
 
                                     <div class="form-item">
                                         <div class="form-item-label">
+                                            <label for="education_level">{{ __('Education level') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <input id="education_level" name="education_level" type="text" value="{{ old('education_level', $metadata['education_level'] ?? null) }}">
+                                            @include('admin.content.partials.field-error', ['field' => 'education_level'])
+                                        </div>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <div class="form-item-label">
+                                            <label for="experience_level">{{ __('Experience level') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <input id="experience_level" name="experience_level" type="text" value="{{ old('experience_level', $metadata['experience_level'] ?? null) }}">
+                                            @include('admin.content.partials.field-error', ['field' => 'experience_level'])
+                                        </div>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <div class="form-item-label">
                                             <label for="salary">{{ __('Salaris') }}</label>
                                         </div>
                                         <div class="form-item-input">
                                             <input id="salary" name="salary" type="text" value="{{ old('salary', $metadata['salary'] ?? null) }}">
                                             @include('admin.content.partials.field-error', ['field' => 'salary'])
+                                        </div>
+                                    </div>
+
+                                    <h2 class="title">{{ __('Volunteer work') }}</h2>
+
+                                    <div class="form-item">
+                                        <div class="form-item-label">
+                                            <label for="volunteer_commitment">{{ __('Volunteer commitment') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <input id="volunteer_commitment" name="volunteer_commitment" type="text" value="{{ old('volunteer_commitment', $metadata['volunteer_commitment'] ?? null) }}">
+                                            @include('admin.content.partials.field-error', ['field' => 'volunteer_commitment'])
+                                        </div>
+                                    </div>
+
+                                    <div class="form-item">
+                                        <div class="form-item-label">
+                                            <label for="volunteer_compensation">{{ __('Volunteer compensation') }}</label>
+                                        </div>
+                                        <div class="form-item-input">
+                                            <input id="volunteer_compensation" name="volunteer_compensation" type="text" value="{{ old('volunteer_compensation', $metadata['volunteer_compensation'] ?? null) }}">
+                                            @include('admin.content.partials.field-error', ['field' => 'volunteer_compensation'])
                                         </div>
                                     </div>
 
@@ -198,8 +271,28 @@
                     </div>
 
                     <div class="main-section">
-                        <h2 class="title">{{ __('Omschrijving') }}</h2>
-                        <textarea id="body" name="body">{{ old('body', $vacancy->body) }}</textarea>
+                        <h2 class="title" id="vacancy-body-label">{{ __('Omschrijving') }}</h2>
+                        <div class="wysiwyg-editor" data-wysiwyg-editor>
+                            <div class="wysiwyg-toolbar" role="toolbar" aria-label="{{ __('Tekstopmaak') }}">
+                                <button type="button" data-wysiwyg-command="bold" aria-label="{{ __('Vet') }}" title="{{ __('Vet') }}">
+                                    <x-admin.material-icon name="format_bold" />
+                                </button>
+                                <button type="button" data-wysiwyg-command="italic" aria-label="{{ __('Cursief') }}" title="{{ __('Cursief') }}">
+                                    <x-admin.material-icon name="format_italic" />
+                                </button>
+                                <button type="button" data-wysiwyg-command="insertUnorderedList" aria-label="{{ __('Opsomming') }}" title="{{ __('Opsomming') }}">
+                                    <x-admin.material-icon name="format_list_bulleted" />
+                                </button>
+                                <button type="button" data-wysiwyg-command="insertOrderedList" aria-label="{{ __('Genummerde lijst') }}" title="{{ __('Genummerde lijst') }}">
+                                    <x-admin.material-icon name="format_list_numbered" />
+                                </button>
+                                <button type="button" data-wysiwyg-command="createLink" data-wysiwyg-prompt="{{ __('Link URL') }}" aria-label="{{ __('Link invoegen') }}" title="{{ __('Link invoegen') }}">
+                                    <x-admin.material-icon name="link" />
+                                </button>
+                            </div>
+                            <div class="wysiwyg-surface" contenteditable="true" role="textbox" aria-labelledby="vacancy-body-label" aria-multiline="true" data-wysiwyg-surface>{!! old('body', $vacancy->body) !!}</div>
+                            <textarea class="wysiwyg-hidden-input" id="body" name="body" hidden data-wysiwyg-input>{{ old('body', $vacancy->body) }}</textarea>
+                        </div>
                         @include('admin.content.partials.field-error', ['field' => 'body'])
                     </div>
                 @elseif ($activeTab === 'form')
@@ -232,6 +325,22 @@
                                     @include('admin.content.partials.field-error', ['field' => 'form_id'])
                                 </div>
                             </div>
+
+                            @if ($selectedForm)
+                                <div class="form-reactions-summary">
+                                    <x-admin.material-icon name="mark_email_unread" />
+                                    <div>
+                                        <strong>{{ trans_choice('{0} No reactions|{1} :count reaction|[2,*] :count reactions', $reactionCount, ['count' => $reactionCount]) }}</strong>
+                                        <span>{{ __('Linked to :form', ['form' => $selectedForm->name]) }}</span>
+                                    </div>
+                                    @if ($reactionCount > 0)
+                                        <a class="btn" href="{{ route($formSubmissionsRouteName, ['id' => $selectedForm->id]) }}">
+                                            <x-admin.material-icon name="open_in_new" />
+                                            {{ __('View reactions') }}
+                                        </a>
+                                    @endif
+                                </div>
+                            @endif
                         @else
                             <div class="attachment-message">
                                 <x-admin.material-icon name="info" />

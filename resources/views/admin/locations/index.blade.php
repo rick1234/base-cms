@@ -125,7 +125,7 @@
                                 {{ $location->categories->pluck('name')->join(', ') ?: '-' }}
                             </div>
                             <div class="overview-item status">
-                                <span class="{{ $location->isActive() ? 'active-item' : 'inactive-item' }}" role="img" aria-label="{{ $location->isActive() ? __('Online') : __('Offline') }}" title="{{ $location->isActive() ? __('Online') : __('Offline') }}"></span>
+                                <x-admin.quick-status model="location" :record="$location" :value="$location->status" :active="$location->isActive()" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $location->id]) }}" aria-label="{{ __('Bewerken') }}" title="{{ __('Bewerken') }}">

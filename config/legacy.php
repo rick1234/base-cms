@@ -10,6 +10,6 @@ return [
         'forms' => ['form', 'formblock', 'formfield', 'formmessage'],
         'commerce' => ['catalogusartikel', 'cataloguscategorie', 'orders', 'orderregels'],
     'users' => ['users', 'role', 'permissions'],
-        'site_modules' => ['banner', 'slider', 'faq', 'vacatures', 'vestiging', 'evenement'],
+        'site_modules' => ['banner', 'faq', 'vacatures', 'vestiging', 'evenement'],
     ],
 ];

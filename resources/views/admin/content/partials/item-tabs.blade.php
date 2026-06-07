@@ -31,11 +31,4 @@
             {{ __('SEO') }}
         @endif
     </li>
-    <li class="tabmenu-item slider-button {{ $active === 'slider' ? 'active' : '' }}">
-        @if ($id)
-            <a href="{{ route($routeNames['slider'], ['id' => $id]) }}">{{ __('Slider') }}</a>
-        @else
-            {{ __('Slider') }}
-        @endif
-    </li>
 </ul>

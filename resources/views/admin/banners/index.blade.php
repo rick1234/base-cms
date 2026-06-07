@@ -115,7 +115,7 @@
                             <div class="overview-item category">{{ $banner->categories->pluck('name')->join(', ') ?: '-' }}</div>
                             <div class="overview-item title">{{ $banner->displayTitle() }}</div>
                             <div class="overview-item status">
-                                <span class="{{ $banner->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="banner" :record="$banner" :value="$banner->status" :active="$banner->isActive()" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $banner->id]) }}" title="{{ __('Bewerken') }}">

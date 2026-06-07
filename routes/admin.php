@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\Locations\LocationCategoryController;
 use App\Http\Controllers\Admin\Locations\LocationController;
 use App\Http\Controllers\Admin\Navigation\NavigationMenuController;
 use App\Http\Controllers\Admin\PageController;
+use App\Http\Controllers\Admin\QuickStatusController;
 use App\Http\Controllers\Admin\Redirects\RedirectController;
 use App\Http\Controllers\Admin\Roles\RoleController;
 use App\Http\Controllers\Admin\Translations\TranslationController;
@@ -59,6 +60,7 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
     Route::middleware(['auth', 'can:access-admin'])->group(function () use ($screenGroup, $screenRoutes): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::post('logout', [AdminLoginController::class, 'destroy'])->name('logout');
+        Route::patch('quick-status', QuickStatusController::class)->name('quick-status.update');
 
         $screenRoutes('content_items', function (): void {
             Route::resource('pages', PageController::class)
@@ -73,6 +75,10 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
         });
 
         $screenRoutes('website_templates', function (): void {
+            Route::get('templates/{websiteTemplate}/edit/{tab}', [WebsiteTemplateController::class, 'edit'])
+                ->whereNumber('websiteTemplate')
+                ->whereIn('tab', ['settings', 'sections', 'paths', 'preview'])
+                ->name('templates.edit.tab');
             Route::resource('templates', WebsiteTemplateController::class)
                 ->except(['show'])
                 ->parameters(['templates' => 'websiteTemplate']);
@@ -102,9 +108,10 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
             Route::get('{id}/edit', [BannerController::class, 'edit'])->whereNumber('id')->name('edit');
             Route::get('{id}/edit/{tab}', [BannerController::class, 'edit'])
                 ->whereNumber('id')
-                ->whereIn('tab', ['image', 'translations'])
+                ->whereIn('tab', ['images', 'template', 'translations'])
                 ->name('edit.tab');
             Route::post('{id?}', [BannerController::class, 'save'])->whereNumber('id')->name('save');
+            Route::post('{id}/images', [BannerController::class, 'uploadImages'])->whereNumber('id')->name('images.upload');
             Route::get('edit', [BannerController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [BannerController::class, 'save'])->name('legacy-save-clean');
             Route::get('edit.php', [BannerController::class, 'edit'])->name('legacy-edit');
@@ -651,12 +658,6 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
             Route::get('editAfbeeldingen.php', [ContentItemController::class, 'images'])->name('legacy-images');
             Route::post('editAfbeeldingen', [ContentItemController::class, 'uploadImage'])->name('legacy-images.upload-clean');
 
-            Route::get('{id}/slider', [ContentItemController::class, 'slider'])->whereNumber('id')->name('slider');
-            Route::post('{id}/slider', [ContentItemController::class, 'saveSlider'])->whereNumber('id')->name('slider.save');
-            Route::get('editSlider', [ContentItemController::class, 'slider'])->name('legacy-slider-clean');
-            Route::post('editSlider', [ContentItemController::class, 'saveSlider'])->name('legacy-slider-save-clean');
-            Route::get('editSlider.php', [ContentItemController::class, 'slider'])->name('legacy-slider');
-            Route::post('editSlider.php', [ContentItemController::class, 'saveSlider'])->name('legacy-slider-save');
             Route::post('{id}/preview', [ContentItemController::class, 'preview'])->whereNumber('id')->name('preview');
 
             Route::post('ajax/duplicateItem', [ContentItemController::class, 'duplicate'])->name('duplicate');
@@ -758,6 +759,23 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
 
             Route::get('create', [UserController::class, 'create'])->name('create');
             Route::get('{id}/edit', [UserController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [UserController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['access', 'roles', 'image', 'two-factor'])
+                ->name('edit.tab');
+            Route::post('{user}/impersonate', [UserController::class, 'impersonate'])
+                ->whereNumber('user')
+                ->name('impersonate');
+            Route::post('{user}/invitation/{area}', [UserController::class, 'sendInvitation'])
+                ->whereNumber('user')
+                ->whereIn('area', ['frontend', 'backend'])
+                ->name('invitation');
+            Route::post('{user}/two-factor/generate', [UserController::class, 'generateTwoFactor'])
+                ->whereNumber('user')
+                ->name('two-factor.generate');
+            Route::delete('{user}/two-factor', [UserController::class, 'disableTwoFactor'])
+                ->whereNumber('user')
+                ->name('two-factor.disable');
             Route::post('{id?}', [UserController::class, 'save'])->whereNumber('id')->name('save');
             Route::get('edit', [UserController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [UserController::class, 'save'])->name('legacy-save-clean');

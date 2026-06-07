@@ -38,34 +38,7 @@
                         <em>{{ __('Selecteer eerst een formulier.') }}</em>
                     </div>
                 @else
-                    <div class="form-submission-list">
-                        @forelse ($submissions as $submission)
-                            <details class="form-submission-item" @if ($loop->first) open @endif>
-                                <summary>
-                                    <span>{{ optional($submission->created_at)->format('d-m-Y H:i') }}</span>
-                                    <span>{{ $submission->source_url ?: '-' }}</span>
-                                    <span>{{ $submission->status }}</span>
-                                </summary>
-                                <dl class="cms-module-details">
-                                    <dt>{{ __('IP') }}</dt>
-                                    <dd>{{ $submission->remote_ip ?: '-' }}</dd>
-                                    <dt>{{ __('Browser') }}</dt>
-                                    <dd>{{ $submission->user_agent ?: '-' }}</dd>
-                                    @foreach ($submission->answers as $answer)
-                                        <dt>{{ $answer->field_name }}</dt>
-                                        <dd>{{ $answer->value }}</dd>
-                                    @endforeach
-                                </dl>
-                            </details>
-                        @empty
-                            <div class="attachment-message">
-                                <x-admin.material-icon name="info" />
-                                <em>{{ __('No messages found.') }}</em>
-                            </div>
-                        @endforelse
-                    </div>
-
-                    @include('admin.partials.pagination', ['paginator' => $submissions])
+                    <livewire:admin.forms.form-submission-inbox :form="$form" />
                 @endif
             </div>
         </div>

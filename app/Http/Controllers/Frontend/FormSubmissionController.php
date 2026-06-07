@@ -5,14 +5,15 @@ namespace App\Http\Controllers\Frontend;
 use App\Actions\Forms\SubmitForm;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Forms\FormSubmissionRequest;
-use App\Models\Cms\Form;
 use Illuminate\Http\RedirectResponse;
 
 class FormSubmissionController extends Controller
 {
-    public function store(FormSubmissionRequest $request, Form $form, SubmitForm $submitForm): RedirectResponse
+    public function store(FormSubmissionRequest $request, SubmitForm $submitForm, FormController $forms): RedirectResponse
     {
-        abort_unless($form->isActive(), 404);
+        $form = $forms->publicForm((string) $request->route('form'));
+
+        abort_unless($form, 404);
 
         $submitForm->handle($form, $request);
 

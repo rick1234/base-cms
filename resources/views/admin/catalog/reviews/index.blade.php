@@ -66,7 +66,7 @@
                             <div class="overview-item user">{{ $review->author_name ?: $review->author_email ?: '-' }}</div>
                             <div class="overview-item rating">{{ $review->rating ?: '-' }}</div>
                             <div class="overview-item status">
-                                <span class="{{ $review->status === 'published' ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="catalog-review" :record="$review" :value="$review->status" :active="$review->status === 'published'" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $review->id]) }}" title="{{ __('Bewerken') }}">

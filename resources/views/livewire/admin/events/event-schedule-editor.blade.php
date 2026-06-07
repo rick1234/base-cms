@@ -66,6 +66,9 @@
                         </div>
 
                         <div class="event-schedule-group-actions">
+                            <button class="btn btn-icon-only" type="button" wire:click="sortItemsByStartTime({{ $groupIndex }})" title="{{ __('Sort by start time') }}">
+                                <x-admin.material-icon name="sort" />
+                            </button>
                             <button class="btn btn-icon-only" type="button" wire:click="toggleGroup({{ $groupIndex }})" title="{{ ($group['is_collapsed'] ?? false) ? __('Uitklappen') : __('Inklappen') }}">
                                 <x-admin.material-icon :name="($group['is_collapsed'] ?? false) ? 'unfold_more' : 'unfold_less'" />
                             </button>
@@ -106,6 +109,7 @@
                                             <div class="form-item-input">
                                                 <input
                                                     id="event-schedule-entry-{{ $item['state_id'] }}-title"
+                                                    wire:key="event-schedule-entry-{{ $group['state_id'] }}-{{ $item['state_id'] }}-{{ $itemIndex }}-title-input"
                                                     type="text"
                                                     wire:model.live.debounce.500ms="groups.{{ $groupIndex }}.items.{{ $itemIndex }}.title"
                                                 >
@@ -122,8 +126,9 @@
                                             <div class="form-item-input">
                                                 <input
                                                     id="event-schedule-entry-{{ $item['state_id'] }}-date"
+                                                    wire:key="event-schedule-entry-{{ $group['state_id'] }}-{{ $item['state_id'] }}-{{ $itemIndex }}-date-input"
                                                     type="date"
-                                                    wire:model.live="groups.{{ $groupIndex }}.items.{{ $itemIndex }}.date"
+                                                    wire:model.blur="groups.{{ $groupIndex }}.items.{{ $itemIndex }}.date"
                                                 >
                                                 @error("groups.{$groupIndex}.items.{$itemIndex}.date")
                                                     <span class="error">{{ $message }}</span>
@@ -138,8 +143,9 @@
                                             <div class="form-item-input">
                                                 <input
                                                     id="event-schedule-entry-{{ $item['state_id'] }}-starts-at"
+                                                    wire:key="event-schedule-entry-{{ $group['state_id'] }}-{{ $item['state_id'] }}-{{ $itemIndex }}-starts-at-input"
                                                     type="time"
-                                                    wire:model.live="groups.{{ $groupIndex }}.items.{{ $itemIndex }}.starts_at"
+                                                    wire:model.blur="groups.{{ $groupIndex }}.items.{{ $itemIndex }}.starts_at"
                                                 >
                                                 @error("groups.{$groupIndex}.items.{$itemIndex}.starts_at")
                                                     <span class="error">{{ $message }}</span>
@@ -154,8 +160,9 @@
                                             <div class="form-item-input">
                                                 <input
                                                     id="event-schedule-entry-{{ $item['state_id'] }}-ends-at"
+                                                    wire:key="event-schedule-entry-{{ $group['state_id'] }}-{{ $item['state_id'] }}-{{ $itemIndex }}-ends-at-input"
                                                     type="time"
-                                                    wire:model.live="groups.{{ $groupIndex }}.items.{{ $itemIndex }}.ends_at"
+                                                    wire:model.blur="groups.{{ $groupIndex }}.items.{{ $itemIndex }}.ends_at"
                                                 >
                                                 @error("groups.{$groupIndex}.items.{$itemIndex}.ends_at")
                                                     <span class="error">{{ $message }}</span>
@@ -170,6 +177,7 @@
                                             <div class="form-item-input">
                                                 <textarea
                                                     id="event-schedule-entry-{{ $item['state_id'] }}-content"
+                                                    wire:key="event-schedule-entry-{{ $group['state_id'] }}-{{ $item['state_id'] }}-{{ $itemIndex }}-content-input"
                                                     wire:model.live.debounce.500ms="groups.{{ $groupIndex }}.items.{{ $itemIndex }}.content"
                                                 ></textarea>
                                                 @error("groups.{$groupIndex}.items.{$itemIndex}.content")

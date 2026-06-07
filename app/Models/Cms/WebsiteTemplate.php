@@ -17,6 +17,7 @@ class WebsiteTemplate extends CmsModel
         return [
             ...parent::casts(),
             'default_settings' => 'array',
+            'defined_sections' => 'array',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
@@ -45,6 +46,48 @@ class WebsiteTemplate extends CmsModel
         return [
             ...config('cms_domains.default_template_settings', []),
             ...($this->default_settings ?? []),
+        ];
+    }
+
+    /**
+     * @return list<array{handle: string, label: string, type: string}>
+     */
+    public function bannerSections(): array
+    {
+        return collect($this->wireframeSections())
+            ->map(fn (array $section): array => [
+                'handle' => (string) ($section['handle'] ?? ''),
+                'label' => (string) ($section['label'] ?? ''),
+                'type' => (string) ($section['type'] ?? 'banner'),
+            ])
+            ->filter(fn (array $section): bool => $section['handle'] !== '' && in_array($section['type'], ['banner', 'mixed'], true))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array{handle: string, label: string, type: string}>
+     */
+    public function wireframeSections(): array
+    {
+        $sections = collect($this->defined_sections ?? [])
+            ->map(fn (array $section): array => [
+                'handle' => (string) ($section['handle'] ?? ''),
+                'label' => (string) ($section['label'] ?? ''),
+                'type' => (string) ($section['type'] ?? 'banner'),
+            ])
+            ->filter(fn (array $section): bool => $section['handle'] !== '' || $section['label'] !== '')
+            ->values();
+
+        if ($sections->isNotEmpty()) {
+            return $sections->all();
+        }
+
+        return [
+            ['handle' => 'homepage_hero', 'label' => __('Homepage hero'), 'type' => 'banner'],
+            ['handle' => 'homepage_right_block', 'label' => __('Homepage Right Block'), 'type' => 'banner'],
+            ['handle' => 'content_sidebar', 'label' => __('Content sidebar'), 'type' => 'mixed'],
+            ['handle' => 'footer_banner', 'label' => __('Footer banner'), 'type' => 'banner'],
         ];
     }
 }

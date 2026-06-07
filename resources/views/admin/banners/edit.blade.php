@@ -19,14 +19,16 @@
 
         <div class="main has-buttons">
             <div class="buttons-container align-right">
-                <button class="btn btn-save" form="banner-form" type="submit">
-                    <x-admin.material-icon name="save" />
-                    {{ __('Opslaan') }}
-                </button>
-                <button class="btn btn-save-and-stay" form="banner-form" name="saveAndStay" type="submit" value="1">
-                    <x-admin.material-icon name="save" />
-                    {{ __('Opslaan en blijven') }}
-                </button>
+                @if (! in_array($activeTab, ['images', 'translations'], true))
+                    <button class="btn btn-save" form="banner-form" type="submit">
+                        <x-admin.material-icon name="save" />
+                        {{ __('Opslaan') }}
+                    </button>
+                    <button class="btn btn-save-and-stay" form="banner-form" name="saveAndStay" type="submit" value="1">
+                        <x-admin.material-icon name="save" />
+                        {{ __('Opslaan en blijven') }}
+                    </button>
+                @endif
                 @if ($isExisting)
                     <form method="post" action="{{ route($routeNames['duplicate']) }}">
                         @csrf
@@ -57,11 +59,12 @@
                 'routeNames' => $routeNames,
             ])
 
-            <form id="banner-form" name="edit-form" enctype="multipart/form-data" method="post" action="{{ route($routeNames['save'], array_filter(['id' => $banner->id])) }}" accept-charset="UTF-8">
-                @csrf
-                <input type="hidden" name="id" value="{{ $banner->id }}">
-                <input type="hidden" name="active_tab" value="{{ $activeTab }}">
-                <input type="hidden" name="saveAndStay" value="0">
+            @if (! in_array($activeTab, ['images', 'translations'], true))
+                <form id="banner-form" name="edit-form" enctype="multipart/form-data" method="post" action="{{ route($routeNames['save'], array_filter(['id' => $banner->id])) }}" accept-charset="UTF-8">
+                    @csrf
+                    <input type="hidden" name="id" value="{{ $banner->id }}">
+                    <input type="hidden" name="active_tab" value="{{ $activeTab }}">
+                    <input type="hidden" name="saveAndStay" value="0">
 
                 @if ($activeTab === 'general')
                     <div class="main-section">
@@ -152,117 +155,88 @@
                             </div>
                         </div>
                     </div>
-                @elseif ($activeTab === 'image')
+                @elseif ($activeTab === 'template')
                     <div class="main-section">
                         @include('admin.banners.partials.page-header', [
-                            'title' => __('Afbeelding'),
+                            'title' => __('Template'),
                             'section' => $pageName,
                         ])
 
-                        <span class="content-admin-screen-label">{{ __('Afbeelding') }}</span>
+                        <span class="content-admin-screen-label">{{ __('Template') }}</span>
 
                         <div class="content-section">
-                            @if ($banner->image_path)
-                                <div class="banner-image-preview">
-                                    <img src="{{ asset($banner->image_path) }}" alt="{{ $metadata['alt_text'] ?? __('Afbeelding') }}" class="banner-image">
+                            <div class="template-assignment-toolbar">
+                                <div>
+                                    <h2 class="sub-title">{{ __('Template wireframe preview') }}</h2>
+                                    <p class="form-item-description">{{ __('Use the highlighted section to check where this banner will appear in the active frontend template.') }}</p>
                                 </div>
-                            @endif
-
-                            <div class="attachment-row form-item">
-                                <input name="image" id="banner_image" type="file" class="attachment-row-input button-only" accept="image/*">
-                                <label for="banner_image" class="attachment-label">
-                                    <x-admin.material-icon name="attach_file" />
-                                    {{ __('Kies een bestand') }}
-                                </label>
+                                <a class="btn" href="{{ route('admin.templates.index') }}">
+                                    <x-admin.material-icon name="dashboard_customize" />
+                                    {{ __('Open template module') }}
+                                </a>
                             </div>
 
-                            @if ($banner->image_path)
-                                <label class="banner-delete-image-option">
-                                    <input type="checkbox" name="delete_image" value="1">
-                                    <span class="checkbox"></span>
-                                    {{ __('Verwijder afbeelding') }}
-                                </label>
-                            @endif
+                            <div class="template-wireframe-grid">
+                                @forelse ($templatePreviews as $templatePreview)
+                                    <x-admin.template-wireframe
+                                        :template="$templatePreview"
+                                        :selected-section="old('template_section', $banner->template_section)"
+                                        compact
+                                    />
+                                @empty
+                                    <div class="template-wireframe-empty">
+                                        {{ __('No active templates found.') }}
+                                    </div>
+                                @endforelse
+                            </div>
 
                             <div class="form-item">
                                 <div class="form-item-label">
-                                    <label for="alt_text">{{ __('Alt tekst') }}</label>
+                                    <label for="template_section">{{ __('Defined section') }}</label>
                                 </div>
                                 <div class="form-item-input">
-                                    <input id="alt_text" name="alt_text" type="text" value="{{ old('alt_text', $metadata['alt_text'] ?? '') }}">
+                                    <select id="template_section" name="template_section">
+                                        <option value="">{{ __('Selecteer') }}</option>
+                                        @foreach ($templateSections as $sectionHandle => $sectionLabel)
+                                            <option value="{{ $sectionHandle }}" @selected(old('template_section', $banner->template_section) === $sectionHandle)>{{ $sectionLabel }}</option>
+                                        @endforeach
+                                    </select>
+                                    <p class="form-item-description">{{ __('Choose where this banner slider can be rendered by the active frontend template.') }}</p>
+                                    @include('admin.content.partials.field-error', ['field' => 'template_section'])
                                 </div>
                             </div>
-                            @include('admin.content.partials.field-error', ['field' => 'image'])
-                        </div>
-                    </div>
-                @elseif ($activeTab === 'translations')
-                    <div class="main-section">
-                        @include('admin.banners.partials.page-header', [
-                            'title' => __('Vertalingen'),
-                            'section' => $pageName,
-                        ])
-
-                        <span class="content-admin-screen-label">{{ __('Vertalingen') }}</span>
-
-                        <div class="banner-language-list">
-                            @foreach ($locales as $locale => $label)
-                                @php $translation = $translations->get($locale); @endphp
-                                <section class="banner-language-panel">
-                                    <h3 class="sub-title language-panel-title">
-                                        <x-admin.language-flag :locale="$locale" :label="$label" decorative />
-                                        {{ $label }}
-                                    </h3>
-
-                                    <div class="form-item">
-                                        <div class="form-item-label">
-                                            <label for="translation_title_{{ $locale }}">{{ __('Titel') }}</label>
-                                        </div>
-                                        <div class="form-item-input">
-                                            <input id="translation_title_{{ $locale }}" name="translations[{{ $locale }}][title]" type="text" value="{{ old('translations.'.$locale.'.title', $translation?->title) }}">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-item">
-                                        <div class="form-item-label">
-                                            <label for="translation_subtitle_{{ $locale }}">{{ __('Subtitel') }}</label>
-                                        </div>
-                                        <div class="form-item-input">
-                                            <input id="translation_subtitle_{{ $locale }}" name="translations[{{ $locale }}][subtitle]" type="text" value="{{ old('translations.'.$locale.'.subtitle', $translation?->subtitle) }}">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-item">
-                                        <div class="form-item-label">
-                                            <label for="translation_link_{{ $locale }}">{{ __('Link') }}</label>
-                                        </div>
-                                        <div class="form-item-input">
-                                            <input id="translation_link_{{ $locale }}" name="translations[{{ $locale }}][link_url]" type="text" value="{{ old('translations.'.$locale.'.link_url', $translation?->link_url) }}">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-item">
-                                        <div class="form-item-label">
-                                            <label for="translation_button_{{ $locale }}">{{ __('Knop titel') }}</label>
-                                        </div>
-                                        <div class="form-item-input">
-                                            <input id="translation_button_{{ $locale }}" name="translations[{{ $locale }}][button_text]" type="text" value="{{ old('translations.'.$locale.'.button_text', $translation?->button_text) }}">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-item">
-                                        <div class="form-item-label">
-                                            <label for="translation_text_{{ $locale }}">{{ __('Tekst') }}</label>
-                                        </div>
-                                        <div class="form-item-input">
-                                            <textarea id="translation_text_{{ $locale }}" name="translations[{{ $locale }}][content]">{{ old('translations.'.$locale.'.content', $translation?->content) }}</textarea>
-                                        </div>
-                                    </div>
-                                </section>
-                            @endforeach
                         </div>
                     </div>
                 @endif
-            </form>
+                </form>
+            @elseif ($activeTab === 'images')
+                <div class="main-section">
+                    @include('admin.banners.partials.page-header', [
+                        'title' => __('Afbeeldingen'),
+                        'section' => $pageName,
+                    ])
+
+                    <span class="content-admin-screen-label">{{ __('Afbeeldingen') }}</span>
+
+                    <div class="content-section">
+                        <livewire:admin.banners.banner-image-album :banner="$banner" :key="'banner-image-album-'.$banner->id" />
+                        @include('admin.content.partials.field-error', ['field' => 'images'])
+                    </div>
+                </div>
+            @else
+                <div class="main-section">
+                    @include('admin.banners.partials.page-header', [
+                        'title' => __('Vertalingen'),
+                        'section' => $pageName,
+                    ])
+
+                    <span class="content-admin-screen-label">{{ __('Vertalingen') }}</span>
+
+                    <div class="content-section">
+                        <livewire:admin.banners.banner-translation-editor :banner="$banner" :locales="$locales" :key="'banner-translation-editor-'.$banner->id" />
+                    </div>
+                </div>
+            @endif
 
             @if ($isExisting)
                 <div class="author-container">

@@ -27,7 +27,9 @@ class VacancyController extends Controller
     {
         $categories = $this->categories();
         $categoryId = $request->integer('categoryId');
-        $query = Vacancy::query()->with('categories');
+        $query = Vacancy::query()
+            ->with('categories')
+            ->with(['form' => fn ($formQuery) => $formQuery->withCount('submissions')]);
 
         if ($request->filled('id')) {
             $query->whereKey($request->integer('id'));
@@ -86,7 +88,10 @@ class VacancyController extends Controller
         }
 
         $vacancy = $this->vacancyFromRequest($request);
-        $vacancy?->load(['categories', 'form']);
+        $vacancy?->load([
+            'categories',
+            'form' => fn ($formQuery) => $formQuery->withCount('submissions'),
+        ]);
 
         return view('admin.vacancies.edit', [
             'vacancy' => $vacancy ?? new Vacancy([
@@ -95,7 +100,7 @@ class VacancyController extends Controller
                 'active_from' => now(),
             ]),
             'categories' => $this->categories(),
-            'forms' => Form::query()->orderBy('name')->get(),
+            'forms' => Form::query()->withCount('submissions')->orderBy('name')->get(),
             'activeTab' => $this->activeTab($request),
             'routeNames' => $this->routeNames(),
             'pageName' => __('Edit vacancy'),

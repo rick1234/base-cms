@@ -21,7 +21,6 @@ use App\Models\Cms\ContentItem;
 use App\Models\Cms\ContentPreviewToken;
 use App\Models\Cms\Form;
 use App\Models\Cms\Page;
-use App\Models\Cms\SliderCategory;
 use Database\Seeders\ContentModuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -147,6 +146,26 @@ class ContentModuleTest extends TestCase
             ->assertSee('Weet u zeker dat u terug wilt gaan, er zijn wijzigingen gedaan aan deze :module', false)
             ->assertSee('data-unsaved-back-module="pagina"', false)
             ->assertSee(__('Terug'));
+    }
+
+    public function test_admin_listing_delete_forms_expose_confirm_modal_metadata(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $contentItem = ContentItem::query()->create([
+            'title' => 'Delete confirmation item',
+            'slug' => 'delete-confirmation-item',
+            'locale' => 'nl',
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/content')
+            ->assertOk()
+            ->assertSee('data-delete-confirm-title="Item verwijderen?"', false)
+            ->assertSee('data-delete-confirm-message="Weet u zeker dat u :item wilt verwijderen?"', false)
+            ->assertSee('data-delete-confirm-button="Verwijderen"', false)
+            ->assertSee('data-delete-item-name="Delete confirmation item"', false)
+            ->assertSee('data-delete-item-id="'.$contentItem->id.'"', false);
     }
 
     public function test_admin_can_create_a_content_item_with_categories_and_attachments(): void
@@ -1307,18 +1326,12 @@ class ContentModuleTest extends TestCase
             'slug' => 'knowledge',
             'status' => 'active',
         ]);
-        $sliderCategory = SliderCategory::query()->create([
-            'name' => 'Legacy slider',
-            'slug' => 'legacy-slider',
-            'status' => 'active',
-        ]);
         $category = ContentCategory::query()->create([
             'name' => 'Insights',
             'slug' => 'insights',
             'description' => 'Original description',
             'meta_description' => 'Legacy meta description',
             'custom_url' => '/legacy-insights',
-            'slider_category_id' => $sliderCategory->id,
             'status' => 'active',
             'is_hidden_from_navigation' => true,
         ]);
@@ -1370,43 +1383,27 @@ class ContentModuleTest extends TestCase
         $this->assertSame($parent->id, $category->parent_id);
         $this->assertSame('Legacy meta description', $category->meta_description);
         $this->assertSame('/legacy-insights', $category->custom_url);
-        $this->assertSame($sliderCategory->id, $category->slider_category_id);
         $this->assertTrue($category->is_hidden_from_navigation);
     }
 
-    public function test_content_slider_page_ignores_removed_category_slider_routes(): void
+    public function test_content_slider_routes_are_removed(): void
     {
         $admin = User::factory()->admin()->create();
-        $category = ContentCategory::query()->create([
-            'name' => 'Insights',
-            'slug' => 'insights',
-            'status' => 'active',
-        ]);
-        $sliderCategory = SliderCategory::query()->create([
-            'name' => 'Homepage slider',
-            'slug' => 'homepage-slider',
-            'status' => 'active',
-        ]);
         $contentItem = ContentItem::query()->create([
-            'title' => 'Slider route check',
-            'slug' => 'slider-route-check',
+            'title' => 'Removed slider route check',
+            'slug' => 'removed-slider-route-check',
             'locale' => 'nl',
             'status' => 'draft',
-            'slider_category_id' => $sliderCategory->id,
         ]);
-
-        $contentItem->categories()->sync([$category->id => ['sort_order' => 1]]);
 
         $this->assertNull(app('router')->getRoutes()->getByName('admin.content.categories.slider'));
         $this->assertNull(app('router')->getRoutes()->getByName('cms.content.categories.slider'));
+        $this->assertNull(app('router')->getRoutes()->getByName('admin.content.slider'));
+        $this->assertNull(app('router')->getRoutes()->getByName('cms.content.slider'));
 
         $this->actingAs($admin)
             ->get("/admin/content/{$contentItem->id}/slider")
-            ->assertOk()
-            ->assertSee('Slider route check')
-            ->assertSee('Homepage slider')
-            ->assertDontSee('Categorie sliders')
-            ->assertDontSee("/admin/content/categorieen/{$category->id}/slider", false);
+            ->assertNotFound();
     }
 
     public function test_content_photo_album_livewire_component_uploads_sorts_and_saves_image_seo(): void

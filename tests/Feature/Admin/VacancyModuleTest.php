@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Cms\Vacancy;
 use App\Models\Cms\VacancyCategory;
 use App\Models\Cms\Form;
+use App\Models\Cms\FormSubmission;
 use App\Models\User;
 use Database\Seeders\VacancyModuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -71,9 +72,15 @@ class VacancyModuleTest extends TestCase
                 'einddatum' => '30-06-2026',
                 'categorie' => [$category->id],
                 'locatie' => 'Ede',
+                'vacancy_type' => 'volunteer',
                 'dienstverband' => 'Fulltime',
+                'education_level' => 'HBO',
+                'experience_level' => 'Medior',
+                'work_mode' => 'hybrid',
                 'uren' => '40 uur',
                 'salaris' => 'In overleg',
+                'volunteer_commitment' => 'Elke woensdagmiddag',
+                'volunteer_compensation' => 'Reiskostenvergoeding',
                 'sollicitatie_url' => '/vacatures/laravel-developer',
                 'contact_email' => 'jobs@example.com',
             ])
@@ -85,7 +92,13 @@ class VacancyModuleTest extends TestCase
         $this->assertSame('laravel-developer', $vacancy->slug);
         $this->assertSame('published', $vacancy->status);
         $this->assertSame('Ede', $vacancy->metadata['location']);
+        $this->assertSame('volunteer', $vacancy->metadata['vacancy_type']);
         $this->assertSame('Fulltime', $vacancy->metadata['employment_type']);
+        $this->assertSame('HBO', $vacancy->metadata['education_level']);
+        $this->assertSame('Medior', $vacancy->metadata['experience_level']);
+        $this->assertSame('hybrid', $vacancy->metadata['work_mode']);
+        $this->assertSame('Elke woensdagmiddag', $vacancy->metadata['volunteer_commitment']);
+        $this->assertSame('Reiskostenvergoeding', $vacancy->metadata['volunteer_compensation']);
         $this->assertDatabaseHas('vacancy_category_vacancy', [
             'vacancy_category_id' => $category->id,
             'vacancy_id' => $vacancy->id,
@@ -195,6 +208,9 @@ class VacancyModuleTest extends TestCase
             ->assertSee('Algemeen')
             ->assertSee('Formulier')
             ->assertSee('SEO')
+            ->assertSee('data-wysiwyg-editor', false)
+            ->assertSee('name="vacancy_type"', false)
+            ->assertSee('name="volunteer_commitment"', false)
             ->assertDontSee('<h2 class="title">Algemeen</h2>', false)
             ->assertDontSee('<label for="slug">URL</label>', false)
             ->assertDontSee('id="slug"', false)
@@ -219,6 +235,38 @@ class VacancyModuleTest extends TestCase
             ->assertDontSee('canonical_url', false)
             ->assertDontSee('id="robots"', false)
             ->assertDontSee('<label for="robots"', false);
+    }
+
+    public function test_vacancy_form_reactions_are_linked_from_form_tab_and_index(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $form = Form::query()->create([
+            'name' => 'Vrijwilligersreacties',
+            'slug' => 'vrijwilligersreacties',
+            'status' => 'published',
+        ]);
+        $vacancy = Vacancy::query()->create([
+            'title' => 'Vrijwilliger activiteiten',
+            'slug' => 'vrijwilliger-activiteiten',
+            'locale' => 'nl',
+            'status' => 'published',
+            'form_id' => $form->id,
+        ]);
+
+        FormSubmission::query()->create(['form_id' => $form->id]);
+        FormSubmission::query()->create(['form_id' => $form->id]);
+
+        $this->actingAs($admin)
+            ->get("/admin/vacatures/{$vacancy->id}/edit/form")
+            ->assertOk()
+            ->assertSee('2 reacties')
+            ->assertSee('/admin/form/'.$form->id.'/submissions', false);
+
+        $this->actingAs($admin)
+            ->get('/admin/vacatures')
+            ->assertOk()
+            ->assertSee('Reacties')
+            ->assertSee('/admin/form/'.$form->id.'/submissions', false);
     }
 
     public function test_vacancy_categories_support_legacy_fields_and_delete_routes(): void

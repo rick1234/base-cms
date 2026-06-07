@@ -124,29 +124,17 @@ class CmsModuleTest extends TestCase
             ->assertSee('Pages');
     }
 
-    public function test_generic_cms_empty_states_use_human_module_names(): void
+    public function test_removed_slider_legacy_cms_screens_are_not_registered(): void
     {
         $admin = User::factory()->admin()->create();
 
-        $this->seed(CountryLanguageSeeder::class);
-        $this->seed(TranslationModuleSeeder::class);
-
-        app()->setLocale('nl');
-        app('translator')->setLoaded([]);
-
         $this->actingAs($admin)
             ->get('/cms/slider/index.php')
-            ->assertOk()
-            ->assertSee('Er zijn geen sliders gevonden.')
-            ->assertDontSee('Er zijn nog geen records gemigreerd of aangemaakt voor dit scherm.')
-            ->assertDontSee('No records have been migrated or created for this screen yet.');
+            ->assertNotFound();
 
         $this->actingAs($admin)
             ->get('/cms/slider/categorieen/index.php')
-            ->assertOk()
-            ->assertSee('Er zijn geen slider categorieen gevonden.')
-            ->assertDontSee('Er zijn nog geen records gemigreerd of aangemaakt voor dit scherm.')
-            ->assertDontSee('No records have been migrated or created for this screen yet.');
+            ->assertNotFound();
     }
 
     public function test_dedicated_cms_empty_states_use_human_module_names(): void

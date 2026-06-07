@@ -56,6 +56,10 @@ class UpsertUser
             'role_id',
         ]);
 
+        if (blank($attributes['password'] ?? null) && ! $user->exists) {
+            $attributes['password'] = Str::password(32);
+        }
+
         if (blank($attributes['password'] ?? null)) {
             unset($attributes['password']);
         }

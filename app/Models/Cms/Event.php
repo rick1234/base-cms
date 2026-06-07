@@ -2,6 +2,8 @@
 
 namespace App\Models\Cms;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -31,6 +33,11 @@ class Event extends CmsModel
             ->orderBy('event_categories.name');
     }
 
+    public function form(): BelongsTo
+    {
+        return $this->belongsTo(Form::class);
+    }
+
     public function images(): HasMany
     {
         return $this->hasMany(EventImage::class)->orderBy('sort_order')->orderBy('id');
@@ -56,5 +63,23 @@ class Event extends CmsModel
     public function isActive(): bool
     {
         return $this->status === 'published';
+    }
+
+    /**
+     * @param  Builder<Event>  $query
+     * @return Builder<Event>
+     */
+    public function scopeOnline(Builder $query): Builder
+    {
+        return $query
+            ->where('status', 'published')
+            ->where(function (Builder $query): void {
+                $query->whereNull('active_from')
+                    ->orWhereDate('active_from', '<=', now());
+            })
+            ->where(function (Builder $query): void {
+                $query->whereNull('active_until')
+                    ->orWhereDate('active_until', '>=', now());
+            });
     }
 }

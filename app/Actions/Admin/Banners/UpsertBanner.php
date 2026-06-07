@@ -29,6 +29,7 @@ class UpsertBanner
             'starts_at',
             'ends_at',
             'sort_order',
+            'template_section',
         ]);
 
         $attributes['metadata'] = [

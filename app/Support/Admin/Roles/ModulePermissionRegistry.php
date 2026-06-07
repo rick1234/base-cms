@@ -263,12 +263,10 @@ class ModulePermissionRegistry
                 'structured_blocks' => 'Content blocks',
                 'images' => 'Afbeeldingen',
                 'attachments' => 'Bijlagen',
-                'slider' => 'Slider',
                 'forms' => 'Formulieren',
             ],
             'content_categories' => [
                 'images' => 'Afbeeldingen',
-                'slider' => 'Slider',
             ],
             'events' => [
                 'agenda' => 'Agenda',

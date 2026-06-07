@@ -20,6 +20,9 @@ use Illuminate\Notifications\Notifiable;
     'name',
     'email',
     'password',
+    'two_factor_secret',
+    'two_factor_confirmed_at',
+    'two_factor_disabled_at',
     'is_admin',
     'username',
     'locale',
@@ -62,8 +65,12 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_admin' => 'boolean',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_confirmed_at' => 'datetime',
+            'two_factor_disabled_at' => 'datetime',
             'active_from' => 'date',
             'active_until' => 'date',
+            'last_login_at' => 'datetime',
             'is_active' => 'boolean',
             'legacy_payload' => 'array',
             'password' => 'hashed',
@@ -129,6 +136,16 @@ class User extends Authenticatable
         }
 
         return true;
+    }
+
+    public function isRevoked(): bool
+    {
+        return $this->active_until !== null && $this->active_until->isPast();
+    }
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return filled($this->two_factor_secret) && $this->two_factor_confirmed_at !== null && $this->two_factor_disabled_at === null;
     }
 
     public function displayName(): string

@@ -73,7 +73,7 @@
                             <div class="overview-item permissions">{{ $role->permissions_count }}</div>
                             <div class="overview-item users">{{ $role->users_count }}</div>
                             <div class="overview-item status">
-                                <span class="{{ $role->status === 'active' ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="role" :record="$role" :value="$role->status" :active="$role->status === 'active'" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $role->id]) }}" title="{{ __('Bewerken') }}">

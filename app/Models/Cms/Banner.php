@@ -37,9 +37,21 @@ class Banner extends CmsModel
         return $this->hasMany(BannerTranslation::class, 'banner_id')->orderBy('locale');
     }
 
+    public function images(): HasMany
+    {
+        return $this->hasMany(BannerImage::class, 'banner_id')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', 'published');
+    }
+
+    public function scopeForTemplateSection(Builder $query, string $section): Builder
+    {
+        return $query->where('template_section', $section);
     }
 
     public function isActive(): bool

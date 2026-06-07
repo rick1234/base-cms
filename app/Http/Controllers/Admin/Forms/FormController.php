@@ -174,16 +174,10 @@ class FormController extends Controller
             ]);
         }
 
-        $form->load('blocks.rows.fields');
-
-        $submissions = $form->submissions()
-            ->with('answers')
-            ->paginate(25)
-            ->withQueryString();
+        $form->load('blocks.rows.fields')->loadCount('submissions');
 
         return view('admin.forms.submissions', [
             'form' => $form,
-            'submissions' => $submissions,
             'routeNames' => $this->routeNames(),
             'pageName' => __('Form messages'),
             'backUrl' => route($this->routeName('edit'), ['id' => $form->id]),

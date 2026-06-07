@@ -1,11 +1,4 @@
-@php
-    $contentImageUploadRoute = $contentImageUploadRoute ?? route(
-        request()->routeIs('cms.*') ? 'cms.content.images.upload' : 'admin.content.images.upload',
-        ['id' => $contentItem->id],
-    );
-@endphp
-
-<div class="content-album">
+<div class="content-album {{ trim($albumClass ?? '') }}">
     @if ($message)
         <div class="content-album-message flash-message flash-message-success" data-flash-message role="alert">
             <div class="flash-message-content">
@@ -33,7 +26,7 @@
         </div>
 
         <form
-            action="{{ $contentImageUploadRoute }}"
+            action="{{ $imageUploadRoute }}"
             class="content-album-upload-form"
             data-content-image-editor
             data-edited-file-suffix="{{ __('edited') }}"
@@ -46,7 +39,7 @@
             data-uploading-copy="{{ __('De bewerkte afbeelding wordt opgeslagen.') }}"
             data-uploading-title="{{ __('Afbeelding opslaan') }}"
             data-upload-success-message="{{ __('Image uploaded.') }}"
-            data-upload-url="{{ $contentImageUploadRoute }}"
+            data-upload-url="{{ $imageUploadRoute }}"
             enctype="multipart/form-data"
             method="post"
         >

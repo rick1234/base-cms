@@ -29,6 +29,7 @@ class BannerRequest extends FormRequest
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'template_section' => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:[_-][a-z0-9]+)*$/'],
             'alt_text' => ['nullable', 'string', 'max:255'],
             'target' => ['nullable', 'string', 'in:_self,_blank'],
             'delete_image' => ['boolean'],
@@ -43,7 +44,7 @@ class BannerRequest extends FormRequest
             'translations.*.button_text' => ['nullable', 'string', 'max:255'],
             'translations.*.content' => ['nullable', 'string'],
             'translations.*.alt_text' => ['nullable', 'string', 'max:255'],
-            'active_tab' => ['sometimes', Rule::in(['general', 'image', 'translations'])],
+            'active_tab' => ['sometimes', Rule::in(['general', 'images', 'template', 'translations'])],
             'saveAndStay' => ['sometimes', 'boolean'],
         ];
     }
@@ -115,6 +116,10 @@ class BannerRequest extends FormRequest
 
         if ($this->has('sort_order')) {
             $data['sort_order'] = $this->input('sort_order');
+        }
+
+        if ($this->has('template_section')) {
+            $data['template_section'] = $this->input('template_section');
         }
 
         if ($this->hasAny(['categories', 'categorie'])) {
@@ -190,6 +195,7 @@ class BannerRequest extends FormRequest
             'starts_at' => optional($banner->starts_at)->format('Y-m-d'),
             'ends_at' => optional($banner->ends_at)->format('Y-m-d'),
             'sort_order' => $banner->sort_order,
+            'template_section' => $banner->template_section,
             'alt_text' => $metadata['alt_text'] ?? null,
             'target' => $metadata['target'] ?? '_self',
             'categories' => $banner->categories()->pluck('banner_categories.id')->all(),
@@ -209,9 +215,10 @@ class BannerRequest extends FormRequest
     private function shouldPreserveField(string $field, string $activeTab): bool
     {
         return match ($activeTab) {
-            'image' => $field !== 'alt_text',
+            'images' => $field !== 'alt_text',
+            'template' => $field !== 'template_section',
             'translations' => ! in_array($field, ['title', 'link_url', 'button_text', 'text'], true),
-            default => in_array($field, ['title', 'link_url', 'button_text', 'text', 'alt_text'], true),
+            default => in_array($field, ['title', 'link_url', 'button_text', 'text', 'alt_text', 'template_section'], true),
         };
     }
 }

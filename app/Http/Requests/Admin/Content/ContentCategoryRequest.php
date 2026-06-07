@@ -20,7 +20,6 @@ class ContentCategoryRequest extends FormRequest
             'name' => $this->input('name', $this->input('naam')),
             'description' => $this->input('description', $this->input('content')),
             'meta_description' => $this->input('meta_description', $this->input('metadescription')),
-            'slider_category_id' => $this->input('slider_category_id', $this->input('slider')),
             'status' => $this->normalizeStatus($this->input('status', $this->input('actief'))),
         ], fn (mixed $value): bool => $value !== null);
 
@@ -57,7 +56,6 @@ class ContentCategoryRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'meta_description' => ['nullable', 'string', 'max:500'],
             'image_path' => ['nullable', 'string', 'max:255'],
-            'slider_category_id' => ['nullable', 'integer', 'exists:slider_categories,id'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
             'is_hidden_from_navigation' => ['sometimes', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],

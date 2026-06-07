@@ -129,7 +129,7 @@
                                 &euro; {{ number_format($product->price / 100, 2, ',', '.') }}
                             </div>
                             <div class="overview-item status">
-                                <span class="{{ $product->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="catalog-product" :record="$product" :value="$product->status" :active="$product->isActive()" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $product->id]) }}" title="{{ __('Bewerken') }}">

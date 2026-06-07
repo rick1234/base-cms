@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Navigation;
 use App\Actions\Admin\Navigation\SaveNavigationMenu;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Navigation\NavigationLinkSearchRequest;
+use App\Http\Requests\Admin\Navigation\NavigationMenuIndexRequest;
 use App\Http\Requests\Admin\Navigation\NavigationMenuRequest;
 use App\Models\Cms\CmsLanguage;
 use App\Models\Cms\Domain;
@@ -22,14 +23,53 @@ class NavigationMenuController extends Controller
 {
     public function __construct(private readonly NavigationLinkRegistry $links) {}
 
-    public function index(): View
+    public function index(NavigationMenuIndexRequest $request): View
     {
+        $filters = $request->validated();
+        $query = NavigationMenu::query()
+            ->with('domain')
+            ->withCount('items');
+
+        if (isset($filters['id'])) {
+            $query->whereKey((int) $filters['id']);
+        }
+
+        if (filled($filters['name'] ?? null)) {
+            $query->where('name', 'like', '%'.$filters['name'].'%');
+        }
+
+        if ($request->user()?->is_admin && filled($filters['handle'] ?? null)) {
+            $query->where('handle', 'like', '%'.$filters['handle'].'%');
+        }
+
+        if (($filters['locale'] ?? null) === 'fallback') {
+            $query->whereNull('locale');
+        } elseif (filled($filters['locale'] ?? null)) {
+            $query->where('locale', $filters['locale']);
+        }
+
+        if (($filters['domain_id'] ?? null) === 'global') {
+            $query->whereNull('domain_id');
+        } elseif (filled($filters['domain_id'] ?? null)) {
+            $query->where('domain_id', (int) $filters['domain_id']);
+        }
+
+        if (($filters['status'] ?? null) === 'active') {
+            $query->where('is_active', true);
+        } elseif (($filters['status'] ?? null) === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        if (isset($filters['items_count'])) {
+            $query->has('items', '=', (int) $filters['items_count']);
+        }
+
         return view('admin.navigation.index', [
-            'menus' => NavigationMenu::query()
-                ->with('domain')
-                ->withCount('items')
+            'menus' => $query
                 ->ordered()
                 ->get(),
+            'domains' => Domain::query()->ordered()->get(),
+            'languages' => $this->languages(),
             'pageName' => __('Navigation'),
         ]);
     }

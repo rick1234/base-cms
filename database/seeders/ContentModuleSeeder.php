@@ -9,7 +9,6 @@ use App\Models\Cms\ContentCategoryImage;
 use App\Models\Cms\ContentImage;
 use App\Models\Cms\ContentItem;
 use App\Models\Cms\Form;
-use App\Models\Cms\SliderCategory;
 use Database\Seeders\Support\SeederFiles;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -19,18 +18,6 @@ class ContentModuleSeeder extends Seeder
     public function run(): void
     {
         $adminId = User::query()->where('email', 'admin@example.com')->value('id');
-
-        $sliderCategory = SliderCategory::query()->firstOrCreate(
-            ['slug' => 'homepage-hero'],
-            [
-                'name' => 'Homepage hero',
-                'description' => 'Seeded slider category used by the rebuilt content module.',
-                'status' => 'active',
-                'sort_order' => 1,
-                'created_by' => $adminId,
-                'updated_by' => $adminId,
-            ],
-        );
 
         $contactForms = [];
 
@@ -54,7 +41,6 @@ class ContentModuleSeeder extends Seeder
                 'name' => 'News',
                 'description' => 'Seeded news category for content module testing.',
                 'meta_description' => 'News and updates managed through the Laravel content module.',
-                'slider_category_id' => $sliderCategory->id,
                 'status' => 'active',
                 'sort_order' => 1,
                 'created_by' => $adminId,
@@ -95,7 +81,6 @@ class ContentModuleSeeder extends Seeder
             $contentItem = $this->contentItem([
                 ...$item,
                 'form_id' => ($item['uses_form'] ?? false) ? $contactForms[$item['locale']]->id : null,
-                'slider_category_id' => ($item['uses_slider'] ?? false) ? $sliderCategory->id : null,
                 'created_by' => $adminId,
                 'updated_by' => $adminId,
             ]);
@@ -157,7 +142,6 @@ class ContentModuleSeeder extends Seeder
                 'slug' => 'welcome-to-the-rebuilt-content-module',
                 'meta_description' => 'Voorbeeldpagina voor de vernieuwde Laravel paginamodule.',
                 'uses_form' => true,
-                'uses_slider' => true,
                 'sort_order' => 1,
             ],
             [
@@ -168,7 +152,6 @@ class ContentModuleSeeder extends Seeder
                 'slug' => 'welcome-to-the-rebuilt-content-module-en',
                 'meta_description' => 'Seeded content item for the Laravel rebuilt page module.',
                 'uses_form' => true,
-                'uses_slider' => true,
                 'sort_order' => 2,
             ],
             [
@@ -203,7 +186,7 @@ class ContentModuleSeeder extends Seeder
                 'status' => 'published',
                 'active_from' => now()->subDay()->toDateString(),
                 'active_until' => now()->addYear()->toDateString(),
-                ...collect($attributes)->except(['kind', 'uses_form', 'uses_slider'])->all(),
+                ...collect($attributes)->except(['kind', 'uses_form'])->all(),
             ],
         );
     }

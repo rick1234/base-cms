@@ -67,7 +67,7 @@
                             <div class="overview-item code">{{ $coupon->code }}</div>
                             <div class="overview-item price">{{ $coupon->percentage_discount }}%</div>
                             <div class="overview-item status">
-                                <span class="{{ $coupon->is_active ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="catalog-coupon" :record="$coupon" :value="$coupon->is_active" :active="$coupon->is_active" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $coupon->id]) }}" title="{{ __('Bewerken') }}">

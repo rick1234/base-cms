@@ -98,10 +98,10 @@
                             <div class="overview-item code">{{ $country->iso2 ?: '-' }}</div>
                             <div class="overview-item currency">{{ $country->currency_code ?: '-' }}</div>
                             <div class="overview-item enabled">
-                                <span class="{{ $country->is_enabled ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="country-enabled" :record="$country" :value="$country->is_enabled" :active="$country->is_enabled" />
                             </div>
                             <div class="overview-item status">
-                                <span class="{{ $country->status === 'active' ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="country" :record="$country" :value="$country->status" :active="$country->status === 'active'" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $country->id]) }}" title="{{ __('Bewerken') }}">

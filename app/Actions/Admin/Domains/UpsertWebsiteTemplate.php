@@ -35,6 +35,7 @@ class UpsertWebsiteTemplate
                 'asset_path' => $this->pathValue($data, 'asset_path', $defaultPaths, $previousDefaults),
                 'view_path' => $this->pathValue($data, 'view_path', $defaultPaths, $previousDefaults),
                 'default_settings' => $this->settings($data),
+                'defined_sections' => $this->definedSections($data),
                 'is_active' => (bool) ($data['is_active'] ?? false),
                 'sort_order' => (int) ($data['sort_order'] ?? 0),
                 'updated_by' => $user?->id,
@@ -81,4 +82,25 @@ class UpsertWebsiteTemplate
             ->all();
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<array{handle: string, label: string, type: string}>
+     */
+    private function definedSections(array $data): array
+    {
+        return collect($data['defined_sections'] ?? [])
+            ->map(fn (array $section): array => [
+                'handle' => trim((string) ($section['handle'] ?? '')),
+                'label' => trim((string) ($section['label'] ?? '')),
+                'type' => in_array(($section['type'] ?? 'banner'), ['banner', 'mixed'], true) ? (string) ($section['type'] ?? 'banner') : 'banner',
+            ])
+            ->filter(fn (array $section): bool => $section['handle'] !== '' || $section['label'] !== '')
+            ->map(fn (array $section): array => [
+                'handle' => $section['handle'],
+                'label' => $section['label'] ?: str($section['handle'])->replace(['_', '-'], ' ')->title()->toString(),
+                'type' => $section['type'],
+            ])
+            ->values()
+            ->all();
+    }
 }

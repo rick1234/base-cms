@@ -54,10 +54,6 @@ class ContentItemRequest extends FormRequest
             $data['form_id'] = $this->input('form_id', $this->input('formulier_id'));
         }
 
-        if ($this->hasAny(['slider_category_id', 'slider'])) {
-            $data['slider_category_id'] = $this->input('slider_category_id', $this->input('slider'));
-        }
-
         if ($this->hasAny(['categories', 'categorie'])) {
             $data['categories'] = $this->input('categories', $this->input('categorie'));
         }
@@ -89,7 +85,6 @@ class ContentItemRequest extends FormRequest
             'active_from' => ['nullable', 'date'],
             'active_until' => ['nullable', 'date', 'after_or_equal:active_from'],
             'form_id' => ['nullable', 'integer', 'exists:forms,id'],
-            'slider_category_id' => ['nullable', 'integer', 'exists:slider_categories,id'],
             'categories' => ['nullable', 'array'],
             'categories.*' => ['integer', 'exists:content_categories,id'],
             'attachment_names' => ['nullable', 'array'],
@@ -134,7 +129,6 @@ class ContentItemRequest extends FormRequest
             'active_from' => optional($contentItem->active_from)->format('Y-m-d'),
             'active_until' => optional($contentItem->active_until)->format('Y-m-d'),
             'form_id' => $contentItem->form_id,
-            'slider_category_id' => $contentItem->slider_category_id,
             'categories' => $contentItem->categories()->pluck('content_categories.id')->all(),
         ];
 
@@ -154,7 +148,7 @@ class ContentItemRequest extends FormRequest
         return match ($activeTab) {
             'seo' => $field !== 'meta_description',
             'form' => $field !== 'form_id',
-            default => in_array($field, ['meta_description', 'form_id', 'slider_category_id'], true),
+            default => in_array($field, ['meta_description', 'form_id'], true),
         };
     }
 

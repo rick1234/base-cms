@@ -186,9 +186,14 @@
                             <nav class="navigation-selector-types" aria-label="{{ __('Modules') }}" data-navigation-selector-types></nav>
 
                             <div class="navigation-selector-content">
-                                <label class="listing-filter-check navigation-selector-language-toggle">
-                                    <input type="checkbox" value="1" data-navigation-all-languages>
-                                    <span>{{ __('Zoeken in alle talen') }}</span>
+                                <label class="navigation-selector-language-toggle">
+                                    <input class="u-sr-only" type="checkbox" value="1" data-navigation-all-languages>
+                                    <span class="navigation-selector-toggle" aria-hidden="true">
+                                        <span class="navigation-selector-toggle-option is-off">{{ __('Off') }}</span>
+                                        <span class="navigation-selector-toggle-option is-on">{{ __('On') }}</span>
+                                        <span class="navigation-selector-toggle-knob"></span>
+                                    </span>
+                                    <span class="navigation-selector-toggle-label">{{ __('Zoeken in alle talen') }}</span>
                                 </label>
 
                                 <div class="navigation-selector-custom" hidden data-navigation-selector-custom>

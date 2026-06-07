@@ -1,15 +1,19 @@
 @php
     $settings = $form->settings ?? [];
+    $routeLocale = request()->route('locale');
+    $formAction = $routeLocale
+        ? route('frontend.locale.forms.submit', ['locale' => $routeLocale, 'form' => $form->slug])
+        : route('frontend.forms.submit', ['form' => $form->slug]);
 @endphp
 
-<form class="form-builder-form" method="post" action="{{ route('frontend.forms.submit', $form->slug) }}" enctype="multipart/form-data">
+<form class="form-builder-form" method="post" action="{{ $formAction }}" enctype="multipart/form-data">
     @csrf
     <div class="form-builder-honeypot" aria-hidden="true">
         <label for="form_{{ $form->id }}_honeypot">{{ __('Website') }}</label>
         <input id="form_{{ $form->id }}_honeypot" name="website" type="text" tabindex="-1" autocomplete="off">
     </div>
 
-    @if (($settings['show_title'] ?? true) === true)
+    @if (filter_var($settings['show_title'] ?? true, FILTER_VALIDATE_BOOLEAN))
         <h2>{{ $form->name }}</h2>
     @endif
 

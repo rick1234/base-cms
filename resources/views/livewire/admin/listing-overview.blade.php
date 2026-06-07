@@ -101,13 +101,13 @@
                     {{ $contentItem->title }}
                 </div>
                 <div class="overview-item status">
-                    <span class="{{ $contentItem->isOnline() ? 'active-item' : 'inactive-item' }}"></span>
+                            <x-admin.quick-status model="content" :record="$contentItem" :value="$contentItem->status" :active="$contentItem->isOnline()" />
                 </div>
                 <div class="overview-item options">
                     <a href="{{ route($routeNames['edit'], ['id' => $contentItem->id]) }}" title="{{ __('Bewerken') }}" wire:navigate>
                         <x-admin.material-icon name="edit" />
                     </a>
-                    <form method="post" action="{{ route($routeNames['destroy'], $contentItem) }}">
+                    <form method="post" action="{{ route($routeNames['destroy'], $contentItem) }}" data-delete-item-name="{{ $contentItem->title }}" data-delete-item-id="{{ $contentItem->id }}">
                         @csrf
                         @method('delete')
                         <button type="submit" title="{{ __('Verwijderen') }}">

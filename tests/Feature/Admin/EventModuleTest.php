@@ -223,6 +223,7 @@ class EventModuleTest extends TestCase
             ->assertSee('Publicatie periode')
             ->assertSee('Blokken toevoegen')
             ->assertSee('content-block-editor', false)
+            ->assertDontSee('Contentblokken')
             ->assertDontSee('name="intro"', false)
             ->assertDontSee('name="body"', false)
             ->assertDontSee('Evenement Onderdelen');
@@ -304,6 +305,8 @@ class EventModuleTest extends TestCase
                 'ownerType' => 'event',
                 'eventId' => $event->id,
             ])
+            ->assertSee('Blokken')
+            ->assertDontSee('Contentblokken')
             ->set('data.blocks', [
                 [
                     'type' => 'title',
@@ -336,7 +339,7 @@ class EventModuleTest extends TestCase
                 ],
             ])
             ->call('save')
-            ->assertSet('message', 'Contentblokken opgeslagen.');
+            ->assertSet('message', 'Blokken opgeslagen.');
 
         $event->refresh();
 
@@ -440,6 +443,81 @@ class EventModuleTest extends TestCase
         $this->assertSame(2, $firstGroup->refresh()->sort_order);
         $this->assertSame(1, $secondPart->refresh()->sort_order);
         $this->assertSame(2, $firstPart->refresh()->sort_order);
+    }
+
+    public function test_livewire_event_schedule_editor_sorts_set_items_by_start_time(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $event = Event::query()->create([
+            'title' => 'Time sorted schedule event',
+            'slug' => 'time-sorted-schedule-event',
+            'status' => 'draft',
+            'starts_at' => '2026-06-10',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(EventScheduleEditor::class, ['eventId' => $event->id])
+            ->set('groups', [
+                [
+                    'state_id' => -1,
+                    'id' => null,
+                    'name' => 'Dagprogramma',
+                    'is_collapsed' => false,
+                    'sort_order' => 1,
+                    'items' => [
+                        [
+                            'state_id' => -2,
+                            'id' => null,
+                            'title' => 'Lunch',
+                            'content' => null,
+                            'date' => '2026-06-09',
+                            'starts_at' => '11:00',
+                            'ends_at' => null,
+                            'sort_order' => 1,
+                        ],
+                        [
+                            'state_id' => -3,
+                            'id' => null,
+                            'title' => 'Opening',
+                            'content' => null,
+                            'date' => '2026-06-10',
+                            'starts_at' => '6:35',
+                            'ends_at' => '0:00',
+                            'sort_order' => 2,
+                        ],
+                        [
+                            'state_id' => -4,
+                            'id' => null,
+                            'title' => 'Borrel',
+                            'content' => null,
+                            'date' => '2026-06-10',
+                            'starts_at' => null,
+                            'ends_at' => null,
+                            'sort_order' => 3,
+                        ],
+                    ],
+                ],
+            ])
+            ->call('sortItemsByStartTime', 0)
+            ->assertSet('groups.0.items.0.title', 'Opening')
+            ->assertSet('groups.0.items.1.title', 'Lunch')
+            ->assertSet('groups.0.items.2.title', 'Borrel')
+            ->set('groups.0.items.1.ends_at', '11:30')
+            ->assertSet('groups.0.items.0.ends_at', '0:00')
+            ->assertSet('groups.0.items.1.ends_at', '11:30')
+            ->assertSet('message', 'Items gesorteerd op starttijd.')
+            ->set('groups.0.items.0.starts_at', '06:35')
+            ->set('groups.0.items.0.ends_at', '00:00')
+            ->call('save')
+            ->assertSet('message', 'Tijdschema opgeslagen.');
+
+        $parts = EventPart::query()
+            ->where('event_id', $event->id)
+            ->orderBy('sort_order')
+            ->pluck('title')
+            ->all();
+
+        $this->assertSame(['Opening', 'Lunch', 'Borrel'], $parts);
     }
 
     public function test_livewire_event_schedule_editor_adopts_legacy_flat_parts(): void

@@ -30,7 +30,6 @@ class UpsertContentCategory
             'description' => array_key_exists('description', $data) ? $data['description'] : $category->description,
             'meta_description' => array_key_exists('meta_description', $data) ? $data['meta_description'] : $category->meta_description,
             'image_path' => $data['image_path'] ?? $category->image_path,
-            'slider_category_id' => array_key_exists('slider_category_id', $data) ? $data['slider_category_id'] : $category->slider_category_id,
             'status' => $data['status'] ?? 'active',
             'is_hidden_from_navigation' => array_key_exists('is_hidden_from_navigation', $data)
                 ? (bool) $data['is_hidden_from_navigation']

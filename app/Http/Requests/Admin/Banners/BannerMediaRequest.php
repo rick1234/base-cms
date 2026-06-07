@@ -25,6 +25,8 @@ class BannerMediaRequest extends FormRequest
             'cat' => ['nullable', 'string'],
             'file' => ['nullable', 'image', 'max:10240'],
             'image' => ['nullable', 'image', 'max:10240'],
+            'images' => ['array'],
+            'images.*' => ['image', 'max:20480'],
             'banners' => ['array'],
             'banners.*' => ['image', 'max:10240'],
         ];

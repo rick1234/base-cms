@@ -3,6 +3,7 @@ import Coloris from '@melloware/coloris';
 
 const adminMenuButton = document.querySelector('[data-admin-menu-button]');
 const adminNavigation = document.querySelector('[data-admin-navigation]');
+const adminSidebarToggle = document.querySelector('[data-admin-sidebar-toggle]');
 const siteMenuButton = document.querySelector('[data-site-menu-toggle]');
 const siteMenuPanel = document.querySelector('[data-site-menu-panel]');
 const siteMenuOverlay = document.querySelector('[data-site-menu-overlay]');
@@ -318,6 +319,63 @@ if (adminMenuButton instanceof HTMLButtonElement && adminNavigation instanceof H
     });
 }
 
+if (adminSidebarToggle instanceof HTMLButtonElement) {
+    const adminShell = adminSidebarToggle.closest('.site-wrapper-container');
+    const adminNavigationGroups = document.querySelectorAll('.navigation-group');
+    const collapseLabel = adminSidebarToggle.dataset.collapseLabel || 'Collapse menu';
+    const expandLabel = adminSidebarToggle.dataset.expandLabel || 'Expand menu';
+    const adminSidebarCookieName = 'base_cms_admin_sidebar_collapsed';
+
+    const cookieValue = (name) => document.cookie
+        .split(';')
+        .map((cookie) => cookie.trim())
+        .find((cookie) => cookie.startsWith(`${name}=`))
+        ?.slice(name.length + 1);
+
+    const setCookieValue = (name, value) => {
+        const maxAge = 60 * 60 * 24 * 365;
+
+        document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+    };
+
+    const setAdminSidebarCollapsed = (isCollapsed, shouldPersist = true) => {
+        if (! (adminShell instanceof HTMLElement)) {
+            return;
+        }
+
+        adminShell.classList.toggle('is-admin-sidebar-collapsed', isCollapsed);
+        document.body.classList.toggle('admin-sidebar-is-collapsed', isCollapsed);
+        adminSidebarToggle.setAttribute('aria-expanded', String(! isCollapsed));
+
+        adminNavigationGroups.forEach((group) => {
+            if (! (group instanceof HTMLDetailsElement)) {
+                return;
+            }
+
+            if (isCollapsed) {
+                group.open = true;
+
+                return;
+            }
+
+            group.open = false;
+        });
+
+        const label = isCollapsed ? expandLabel : collapseLabel;
+        adminSidebarToggle.title = label;
+        adminSidebarToggle.setAttribute('aria-label', label);
+        if (shouldPersist) {
+            setCookieValue(adminSidebarCookieName, isCollapsed ? 'true' : 'false');
+        }
+    };
+
+    setAdminSidebarCollapsed(cookieValue(adminSidebarCookieName) === 'true', false);
+
+    adminSidebarToggle.addEventListener('click', () => {
+        setAdminSidebarCollapsed(! adminShell?.classList.contains('is-admin-sidebar-collapsed'));
+    });
+}
+
 document.addEventListener('click', (event) => {
     if (! (event.target instanceof Element)) {
         return;
@@ -552,6 +610,11 @@ const contentBlockWidthClasses = Array.from(
     (_, index) => `content-block-builder-item--width-${index * 5}`,
 );
 
+const CONTENT_BLOCK_WIDTH_MIN = 15;
+const CONTENT_BLOCK_WIDTH_MAX = 100;
+const CONTENT_BLOCK_WIDTH_STEP = 5;
+const CONTENT_BLOCK_WIDTH_EDGE_TOLERANCE = 0.025;
+
 const contentBlockWidthByItemKey = new Map();
 
 const normalizeContentBlockWidth = (value) => {
@@ -561,7 +624,35 @@ const normalizeContentBlockWidth = (value) => {
         return 50;
     }
 
-    return Math.max(15, Math.min(100, Math.round(parsed / 5) * 5));
+    return Math.max(
+        CONTENT_BLOCK_WIDTH_MIN,
+        Math.min(
+            CONTENT_BLOCK_WIDTH_MAX,
+            Math.round(parsed / CONTENT_BLOCK_WIDTH_STEP) * CONTENT_BLOCK_WIDTH_STEP,
+        ),
+    );
+};
+
+const contentBlockWidthFromPointer = (range, clientX) => {
+    const rect = range.getBoundingClientRect();
+
+    if (rect.width <= 0) {
+        return normalizeContentBlockWidth(range.value);
+    }
+
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+
+    if (ratio >= 1 - CONTENT_BLOCK_WIDTH_EDGE_TOLERANCE) {
+        return CONTENT_BLOCK_WIDTH_MAX;
+    }
+
+    if (ratio <= CONTENT_BLOCK_WIDTH_EDGE_TOLERANCE) {
+        return CONTENT_BLOCK_WIDTH_MIN;
+    }
+
+    return normalizeContentBlockWidth(
+        CONTENT_BLOCK_WIDTH_MIN + (ratio * (CONTENT_BLOCK_WIDTH_MAX - CONTENT_BLOCK_WIDTH_MIN)),
+    );
 };
 
 const contentBlockItemKey = (item) => {
@@ -683,9 +774,9 @@ const ensureContentBlockWidthSlider = (item, select) => {
         slider = document.createElement('input');
         slider.className = 'content-block-width-slider';
         slider.type = 'range';
-        slider.min = '15';
-        slider.max = '100';
-        slider.step = '5';
+        slider.min = String(CONTENT_BLOCK_WIDTH_MIN);
+        slider.max = String(CONTENT_BLOCK_WIDTH_MAX);
+        slider.step = String(CONTENT_BLOCK_WIDTH_STEP);
         slider.dataset.contentBlockWidthRange = 'true';
         slider.setAttribute('aria-label', select.getAttribute('aria-label') || 'Block width');
 
@@ -718,11 +809,11 @@ const updateContentBlockWidth = (item, width, shouldCommit = false) => {
         return;
     }
 
-    const nextValue = String(width);
+    const nextValue = String(normalizeContentBlockWidth(width));
     const previousValue = select.value;
 
     select.value = nextValue;
-    applyContentBlockWidthClass(item, width);
+    applyContentBlockWidthClass(item, nextValue);
 
     if (shouldCommit && previousValue !== nextValue) {
         select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1027,6 +1118,7 @@ document.addEventListener('input', (event) => {
 });
 
 let activeContentBlockWidthRange = null;
+let activeContentBlockWidthPointerId = null;
 
 document.addEventListener('pointerdown', (event) => {
     if (! (event.target instanceof HTMLInputElement) || ! event.target.matches('[data-content-block-width-range]')) {
@@ -1034,21 +1126,62 @@ document.addEventListener('pointerdown', (event) => {
     }
 
     activeContentBlockWidthRange = event.target;
+    activeContentBlockWidthPointerId = event.pointerId;
     const item = event.target.closest('.fi-fo-builder-item');
+    const width = contentBlockWidthFromPointer(event.target, event.clientX);
+
+    event.target.value = String(width);
+    event.target.setPointerCapture?.(event.pointerId);
 
     if (item instanceof HTMLElement) {
-        setContentBlockWidthPreview(item, event.target.value);
+        setContentBlockWidthPreview(item, width);
+        item.classList.add('is-width-resizing');
+    }
+});
+
+document.addEventListener('pointermove', (event) => {
+    if (
+        ! (activeContentBlockWidthRange instanceof HTMLInputElement)
+        || activeContentBlockWidthPointerId !== event.pointerId
+    ) {
+        return;
+    }
+
+    const item = activeContentBlockWidthRange.closest('.fi-fo-builder-item');
+    const width = contentBlockWidthFromPointer(activeContentBlockWidthRange, event.clientX);
+
+    activeContentBlockWidthRange.value = String(width);
+
+    if (item instanceof HTMLElement) {
+        setContentBlockWidthPreview(item, width);
         item.classList.add('is-width-resizing');
     }
 });
 
 ['pointerup', 'pointercancel'].forEach((eventName) => {
-    document.addEventListener(eventName, () => {
-        if (activeContentBlockWidthRange instanceof HTMLInputElement) {
+    document.addEventListener(eventName, (event) => {
+        if (
+            activeContentBlockWidthRange instanceof HTMLInputElement
+            && activeContentBlockWidthPointerId !== event.pointerId
+        ) {
+            return;
+        }
+
+        if (
+            activeContentBlockWidthRange instanceof HTMLInputElement
+            && activeContentBlockWidthPointerId === event.pointerId
+        ) {
+            const width = eventName === 'pointerup'
+                ? contentBlockWidthFromPointer(activeContentBlockWidthRange, event.clientX)
+                : normalizeContentBlockWidth(activeContentBlockWidthRange.value);
+
+            activeContentBlockWidthRange.value = String(width);
             commitContentBlockWidthRange(activeContentBlockWidthRange);
+            activeContentBlockWidthRange.releasePointerCapture?.(event.pointerId);
         }
 
         activeContentBlockWidthRange = null;
+        activeContentBlockWidthPointerId = null;
 
         document.querySelectorAll('.fi-fo-builder-item.is-width-resizing').forEach((item) => {
             item.classList.remove('is-width-resizing');
@@ -3436,6 +3569,165 @@ document.querySelectorAll('form').forEach((form) => {
     if (form instanceof HTMLFormElement) {
         registerUnsavedBackForm(form);
     }
+});
+
+let listingDeleteModal = null;
+let listingDeletePendingForm = null;
+let listingDeleteReturnFocus = null;
+
+const listingDeleteText = (key, fallback) => document.body.dataset[key] || fallback;
+
+const overviewRowText = (row, selectors) => {
+    for (const selector of selectors) {
+        const element = row.querySelector(selector);
+        const text = element?.textContent?.trim().replace(/\s+/g, ' ');
+
+        if (text) {
+            return text;
+        }
+    }
+
+    return '';
+};
+
+const listingDeleteItem = (form) => {
+    const row = form.closest('.overview-row');
+    const fallbackName = listingDeleteText('deleteItemFallbackName', 'item');
+
+    if (! (row instanceof HTMLElement)) {
+        return {
+            id: form.dataset.deleteItemId || '',
+            name: form.dataset.deleteItemName || fallbackName,
+        };
+    }
+
+    return {
+        id: form.dataset.deleteItemId || overviewRowText(row, ['.overview-item.id']) || '',
+        name: form.dataset.deleteItemName || overviewRowText(row, [
+            '.overview-item.name',
+            '.overview-item.title',
+            '.overview-item.source',
+            '.overview-item.email',
+            '.overview-item.code',
+            '.overview-item.subject',
+        ]) || fallbackName,
+    };
+};
+
+const closeListingDeleteModal = () => {
+    if (! listingDeleteModal) {
+        return;
+    }
+
+    listingDeleteModal.hidden = true;
+    document.body.classList.remove('has-listing-delete-modal');
+    listingDeletePendingForm = null;
+
+    if (listingDeleteReturnFocus instanceof HTMLElement) {
+        listingDeleteReturnFocus.focus();
+    }
+
+    listingDeleteReturnFocus = null;
+};
+
+const buildListingDeleteModal = () => {
+    if (listingDeleteModal) {
+        return listingDeleteModal;
+    }
+
+    const modal = document.createElement('div');
+    const titleId = 'listing-delete-modal-title';
+    const descriptionId = 'listing-delete-modal-description';
+
+    modal.className = 'listing-delete-modal';
+    modal.hidden = true;
+    modal.dataset.listingDeleteModal = 'true';
+    modal.innerHTML = `
+        <div class="listing-delete-modal-backdrop" data-listing-delete-close></div>
+        <section class="listing-delete-modal-panel" role="dialog" aria-modal="true" aria-labelledby="${titleId}" aria-describedby="${descriptionId}">
+            <div class="listing-delete-modal-body">
+                <h2 class="listing-delete-modal-title" id="${titleId}"></h2>
+                <p class="listing-delete-modal-description" id="${descriptionId}"></p>
+            </div>
+            <div class="listing-delete-modal-actions">
+                <button class="btn btn-cancel" type="button" data-listing-delete-close></button>
+                <button class="btn btn-remove" type="button" data-listing-delete-confirm></button>
+            </div>
+        </section>
+    `;
+
+    modal.querySelectorAll('[data-listing-delete-close]').forEach((button) => {
+        button.addEventListener('click', closeListingDeleteModal);
+    });
+
+    modal.querySelector('[data-listing-delete-confirm]')?.addEventListener('click', () => {
+        const form = listingDeletePendingForm;
+
+        if (! (form instanceof HTMLFormElement)) {
+            closeListingDeleteModal();
+
+            return;
+        }
+
+        form.dataset.listingDeleteConfirmed = 'true';
+        form.requestSubmit();
+    });
+
+    document.body.append(modal);
+    listingDeleteModal = modal;
+
+    return modal;
+};
+
+const openListingDeleteModal = (form, returnFocus) => {
+    const modal = buildListingDeleteModal();
+    const item = listingDeleteItem(form);
+    const itemLabel = item.id ? `${item.name} #${item.id}` : item.name;
+    const title = modal.querySelector('.listing-delete-modal-title');
+    const description = modal.querySelector('.listing-delete-modal-description');
+    const cancel = modal.querySelector('[data-listing-delete-close].btn');
+    const confirm = modal.querySelector('[data-listing-delete-confirm]');
+
+    if (title instanceof HTMLElement) {
+        title.textContent = listingDeleteText('deleteConfirmTitle', 'Delete item?');
+    }
+
+    if (description instanceof HTMLElement) {
+        description.textContent = listingDeleteText('deleteConfirmMessage', 'Are you sure you want to delete :item?').split(':item').join(itemLabel);
+    }
+
+    if (cancel instanceof HTMLButtonElement) {
+        cancel.textContent = listingDeleteText('deleteConfirmCancel', 'Cancel');
+    }
+
+    if (confirm instanceof HTMLButtonElement) {
+        confirm.textContent = listingDeleteText('deleteConfirmButton', 'Delete');
+    }
+
+    listingDeletePendingForm = form;
+    listingDeleteReturnFocus = returnFocus;
+    modal.hidden = false;
+    document.body.classList.add('has-listing-delete-modal');
+    confirm?.focus();
+};
+
+document.addEventListener('submit', (event) => {
+    if (! (event.target instanceof HTMLFormElement)) {
+        return;
+    }
+
+    const form = event.target;
+
+    if (
+        form.dataset.listingDeleteConfirmed === 'true'
+        || ! form.querySelector('input[name="_method"][value="delete"], input[name="_method"][value="DELETE"]')
+        || ! document.body.dataset.deleteConfirmTitle
+    ) {
+        return;
+    }
+
+    event.preventDefault();
+    openListingDeleteModal(form, event.submitter instanceof HTMLElement ? event.submitter : form.querySelector('button[type="submit"]'));
 });
 
 const hasUnsavedBackChanges = () => {

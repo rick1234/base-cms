@@ -100,7 +100,7 @@
                             <div class="overview-item code">{{ $redirect->status_code }}</div>
                             <div class="overview-item hits">{{ $redirect->hit_count ?? 0 }}</div>
                             <div class="overview-item status">
-                                <span class="{{ $redirect->is_active ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="redirect" :record="$redirect" :value="$redirect->is_active" :active="$redirect->is_active" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $redirect->id]) }}" title="{{ __('Bewerken') }}">

@@ -22,10 +22,17 @@ class LocationMediaRequest extends FormRequest
             'uploadId' => ['nullable', 'integer', 'exists:location_images,id'],
             'uploadName' => ['nullable', 'string', 'max:255'],
             'caption' => ['nullable', 'string', 'max:255'],
+            'alt_text' => ['nullable', 'string', 'max:255'],
+            'title_text' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'credit' => ['nullable', 'string', 'max:255'],
+            'is_decorative' => ['nullable', 'boolean'],
             'sort_index' => ['nullable', 'string'],
-            'file' => ['nullable', 'image', 'max:10240'],
-            'image' => ['nullable', 'image', 'max:10240'],
-            'afbeelding' => ['nullable', 'image', 'max:10240'],
+            'file' => ['nullable', 'image', 'max:20480'],
+            'image' => ['nullable', 'image', 'max:20480'],
+            'images' => ['nullable', 'array', 'max:20'],
+            'images.*' => ['image', 'max:20480'],
+            'afbeelding' => ['nullable', 'image', 'max:20480'],
         ];
     }
 }

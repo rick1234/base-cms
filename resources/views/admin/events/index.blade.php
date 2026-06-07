@@ -35,7 +35,7 @@
                 <div class="overview-container events-overview-container">
                     <div class="overview-row header">
                         <div class="overview-item id">
-                            Id
+                            {{ __('ID') }}
                             <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'id', 'sorttype' => 'desc'])) }}">
                                 <x-admin.material-icon name="keyboard_arrow_up" />
                             </a>
@@ -116,7 +116,7 @@
                                 {{ $event->categories->pluck('name')->join(', ') ?: '-' }}
                             </div>
                             <div class="overview-item status">
-                                <span class="{{ $event->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="event" :record="$event" :value="$event->status" :active="$event->isActive()" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $event->id]) }}" title="{{ __('Bewerken') }}">

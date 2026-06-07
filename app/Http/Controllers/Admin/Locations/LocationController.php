@@ -198,22 +198,38 @@ class LocationController extends Controller
     public function uploadImage(LocationMediaRequest $request, LocationMediaManager $mediaManager): JsonResponse|RedirectResponse
     {
         $location = Location::query()->findOrFail($request->integer('location_id') ?: $request->integer('id'));
-        $file = $request->file('file') ?: $request->file('image') ?: $request->file('afbeelding');
+        $files = collect([$request->file('file'), $request->file('image'), $request->file('afbeelding')])
+            ->merge($request->file('images', []))
+            ->filter(fn (mixed $file): bool => $file instanceof UploadedFile)
+            ->values();
 
-        abort_unless($file instanceof UploadedFile, 422);
+        abort_unless($files->isNotEmpty(), 422);
 
-        $image = $mediaManager->storeImage($location, $file, $request->string('caption')->toString() ?: null, $request->user());
+        $images = $files->map(function (UploadedFile $file) use ($request, $location, $mediaManager): LocationImage {
+            $caption = $request->string('caption')->toString() ?: $this->defaultCaptionForUpload($file);
+
+            return $mediaManager->storeImage($location, $file, $caption, $request->user(), [
+                'alt_text' => $request->string('alt_text')->toString() ?: $caption,
+                'title_text' => $request->string('title_text')->toString() ?: $caption,
+                'description' => $request->string('description')->toString() ?: null,
+                'credit' => $request->string('credit')->toString() ?: null,
+                'is_decorative' => $request->boolean('is_decorative'),
+            ]);
+        });
 
         if ($request->expectsJson()) {
+            $image = $images->first();
+
             return response()->json([
                 'jsonrpc' => '2.0',
                 'status' => 'success',
                 'result' => $image->id,
                 'id' => $image->id,
+                'count' => $images->count(),
             ]);
         }
 
-        flash(__('Image uploaded.'))->success();
+        flash(trans_choice('{1} Image uploaded.|[2,*] Images uploaded.', $images->count()))->success();
 
         return redirect()->route($this->routeName('images'), ['id' => $location->id]);
     }
@@ -517,5 +533,14 @@ class LocationController extends Controller
 
         return redirect()
             ->route($this->editRouteName($tab), $this->editRedirectParameters($location, $tab));
+    }
+
+    private function defaultCaptionForUpload(UploadedFile $file): string
+    {
+        return str(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
+            ->replace(['-', '_'], ' ')
+            ->squish()
+            ->title()
+            ->toString();
     }
 }

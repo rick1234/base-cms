@@ -9,7 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Banners\BannerMediaRequest;
 use App\Http\Requests\Admin\Banners\BannerRequest;
 use App\Models\Cms\Banner;
+use App\Models\Cms\BannerImage;
 use App\Models\Cms\BannerCategory;
+use App\Models\Cms\WebsiteTemplate;
 use App\Support\Admin\Banners\BannerMediaManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +28,7 @@ class BannerController extends Controller
     /**
      * @var list<string>
      */
-    private const EDIT_TABS = ['image', 'translations'];
+    private const EDIT_TABS = ['images', 'template', 'translations'];
 
     public function index(Request $request): View|RedirectResponse
     {
@@ -110,7 +112,7 @@ class BannerController extends Controller
         }
 
         $banner = $this->bannerFromRequest($request);
-        $banner?->load(['categories', 'translations']);
+        $banner?->load(['categories', 'translations', 'images']);
         $editableBanner = $banner ?? new Banner([
             'status' => 'draft',
             'starts_at' => now(),
@@ -123,6 +125,8 @@ class BannerController extends Controller
             'activeTab' => $activeTab,
             'categories' => $this->categories(),
             'locales' => $this->locales(),
+            'templateSections' => $this->templateSections(),
+            'templatePreviews' => $this->templatePreviews(),
             'routeNames' => $this->routeNames(),
             'pageName' => __('Edit banner'),
             'backUrl' => route($this->routeName('index')),
@@ -213,6 +217,46 @@ class BannerController extends Controller
         return redirect()->route($this->routeName('index'));
     }
 
+    public function uploadImages(BannerMediaRequest $request, BannerMediaManager $mediaManager): JsonResponse|RedirectResponse
+    {
+        $banner = Banner::query()->findOrFail((int) ($request->route('id') ?: $request->integer('id')));
+        $files = collect([$request->file('file'), $request->file('image')])
+            ->filter()
+            ->merge($request->file('images', []))
+            ->values();
+
+        abort_unless($files->isNotEmpty(), 422);
+
+        $images = $files->map(function (UploadedFile $file) use ($request, $banner, $mediaManager): BannerImage {
+            $caption = $request->string('caption')->toString()
+                ?: str(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))->replace(['-', '_'], ' ')->squish()->title()->toString();
+
+            return $mediaManager->storeBannerImage($banner, $file, $caption, $request->user(), [
+                'alt_text' => $request->string('alt_text')->toString() ?: $caption,
+                'title_text' => $request->string('title_text')->toString() ?: $caption,
+                'description' => $request->string('description')->toString() ?: null,
+                'credit' => $request->string('credit')->toString() ?: null,
+                'is_decorative' => $request->boolean('is_decorative'),
+            ]);
+        });
+
+        if (! $request->expectsJson()) {
+            flash(trans_choice('{1} Image uploaded.|[2,*] Images uploaded.', $images->count()))->success();
+
+            return back();
+        }
+
+        $image = $images->first();
+
+        return response()->json([
+            'jsonrpc' => '2.0',
+            'status' => 'success',
+            'result' => $image->id,
+            'id' => $image->id,
+            'count' => $images->count(),
+        ]);
+    }
+
     public function deleteImage(BannerMediaRequest $request, BannerMediaManager $mediaManager): JsonResponse|RedirectResponse
     {
         $banner = Banner::query()->findOrFail($request->integer('bannerId') ?: $request->integer('id'));
@@ -296,6 +340,40 @@ class BannerController extends Controller
             'de' => 'Deutsch',
             'fr' => 'Francais',
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function templateSections(): array
+    {
+        $defaults = [
+            'homepage_right_block' => __('Homepage Right Block'),
+            'footer_banner' => __('Footer banner'),
+            'catalogus_upsale_banner' => __('Catalogus upsale banner'),
+            'homepage_hero' => __('Homepage hero'),
+            'content_sidebar' => __('Content sidebar'),
+        ];
+
+        return WebsiteTemplate::query()
+            ->active()
+            ->ordered()
+            ->get()
+            ->flatMap(fn (WebsiteTemplate $template): array => $template->bannerSections())
+            ->mapWithKeys(fn (array $section): array => [$section['handle'] => $section['label'] ?: $section['handle']])
+            ->union($defaults)
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, WebsiteTemplate>
+     */
+    private function templatePreviews(): Collection
+    {
+        return WebsiteTemplate::query()
+            ->active()
+            ->ordered()
+            ->get();
     }
 
     /**
@@ -431,6 +509,7 @@ class BannerController extends Controller
             'bulk' => $this->routeName('bulk'),
             'bulk.upload' => $this->routeName('bulk.upload'),
             'image.delete' => $this->routeName('image.delete'),
+            'images.upload' => $this->routeName('images.upload'),
         ];
     }
 

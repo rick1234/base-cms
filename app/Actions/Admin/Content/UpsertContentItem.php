@@ -37,7 +37,6 @@ class UpsertContentItem
             'active_from' => $data['active_from'] ?? null,
             'active_until' => $data['active_until'] ?? null,
             'form_id' => $data['form_id'] ?? null,
-            'slider_category_id' => $data['slider_category_id'] ?? null,
             'updated_by' => $user?->id,
         ]);
 

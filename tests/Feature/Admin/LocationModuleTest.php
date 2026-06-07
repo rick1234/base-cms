@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Livewire\Admin\Locations\LocationImageAlbum;
+use App\Livewire\Admin\Locations\LocationOpeningHoursEditor;
 use App\Models\User;
 use App\Models\Cms\Location;
 use App\Models\Cms\LocationCategory;
@@ -13,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class LocationModuleTest extends TestCase
@@ -256,6 +259,74 @@ class LocationModuleTest extends TestCase
         ]);
     }
 
+    public function test_location_images_screen_uses_shared_livewire_photo_album(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $location = Location::query()->create([
+            'name' => 'Album location',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/vestigingen/{$location->id}/images")
+            ->assertOk()
+            ->assertSee('location-image-album', false)
+            ->assertSee('data-content-image-editor', false)
+            ->assertSee('data-content-image-editor-input', false)
+            ->assertSee("/admin/vestigingen/ajax/uploadAfbeelding?id={$location->id}", false)
+            ->assertSee('Upload selectie')
+            ->assertDontSee('Reeds gekoppelde afbeeldingen')
+            ->assertDontSee('location_image', false);
+    }
+
+    public function test_livewire_location_image_album_saves_seo_fields_and_sorts_images(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $location = Location::query()->create([
+            'name' => 'Livewire album location',
+            'status' => 'active',
+        ]);
+        $firstImage = LocationImage::query()->create([
+            'location_id' => $location->id,
+            'image_path' => 'storage/locations/first.jpg',
+            'caption' => 'First',
+            'sort_order' => 1,
+        ]);
+        $secondImage = LocationImage::query()->create([
+            'location_id' => $location->id,
+            'image_path' => 'storage/locations/second.jpg',
+            'caption' => 'Second',
+            'sort_order' => 2,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(LocationImageAlbum::class, ['location' => $location])
+            ->assertSee('data-content-image-editor', false)
+            ->call('editImage', $firstImage->id)
+            ->set("imageForms.{$firstImage->id}.caption", 'Updated location caption')
+            ->set("imageForms.{$firstImage->id}.alt_text", 'Location alt text')
+            ->set("imageForms.{$firstImage->id}.title_text", 'Location image title')
+            ->set("imageForms.{$firstImage->id}.description", 'Location image description.')
+            ->set("imageForms.{$firstImage->id}.credit", 'Location photographer')
+            ->set("imageForms.{$firstImage->id}.is_decorative", false)
+            ->call('saveImage', $firstImage->id)
+            ->assertSet('message', 'Image SEO options saved.')
+            ->call('moveImage', $secondImage->id, $firstImage->id, 'after')
+            ->assertSet('message', 'Image order saved.');
+
+        $this->assertDatabaseHas('location_images', [
+            'id' => $firstImage->id,
+            'caption' => 'Updated location caption',
+            'alt_text' => 'Location alt text',
+            'title_text' => 'Location image title',
+            'description' => 'Location image description.',
+            'credit' => 'Location photographer',
+            'is_decorative' => false,
+            'sort_order' => 2,
+        ]);
+        $this->assertSame(1, $secondImage->refresh()->sort_order);
+    }
+
     public function test_location_opening_hours_can_be_saved_and_special_days_deleted(): void
     {
         $admin = User::factory()->admin()->create();
@@ -263,6 +334,14 @@ class LocationModuleTest extends TestCase
             'name' => 'Hours location',
             'status' => 'active',
         ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/vestigingen/{$location->id}/opening-hours")
+            ->assertOk()
+            ->assertSee('location-opening-hours-editor-form', false)
+            ->assertSee('location-hours-week-grid', false)
+            ->assertSee('Uitzondering toevoegen')
+            ->assertDontSee('location-opening-hours-form', false);
 
         $this->actingAs($admin)
             ->post('/admin/vestigingen/editOpeningstijden', [
@@ -325,6 +404,64 @@ class LocationModuleTest extends TestCase
 
         $this->assertDatabaseMissing('location_special_opening_hours', [
             'id' => $specialOpeningHour->id,
+        ]);
+    }
+
+    public function test_livewire_location_opening_hours_editor_saves_hours_and_exceptions(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $location = Location::query()->create([
+            'name' => 'Livewire hours location',
+            'status' => 'active',
+        ]);
+        $specialOpeningHour = LocationSpecialOpeningHour::query()->create([
+            'location_id' => $location->id,
+            'title' => 'Old exception',
+            'date' => '2026-06-01',
+            'opens_at' => '09:00',
+            'closes_at' => '12:00',
+            'is_closed' => false,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(LocationOpeningHoursEditor::class, ['location' => $location])
+            ->assertSee('location-hours-week-grid', false)
+            ->set('openingHours.0.opens_at', '08:30')
+            ->set('openingHours.0.closes_at', '17:30')
+            ->call('toggleDayClosed', '6')
+            ->set("specialOpeningHours.0.title", 'Closed for renovation')
+            ->set("specialOpeningHours.0.date", '2026-06-02')
+            ->call('addSpecialOpeningHour')
+            ->set("specialOpeningHours.1.title", 'Late shopping')
+            ->set("specialOpeningHours.1.date", '2026-06-03')
+            ->set("specialOpeningHours.1.opens_at", '10:00')
+            ->set("specialOpeningHours.1.closes_at", '22:00')
+            ->call('save')
+            ->assertSet('message', 'Openingstijden opgeslagen.');
+
+        $this->assertDatabaseHas('location_opening_hours', [
+            'location_id' => $location->id,
+            'day' => '0',
+            'is_closed' => false,
+        ]);
+        $this->assertSame(
+            '08:30',
+            substr((string) LocationOpeningHour::query()->where('location_id', $location->id)->where('day', '0')->firstOrFail()->opens_at, 0, 5),
+        );
+        $this->assertDatabaseHas('location_opening_hours', [
+            'location_id' => $location->id,
+            'day' => '6',
+            'is_closed' => true,
+        ]);
+        $this->assertDatabaseHas('location_special_opening_hours', [
+            'id' => $specialOpeningHour->id,
+            'title' => 'Closed for renovation',
+            'date' => '2026-06-02 00:00:00',
+        ]);
+        $this->assertDatabaseHas('location_special_opening_hours', [
+            'location_id' => $location->id,
+            'title' => 'Late shopping',
+            'date' => '2026-06-03 00:00:00',
         ]);
     }
 

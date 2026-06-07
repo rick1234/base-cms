@@ -2,7 +2,8 @@
     $id = $banner?->id;
     $tabs = [
         'general' => __('Algemeen'),
-        'image' => __('Afbeelding'),
+        'images' => __('Afbeeldingen'),
+        'template' => __('Template'),
         'translations' => __('Vertalingen'),
     ];
 @endphp

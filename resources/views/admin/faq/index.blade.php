@@ -111,7 +111,7 @@
                                 {{ $faqItem->categories->pluck('name')->join(', ') ?: '-' }}
                             </div>
                             <div class="overview-item status">
-                                <span class="{{ $faqItem->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="faq" :record="$faqItem" :value="$faqItem->status" :active="$faqItem->isActive()" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $faqItem->id]) }}" title="{{ __('Bewerken') }}">

@@ -11,6 +11,14 @@ class LocationImage extends CmsModel
 
     protected $table = 'location_images';
 
+    protected function casts(): array
+    {
+        return [
+            ...parent::casts(),
+            'is_decorative' => 'boolean',
+        ];
+    }
+
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'location_id');

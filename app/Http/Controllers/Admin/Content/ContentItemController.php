@@ -9,12 +9,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Content\ContentActionRequest;
 use App\Http\Requests\Admin\Content\ContentItemRequest;
 use App\Http\Requests\Admin\Content\ContentMediaRequest;
-use App\Http\Requests\Admin\Content\ContentSliderRequest;
 use App\Models\Cms\ContentCategory;
 use App\Models\Cms\ContentImage;
 use App\Models\Cms\ContentItem;
 use App\Models\Cms\Form;
-use App\Models\Cms\SliderCategory;
 use App\Support\Admin\Content\ContentMediaManager;
 use App\Support\Content\ContentPreviewLinkIssuer;
 use App\Support\Localization\TranslationRepository;
@@ -90,7 +88,6 @@ class ContentItemController extends Controller
             'frontendUrlBase' => $this->frontendUrlBase($editableContentItem->locale, $translations),
             'categories' => $this->categories(),
             'forms' => Form::query()->orderBy('name')->get(),
-            'sliderCategories' => SliderCategory::query()->orderBy('name')->get(),
             'routeNames' => $this->routeNames(),
             'pageName' => __('Edit page'),
             'backUrl' => route($this->routeName('index')),
@@ -239,49 +236,6 @@ class ContentItemController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-    public function slider(Request $request): View
-    {
-        $contentItem = $this->contentItemFromRequest($request);
-
-        return view('admin.content.slider', [
-            'contentItem' => $contentItem,
-            'sliderCategories' => SliderCategory::query()->orderBy('name')->get(),
-            'routeNames' => $this->routeNames(),
-            'pageName' => __('Page slider'),
-            'backUrl' => route($this->routeName('index')),
-        ]);
-    }
-
-    public function saveSlider(ContentSliderRequest $request, UpsertContentItem $upsert): RedirectResponse
-    {
-        $contentItem = $request->contentItem();
-
-        abort_unless($contentItem, 404);
-
-        $data = [
-            ...$contentItem->only([
-                'title',
-                'subtitle',
-                'slug',
-                'locale',
-                'meta_description',
-                'status',
-                'active_from',
-                'active_until',
-                'form_id',
-            ]),
-            'slider_category_id' => $request->validated('slider_category_id'),
-            'categories' => $contentItem->categories()->pluck('content_categories.id')->all(),
-        ];
-
-        $upsert->handle($data, $request->user(), $contentItem);
-
-        flash(__('Slider settings saved.'))->success();
-
-        return redirect()
-            ->route($this->routeName('slider'), ['id' => $contentItem->id]);
-    }
-
     public function duplicate(ContentActionRequest $request, DuplicateContentItem $duplicate): JsonResponse|RedirectResponse
     {
         $id = $request->integer('itemId') ?: $request->integer('item_id') ?: $request->integer('id');
@@ -416,8 +370,6 @@ class ContentItemController extends Controller
             'destroy' => $this->routeName('destroy'),
             'images' => $this->routeName('images'),
             'images.upload' => $this->routeName('images.upload'),
-            'slider' => $this->routeName('slider'),
-            'slider.save' => $this->routeName('slider.save'),
             'preview' => $this->routeName('preview'),
             'duplicate' => $this->routeName('duplicate'),
             'image.delete' => $this->routeName('image.delete'),

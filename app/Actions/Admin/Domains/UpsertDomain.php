@@ -84,6 +84,7 @@ class UpsertDomain
             'social_links' => $this->socialLinks((array) ($data['social_links'] ?? [])),
             'contact_form_id' => $data['contact_form_id'] ?? null,
             'public_integrations' => $this->publicIntegrations((array) ($data['public_integrations'] ?? [])),
+            'settings' => $this->settings($domain, $data),
             'integration_credentials' => $domain->integration_credentials,
             'is_active' => (bool) ($data['is_active'] ?? false),
             'is_development' => (bool) ($data['is_development'] ?? false),
@@ -131,6 +132,10 @@ class UpsertDomain
             ]),
             'integrations' => $domain->fill([
                 'public_integrations' => $this->publicIntegrations((array) ($data['public_integrations'] ?? [])),
+                'updated_by' => $user?->id,
+            ]),
+            'security' => $domain->fill([
+                'settings' => $this->settings($domain, $data),
                 'updated_by' => $user?->id,
             ]),
             'social-contact' => $domain->fill([
@@ -244,6 +249,23 @@ class UpsertDomain
             ->mapWithKeys(fn (string $key): array => [$key => trim((string) ($integrations[$key] ?? ''))])
             ->filter()
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function settings(Domain $domain, array $data): array
+    {
+        $settings = $domain->settings ?? [];
+
+        data_set(
+            $settings,
+            'security.backend_two_factor_required',
+            (bool) data_get($data, 'settings.security.backend_two_factor_required', false)
+        );
+
+        return $settings;
     }
 
     /**

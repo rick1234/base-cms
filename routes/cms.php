@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\Localization\CountryController;
 use App\Http\Controllers\Admin\Localization\LanguageController;
 use App\Http\Controllers\Admin\Locations\LocationCategoryController;
 use App\Http\Controllers\Admin\Locations\LocationController;
+use App\Http\Controllers\Admin\QuickStatusController;
 use App\Http\Controllers\Admin\Redirects\RedirectController;
 use App\Http\Controllers\Admin\Roles\RoleController;
 use App\Http\Controllers\Admin\Translations\TranslationController;
@@ -44,6 +45,7 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
     Route::middleware(['auth', 'can:access-admin'])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('dashboard.php', DashboardController::class)->name('dashboard.legacy');
+        Route::patch('quick-status', QuickStatusController::class)->name('quick-status.update');
         Route::match(['get', 'post'], 'delete.php', [CmsModuleController::class, 'legacyDelete'])->name('delete');
         Route::get('{page}.php', [CmsModuleController::class, 'legacyRootPage'])
             ->where('page', 'firstLogin|resetpass|token')
@@ -56,6 +58,7 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
             Route::post('index.php', [BannerController::class, 'store'])->name('store');
             Route::get('edit.php', [BannerController::class, 'edit'])->name('edit');
             Route::post('edit.php', [BannerController::class, 'save'])->name('save');
+            Route::post('{id}/images', [BannerController::class, 'uploadImages'])->whereNumber('id')->name('images.upload');
             Route::get('bulkUploader.php', [BannerController::class, 'bulkUploader'])->name('bulk');
             Route::post('bulkUploader.php', [BannerController::class, 'uploadBulk'])->name('bulk.upload');
             Route::post('ajax/duplicateItem.php', [BannerController::class, 'duplicate'])->name('duplicate');
@@ -348,8 +351,6 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
             Route::post('edit.php', [ContentItemController::class, 'save'])->name('save');
             Route::get('editAfbeeldingen.php', [ContentItemController::class, 'images'])->name('images');
             Route::post('editAfbeeldingen.php', [ContentItemController::class, 'uploadImage'])->name('images.upload');
-            Route::get('editSlider.php', [ContentItemController::class, 'slider'])->name('slider');
-            Route::post('editSlider.php', [ContentItemController::class, 'saveSlider'])->name('slider.save');
             Route::post('{id}/preview', [ContentItemController::class, 'preview'])->whereNumber('id')->name('preview');
 
             Route::post('ajax/duplicateItem.php', [ContentItemController::class, 'duplicate'])->name('duplicate');
@@ -411,6 +412,20 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
             Route::get('index.php', [UserController::class, 'index'])->name('index');
             Route::post('index.php', [UserController::class, 'store'])->name('store');
             Route::get('edit.php', [UserController::class, 'edit'])->name('edit');
+            Route::get('{id}/edit/{tab}', [UserController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['access', 'roles', 'image', 'two-factor'])
+                ->name('edit.tab');
+            Route::post('{user}/invitation/{area}', [UserController::class, 'sendInvitation'])
+                ->whereNumber('user')
+                ->whereIn('area', ['frontend', 'backend'])
+                ->name('invitation');
+            Route::post('{user}/two-factor/generate', [UserController::class, 'generateTwoFactor'])
+                ->whereNumber('user')
+                ->name('two-factor.generate');
+            Route::delete('{user}/two-factor', [UserController::class, 'disableTwoFactor'])
+                ->whereNumber('user')
+                ->name('two-factor.disable');
             Route::post('edit.php', [UserController::class, 'save'])->name('save');
             Route::post('ajax/deleteAfbeelding.php', [UserController::class, 'deleteImage'])->name('image.delete');
 

@@ -106,6 +106,24 @@ class EventScheduleEditor extends Component
         }
     }
 
+    public function sortItemsByStartTime(int $groupIndex): void
+    {
+        if (! isset($this->groups[$groupIndex])) {
+            return;
+        }
+
+        $items = array_values($this->groups[$groupIndex]['items'] ?? []);
+
+        usort($items, fn (array $first, array $second): int => $this->itemStartSortKey($first)
+            <=> $this->itemStartSortKey($second));
+
+        $this->groups[$groupIndex]['items'] = $items;
+        $this->reindexItems($groupIndex);
+        $this->groups[$groupIndex]['is_collapsed'] = false;
+        $this->messageLevel = 'success';
+        $this->message = __('Items sorted by start time.');
+    }
+
     public function save(): void
     {
         $this->ensureAuthorized();
@@ -369,6 +387,41 @@ class EventScheduleEditor extends Component
     {
         return $this->stateIndex($rows, $targetId) !== null
             && $this->stateIndex($rows, $draggedId) !== null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     * @return array{0: int, 1: string, 2: string, 3: int}
+     */
+    private function itemStartSortKey(array $item): array
+    {
+        $startTime = $this->normalizedSortTime($item['starts_at'] ?? null);
+
+        if ($startTime === null) {
+            return [1, '99:99', '9999-12-31', (int) ($item['sort_order'] ?? 0)];
+        }
+
+        return [
+            0,
+            $startTime,
+            filled($item['date'] ?? null) ? (string) $item['date'] : '0000-00-00',
+            (int) ($item['sort_order'] ?? 0),
+        ];
+    }
+
+    private function normalizedSortTime(mixed $time): ?string
+    {
+        if (blank($time)) {
+            return null;
+        }
+
+        $time = trim((string) $time);
+
+        if (! preg_match('/^(\d{1,2}):(\d{2})$/', $time, $matches)) {
+            return $time;
+        }
+
+        return sprintf('%02d:%02d', (int) $matches[1], (int) $matches[2]);
     }
 
     private function reindexGroups(): void

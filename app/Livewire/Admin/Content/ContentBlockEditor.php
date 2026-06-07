@@ -35,6 +35,8 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
 
     public string $ownerType = 'content';
 
+    public string $builderLabel = '';
+
     /**
      * @var array{blocks: array<int, mixed>}
      */
@@ -46,13 +48,14 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
 
     public bool $usesLegacySource = false;
 
-    public function mount(?int $contentItemId = null, ?int $eventId = null, string $ownerType = 'content'): void
+    public function mount(?int $contentItemId = null, ?int $eventId = null, string $ownerType = 'content', ?string $builderLabel = null): void
     {
         $this->ensureAuthorized();
 
         $this->contentItemId = $contentItemId;
         $this->eventId = $eventId;
         $this->ownerType = $eventId !== null ? 'event' : $ownerType;
+        $this->builderLabel = $builderLabel ?? $this->defaultBuilderLabel();
         $record = $this->record();
         $blocks = $record->structured_blocks ?? [];
 
@@ -72,7 +75,7 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
         return $schema
             ->components([
                 Builder::make('blocks')
-                    ->label(__('Content blocks'))
+                    ->label($this->builderLabel)
                     ->blocks($this->filamentBlocks())
                     ->blockIcons()
                     ->blockNumbers(false)
@@ -151,7 +154,7 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
         $record->forceFill($update)->save();
 
         $this->usesLegacySource = false;
-        $this->message = __('Content blocks saved.');
+        $this->message = $this->blocksSavedMessage();
         $this->dispatch('content-block-saved', closeAll: true);
     }
 
@@ -216,6 +219,13 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
         return view('livewire.admin.content.content-block-editor');
     }
 
+    public function autoSaveErrorMessage(): string
+    {
+        return $this->isEventOwner()
+            ? __('Blocks could not be saved automatically. Save the blocks and try again.')
+            : __('Content blocks could not be saved automatically. Save the blocks and try again.');
+    }
+
     private function ensureAuthorized(): void
     {
         abort_unless(auth()->user()?->can('access-admin'), 403);
@@ -248,6 +258,16 @@ class ContentBlockEditor extends Component implements HasActions, HasForms
     private function isEventOwner(): bool
     {
         return $this->ownerType === 'event';
+    }
+
+    private function defaultBuilderLabel(): string
+    {
+        return $this->isEventOwner() ? __('Blocks') : __('Content blocks');
+    }
+
+    private function blocksSavedMessage(): string
+    {
+        return $this->isEventOwner() ? __('Blocks saved.') : __('Content blocks saved.');
     }
 
     private function localizeDirectAddAction(Action $action, string $label): Action

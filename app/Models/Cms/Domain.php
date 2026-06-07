@@ -176,4 +176,23 @@ class Domain extends CmsModel
 
         return rtrim($this->canonical_base_url, '/').'/'.ltrim($path, '/');
     }
+
+    public function requiresTwoFactorForBackend(): bool
+    {
+        return (bool) data_get($this->settings ?? [], 'security.backend_two_factor_required', false);
+    }
+
+    public static function resolveForHost(?string $host): ?self
+    {
+        $host = static::normalizeHost($host);
+
+        if ($host === '') {
+            return null;
+        }
+
+        return static::query()
+            ->where('host', $host)
+            ->orWhereHas('aliases', fn ($query) => $query->where('host', $host))
+            ->first();
+    }
 }

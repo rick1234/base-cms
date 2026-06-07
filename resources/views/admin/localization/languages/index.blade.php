@@ -84,7 +84,7 @@
                                 </div>
                                 <div class="overview-item direction">{{ strtoupper($language->direction) }}</div>
                                 <div class="overview-item status">
-                                    <span class="{{ $language->status === 'active' ? 'active-item' : 'inactive-item' }}"></span>
+                                    <x-admin.quick-status model="language" :record="$language" :value="$language->status" :active="$language->status === 'active'" />
                                 </div>
                                 <div class="overview-item options">
                                     <a href="{{ route($routeNames['edit'], ['id' => $language->id]) }}" title="{{ __('Bewerken') }}">

@@ -59,7 +59,6 @@ class AdminBreadcrumbBuilder
         'combinations' => 'editCombinaties',
         'images' => 'editAfbeeldingen',
         'options' => 'editOptions',
-        'slider' => 'editSlider',
         'stock' => 'editVoorraad',
         'submissions' => 'editMessages',
         'sync' => 'sync',

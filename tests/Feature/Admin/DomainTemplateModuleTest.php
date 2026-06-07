@@ -5,12 +5,15 @@ namespace Tests\Feature\Admin;
 use App\Models\Cms\CmsLanguage;
 use App\Models\Cms\Domain;
 use App\Models\Cms\WebsiteTemplate;
+use App\Livewire\Admin\Templates\TemplateOverview;
+use App\Livewire\Admin\Templates\TemplateSectionEditor;
 use App\Models\User;
 use Database\Seeders\CountryLanguageSeeder;
 use Database\Seeders\DomainTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class DomainTemplateModuleTest extends TestCase
@@ -39,6 +42,18 @@ class DomainTemplateModuleTest extends TestCase
                     'social_placement' => 'footer',
                     'contact_form_placement' => 'footer',
                 ],
+                'defined_sections' => [
+                    [
+                        'label' => 'Homepage Right Block',
+                        'handle' => 'homepage_right_block',
+                        'type' => 'banner',
+                    ],
+                    [
+                        'label' => 'Catalogus upsale banner',
+                        'handle' => 'catalogus_upsale_banner',
+                        'type' => 'mixed',
+                    ],
+                ],
                 'is_active' => '1',
                 'sort_order' => '10',
             ])
@@ -53,6 +68,75 @@ class DomainTemplateModuleTest extends TestCase
         $this->assertSame('#102030', $template->default_settings['primary_color']);
         $this->assertSame('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap', $template->default_settings['base_font_google_url']);
         $this->assertSame('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@600;700&display=swap', $template->default_settings['heading_font_google_url']);
+        $this->assertSame('homepage_right_block', $template->defined_sections[0]['handle']);
+        $this->assertSame('Catalogus upsale banner', $template->defined_sections[1]['label']);
+        $this->assertSame('mixed', $template->defined_sections[1]['type']);
+    }
+
+    public function test_admin_can_filter_template_overview_and_update_status(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $corporate = WebsiteTemplate::query()->create([
+            'handle' => 'corporate',
+            'name' => 'Corporate Template',
+            'is_active' => true,
+            'sort_order' => 20,
+            'defined_sections' => [
+                ['label' => 'Homepage hero', 'handle' => 'homepage_hero', 'type' => 'banner'],
+                ['label' => 'Footer banner', 'handle' => 'footer_banner', 'type' => 'banner'],
+            ],
+        ]);
+        $campaign = WebsiteTemplate::query()->create([
+            'handle' => 'campaign',
+            'name' => 'Campaign Template',
+            'is_active' => false,
+            'sort_order' => 10,
+        ]);
+
+        Domain::query()->create([
+            'host' => 'www.example.test',
+            'name' => 'Example',
+            'website_template_id' => $corporate->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/templates')
+            ->assertOk()
+            ->assertSee('Template overview')
+            ->assertSeeLivewire(TemplateOverview::class)
+            ->assertSee('template-overview-container', false)
+            ->assertSee('Corporate Template')
+            ->assertSee('Campaign Template')
+            ->assertSee('quick-status', false);
+
+        Livewire::actingAs($admin)
+            ->test(TemplateOverview::class)
+            ->assertSee('Corporate Template')
+            ->assertSee('Campaign Template')
+            ->set('draftName', 'Corporate')
+            ->call('applyFilters')
+            ->assertSee('Corporate Template')
+            ->assertDontSee('Campaign Template')
+            ->set('draftName', '')
+            ->set('draftStatus', 'inactive')
+            ->call('applyFilters')
+            ->assertSee('Campaign Template')
+            ->assertDontSee('Corporate Template')
+            ->call('sortBy', 'name', 'desc')
+            ->assertSet('sort', 'name')
+            ->assertSet('direction', 'desc');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.quick-status.update'), [
+                'model' => 'website-template',
+                'id' => $campaign->id,
+                'status' => 'active',
+            ])
+            ->assertRedirect();
+
+        $this->assertTrue($campaign->refresh()->is_active);
     }
 
     public function test_admin_can_start_domain_setup_from_domain_index(): void
@@ -77,15 +161,64 @@ class DomainTemplateModuleTest extends TestCase
             ->get('/admin/templates/create')
             ->assertOk()
             ->assertSee('Technical name')
-            ->assertSee('Base Google font link')
-            ->assertSee('Heading Google font link')
-            ->assertSee('data-google-font-preview-input', false)
-            ->assertSee('template-font-preview-sample', false)
+            ->assertSee('tabmenu', false)
+            ->assertSee('Template')
+            ->assertSee('Instellingen')
+            ->assertSee('Gedefinieerde secties')
+            ->assertSee('Paden')
+            ->assertSee('Voorbeeld')
+            ->assertDontSee('Base Google font link')
+            ->assertDontSee('Heading Google font link')
+            ->assertDontSee('template-wireframe', false)
+            ->assertDontSee('data-google-font-preview-input', false)
+            ->assertDontSee('template-font-preview-sample', false)
             ->assertSee('resources/scss/site/templates/{technical-name}/_index.scss')
-            ->assertSee('data-coloris', false)
+            ->assertDontSee('default_settings[primary_color]', false)
             ->assertDontSee('Schemas')
             ->assertDontSee('Settings schema')
             ->assertDontSee('Custom settings schema');
+
+        $template = WebsiteTemplate::query()->create([
+            'handle' => 'wireframe',
+            'name' => 'Wireframe Template',
+            'is_active' => true,
+            'defined_sections' => [
+                ['label' => 'Homepage hero', 'handle' => 'homepage_hero', 'type' => 'banner'],
+                ['label' => 'Footer banner', 'handle' => 'footer_banner', 'type' => 'banner'],
+            ],
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.templates.edit', $template))
+            ->assertOk()
+            ->assertSee('tabmenu', false)
+            ->assertSee('Template')
+            ->assertSee('Instellingen')
+            ->assertSee('Gedefinieerde secties')
+            ->assertDontSee('template-wireframe', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.templates.edit.tab', ['websiteTemplate' => $template, 'tab' => 'settings']))
+            ->assertOk()
+            ->assertSee('Base Google font link')
+            ->assertSee('Heading Google font link')
+            ->assertSee('data-google-font-preview-input', false)
+            ->assertSee('template-font-preview-sample', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.templates.edit.tab', ['websiteTemplate' => $template, 'tab' => 'sections']))
+            ->assertOk()
+            ->assertSee('template-section-editor', false)
+            ->assertSee('template-wireframe', false)
+            ->assertSee('Homepage hero')
+            ->assertSee('Footer banner');
+
+        $this->actingAs($admin)
+            ->get(route('admin.templates.edit.tab', ['websiteTemplate' => $template, 'tab' => 'preview']))
+            ->assertOk()
+            ->assertSee('template-wireframe', false)
+            ->assertSee('template-generate-form', false)
+            ->assertSee('Frontendbestanden opnieuw genereren');
 
         $this->actingAs($admin)
             ->get('/admin/domains/create')
@@ -103,7 +236,7 @@ class DomainTemplateModuleTest extends TestCase
             ->assertSee('Review')
             ->assertDontSee('Website template')
             ->assertDontSee('Title separator')
-            ->assertDontSee('data-coloris', false)
+            ->assertDontSee('template_settings[primary_color]', false)
             ->assertDontSee('Custom template settings')
             ->assertDontSee('Private integration credentials');
 
@@ -117,7 +250,7 @@ class DomainTemplateModuleTest extends TestCase
             ->get(route('admin.domains.edit', ['domain' => $domain, 'step' => 'template']))
             ->assertOk()
             ->assertSee('Website template')
-            ->assertSee('data-coloris', false)
+            ->assertSee('template_settings[primary_color]', false)
             ->assertDontSee('Primary host');
 
         $this->actingAs($admin)
@@ -358,6 +491,39 @@ class DomainTemplateModuleTest extends TestCase
         $this->assertSame(['nl', 'de'], $domain->active_backend_locales);
     }
 
+    public function test_admin_can_require_two_factor_for_domain_backend_login(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $domain = Domain::query()->create([
+            'host' => 'secure.example.test',
+            'name' => 'Secure Example',
+            'default_locale' => 'nl',
+            'active_frontend_locales' => ['nl'],
+            'active_backend_locales' => ['nl'],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.domains.edit', ['domain' => $domain, 'step' => 'security']))
+            ->assertOk()
+            ->assertSee('Tweefactorauthenticatie')
+            ->assertSee('2FA verplichten voor CMS-login');
+
+        $this->actingAs($admin)
+            ->put(route('admin.domains.update', $domain), [
+                '_domain_step' => 'security',
+                '_next_step' => 'social-contact',
+                'settings' => [
+                    'security' => [
+                        'backend_two_factor_required' => '1',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.domains.edit', ['domain' => $domain, 'step' => 'social-contact']));
+
+        $this->assertTrue($domain->refresh()->requiresTwoFactorForBackend());
+    }
+
     public function test_domain_template_seeder_creates_local_and_sample_domains(): void
     {
         $this->seed(DomainTemplateSeeder::class);
@@ -380,5 +546,35 @@ class DomainTemplateModuleTest extends TestCase
         $this->assertFalse($template->default_settings['show_footer_credit']);
         $this->assertArrayNotHasKey('footer_credit_label', $template->default_settings);
         $this->assertArrayNotHasKey('footer_credit_url', $template->default_settings);
+    }
+
+    public function test_template_section_editor_saves_sections_interactively(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $template = WebsiteTemplate::query()->create([
+            'handle' => 'interactive',
+            'name' => 'Interactive Template',
+            'is_active' => true,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(TemplateSectionEditor::class, ['template' => $template])
+            ->set('sections.0.label', 'Homepage hero')
+            ->set('sections.0.handle', 'homepage_hero')
+            ->set('sections.0.type', 'banner')
+            ->call('addSection')
+            ->set('sections.2.label', 'Footer banner')
+            ->set('sections.2.handle', 'footer_banner')
+            ->set('sections.2.type', 'mixed')
+            ->call('moveSection', 2, 'up')
+            ->call('save')
+            ->assertSet('message', 'Template secties opgeslagen.');
+
+        $template->refresh();
+
+        $this->assertSame('homepage_hero', $template->defined_sections[0]['handle']);
+        $this->assertSame('footer_banner', $template->defined_sections[1]['handle']);
+        $this->assertSame('mixed', $template->defined_sections[1]['type']);
+        $this->assertSame($admin->id, $template->updated_by);
     }
 }

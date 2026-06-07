@@ -7,6 +7,7 @@ use App\Models\Cms\CmsPermission;
 use App\Models\Cms\CmsRole;
 use App\Models\Cms\ContentCategory;
 use App\Models\Cms\ContentItem;
+use App\Models\Cms\Domain;
 use App\Models\Cms\NavigationMenu;
 use App\Models\Cms\NavigationMenuItem;
 use App\Models\User;
@@ -45,7 +46,9 @@ class NavigationBuilderModuleTest extends TestCase
             ->get(route('admin.navigation.edit', $menu))
             ->assertOk()
             ->assertSee('name="handle"', false)
-            ->assertSee('internal-primary');
+            ->assertSee('internal-primary')
+            ->assertSee('navigation-selector-toggle', false)
+            ->assertSee('data-navigation-all-languages', false);
 
         $this->actingAs($roleAdmin)
             ->get(route('admin.navigation.edit', $menu))
@@ -260,6 +263,65 @@ class NavigationBuilderModuleTest extends TestCase
             ->assertSee('name="locale"', false)
             ->assertSee('data-navigation-locale="nl"', false)
             ->assertDontSee('name="locale" type="text"', false);
+    }
+
+    public function test_navigation_overview_can_filter_menu_fields(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $domain = Domain::query()->create([
+            'host' => 'example.test',
+            'name' => 'Example',
+            'is_active' => true,
+        ]);
+        $footer = NavigationMenu::query()->create([
+            'name' => 'Footer downloads',
+            'handle' => 'footer-downloads',
+            'locale' => 'en',
+            'domain_id' => $domain->id,
+            'is_active' => true,
+        ]);
+        NavigationMenuItem::query()->create([
+            'navigation_menu_id' => $footer->id,
+            'title' => 'Files',
+            'link_type' => 'download',
+            'link_id' => 1,
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+        NavigationMenu::query()->create([
+            'name' => 'Primary navigation',
+            'handle' => 'primary',
+            'locale' => 'nl',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.navigation.index', [
+                'name' => 'Footer',
+                'handle' => 'footer',
+                'locale' => 'en',
+                'domain_id' => $domain->id,
+                'status' => 'active',
+                'items_count' => 1,
+            ]))
+            ->assertOk()
+            ->assertSee('name="name"', false)
+            ->assertSee('name="handle"', false)
+            ->assertSee('name="items_count"', false)
+            ->assertSee('Footer downloads')
+            ->assertSee('example.test')
+            ->assertDontSee('Primary navigation');
+    }
+
+    public function test_admin_sidebar_collapsed_cookie_adds_initial_body_class(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->withHeader('Cookie', 'base_cms_admin_sidebar_collapsed=true')
+            ->get(route('admin.navigation.index'))
+            ->assertOk()
+            ->assertSee('class="admin-sidebar-is-collapsed"', false);
     }
 
     public function test_frontend_navigation_renders_builder_items_and_expanded_category_children(): void

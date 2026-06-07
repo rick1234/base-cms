@@ -14,7 +14,7 @@ class DuplicateBanner
     public function handle(Banner $banner, ?Authenticatable $actor = null): Banner
     {
         return DB::transaction(function () use ($banner, $actor): Banner {
-            $banner->load(['categories', 'translations']);
+            $banner->load(['categories', 'translations', 'images']);
 
             $copy = $banner->replicate(['uuid', 'legacy_id', 'created_at', 'updated_at', 'deleted_at']);
             $copy->title = ($banner->title ?: __('Banner')).' copy';
@@ -37,6 +37,15 @@ class DuplicateBanner
                 $newTranslation->created_by = $actor?->getAuthIdentifier();
                 $newTranslation->updated_by = $actor?->getAuthIdentifier();
                 $newTranslation->save();
+            }
+
+            foreach ($banner->images as $image) {
+                $newImage = $image->replicate(['uuid', 'legacy_id', 'created_at', 'updated_at', 'deleted_at']);
+                $newImage->banner_id = $copy->id;
+                $newImage->image_path = $this->duplicateImage($image->image_path);
+                $newImage->created_by = $actor?->getAuthIdentifier();
+                $newImage->updated_by = $actor?->getAuthIdentifier();
+                $newImage->save();
             }
 
             return $copy->refresh();

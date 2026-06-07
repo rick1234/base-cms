@@ -1,7 +1,7 @@
 <div
     class="content-block-editor"
     data-content-block-editor
-    data-content-block-auto-save-error="{{ __('Content blocks could not be saved automatically. Save the blocks and try again.') }}"
+    data-content-block-auto-save-error="{{ $this->autoSaveErrorMessage() }}"
 >
     @if ($message)
         <div class="flash-message flash-message-success" data-flash-message>

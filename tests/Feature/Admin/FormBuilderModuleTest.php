@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Livewire\Admin\Forms\ResponseMailBuilder;
+use App\Livewire\Admin\Forms\FormSubmissionInbox;
 use App\Mail\FormSubmissionNotification;
 use App\Models\User;
 use App\Models\Cms\Form;
@@ -12,6 +13,7 @@ use App\Models\Cms\FormField;
 use App\Models\Cms\FormFieldOption;
 use App\Models\Cms\FormRecipient;
 use App\Models\Cms\FormSubmission;
+use App\Models\Cms\FormSubmissionAnswer;
 use Database\Seeders\FormModuleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -573,6 +575,64 @@ class FormBuilderModuleTest extends TestCase
         ]);
 
         Mail::assertSent(FormSubmissionNotification::class, 2);
+    }
+
+    public function test_admin_form_submissions_use_livewire_inbox_layout(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $form = Form::query()->create([
+            'name' => 'Contact form',
+            'slug' => 'contact-form',
+            'locale' => 'nl',
+            'status' => 'published',
+        ]);
+        $olderSubmission = FormSubmission::query()->create([
+            'form_id' => $form->id,
+            'status' => 'new',
+            'source_url' => 'https://example.test/contact',
+            'remote_ip' => '127.0.0.1',
+            'user_agent' => 'Feature browser',
+            'created_at' => now()->subHour(),
+        ]);
+        $newerSubmission = FormSubmission::query()->create([
+            'form_id' => $form->id,
+            'status' => 'new',
+            'source_url' => 'https://example.test/quote',
+            'remote_ip' => '127.0.0.2',
+            'user_agent' => 'Latest browser',
+            'created_at' => now(),
+        ]);
+
+        FormSubmissionAnswer::query()->create([
+            'submission_id' => $olderSubmission->id,
+            'field_name' => 'subject',
+            'value' => 'Older question',
+        ]);
+        FormSubmissionAnswer::query()->create([
+            'submission_id' => $olderSubmission->id,
+            'field_name' => 'message',
+            'value' => 'Please call me back.',
+        ]);
+        FormSubmissionAnswer::query()->create([
+            'submission_id' => $newerSubmission->id,
+            'field_name' => 'subject',
+            'value' => 'Latest question',
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/form/{$form->id}/submissions")
+            ->assertOk()
+            ->assertSeeLivewire(FormSubmissionInbox::class)
+            ->assertSee('form-submission-inbox');
+
+        Livewire::actingAs($admin)
+            ->test(FormSubmissionInbox::class, ['form' => $form])
+            ->assertSet('selectedSubmissionId', $newerSubmission->id)
+            ->assertSee('Latest question')
+            ->call('selectSubmission', $olderSubmission->id)
+            ->assertSet('selectedSubmissionId', $olderSubmission->id)
+            ->assertSee('Older question')
+            ->assertSee('Please call me back.');
     }
 
     public function test_form_categories_support_legacy_fields_and_delete_routes(): void

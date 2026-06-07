@@ -20,6 +20,11 @@
         $adminDirtyScreen = request()->route()?->getAction('admin_screen');
         $adminDirtyScreen = is_array($adminDirtyScreen) ? end($adminDirtyScreen) : $adminDirtyScreen;
         $adminDirtySegment = request()->segment(2);
+        $adminSidebarCookie = collect(explode(';', (string) request()->headers->get('cookie')))
+            ->map(fn (string $cookie): array => explode('=', trim($cookie), 2))
+            ->first(fn (array $cookie): bool => ($cookie[0] ?? '') === 'base_cms_admin_sidebar_collapsed');
+        $adminSidebarCollapsed = rawurldecode((string) ($adminSidebarCookie[1] ?? '')) === 'true'
+            || request()->cookie('base_cms_admin_sidebar_collapsed') === 'true';
         $adminDirtyModuleName = [
             'content_items' => __('pagina'),
             'content_categories' => __('paginacategorie'),
@@ -54,12 +59,17 @@
             'translations' => __('vertaling'),
         ][$adminDirtyScreen] ?? __('module');
     @endphp
-    <body
+    <body @class(['admin-sidebar-is-collapsed' => $adminSidebarCollapsed])
         data-unsaved-back-title="{{ __('Wijzigingen niet opgeslagen') }}"
         data-unsaved-back-message="{{ __('Weet u zeker dat u terug wilt gaan, er zijn wijzigingen gedaan aan deze :module') }}"
         data-unsaved-back-confirm="{{ __('Teruggaan') }}"
         data-unsaved-back-cancel="{{ __('Blijven') }}"
         data-unsaved-back-module="{{ $adminDirtyModuleName }}"
+        data-delete-confirm-title="{{ __('Item verwijderen?') }}"
+        data-delete-confirm-message="{{ __('Weet u zeker dat u :item wilt verwijderen?') }}"
+        data-delete-confirm-button="{{ __('Verwijderen') }}"
+        data-delete-confirm-cancel="{{ __('Annuleren') }}"
+        data-delete-item-fallback-name="{{ __('item') }}"
     >
         <div class="admin-shell">
             @include('flash::message')

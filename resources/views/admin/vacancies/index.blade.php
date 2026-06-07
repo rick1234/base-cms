@@ -56,6 +56,7 @@
                         </div>
                         <div class="overview-item language">{{ __('Taal') }}</div>
                         <div class="overview-item category">{{ __('Categorie') }}</div>
+                        <div class="overview-item reactions">{{ __('Reacties') }}</div>
                         <div class="overview-item status">{{ __('Status') }}</div>
                         <div class="overview-item options">{{ __('Opties') }}</div>
                     </div>
@@ -85,6 +86,7 @@
                                     'clearUrl' => route($routeNames['index'], request()->except(['categoryId', 'showChild'])),
                                 ])
                             </div>
+                            <div class="overview-item reactions"></div>
                             <div class="overview-item status">
                                 <select name="status">
                                     <option value="">{{ __('Selecteer') }}</option>
@@ -111,8 +113,22 @@
                             <div class="overview-item category">
                                 {{ $vacancy->categories->pluck('name')->join(', ') ?: '-' }}
                             </div>
+                            <div class="overview-item reactions">
+                                @php
+                                    $reactionCount = (int) ($vacancy->form?->submissions_count ?? 0);
+                                    $formSubmissionsRouteName = request()->routeIs('cms.*') ? 'cms.forms.submissions' : 'admin.forms.submissions';
+                                @endphp
+
+                                @if ($vacancy->form && $reactionCount > 0)
+                                    <a class="overview-count-link" href="{{ route($formSubmissionsRouteName, ['id' => $vacancy->form->id]) }}">
+                                        {{ $reactionCount }}
+                                    </a>
+                                @else
+                                    <span class="overview-muted-count">{{ $reactionCount }}</span>
+                                @endif
+                            </div>
                             <div class="overview-item status">
-                                <span class="{{ $vacancy->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="vacancy" :record="$vacancy" :value="$vacancy->status" :active="$vacancy->isActive()" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $vacancy->id]) }}" title="{{ __('Bewerken') }}">

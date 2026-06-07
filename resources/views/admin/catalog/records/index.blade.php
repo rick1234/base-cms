@@ -80,7 +80,7 @@
                             <div class="overview-item title">{{ $record->name }}</div>
                             <div class="overview-item category">{{ $record->products_count }}</div>
                             <div class="overview-item status">
-                                <span class="{{ $record->status === 'active' ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status :model="str_contains($legacyClass, 'brand') ? 'catalog-brand' : 'catalog-promotion'" :record="$record" :value="$record->status" :active="$record->status === 'active'" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $record->id]) }}" title="{{ __('Bewerken') }}">

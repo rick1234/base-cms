@@ -110,6 +110,9 @@ class DomainRequest extends FormRequest
             'public_integrations.matomo_url' => ['nullable', 'url', 'max:255'],
             'public_integrations.matomo_site_id' => ['nullable', 'string', 'max:80'],
             'public_integrations.meta_pixel_id' => ['nullable', 'string', 'max:80'],
+            'settings' => ['array'],
+            'settings.security' => ['array'],
+            'settings.security.backend_two_factor_required' => ['sometimes', 'boolean'],
             'favicon_logo' => ['nullable', 'file', 'max:8192', 'mimetypes:image/svg+xml,text/plain,application/xml,text/xml,image/png,image/jpeg,image/webp'],
             'favicon_svg' => ['nullable', 'file', 'max:8192', 'mimetypes:image/svg+xml,text/plain,application/xml,text/xml,image/png,image/jpeg,image/webp'],
             'is_active' => ['sometimes', 'boolean'],
@@ -227,6 +230,11 @@ class DomainRequest extends FormRequest
                     array_keys($rules),
                     fn (string $key): bool => str_starts_with($key, 'public_integrations.'),
                 )),
+            ],
+            'security' => [
+                'settings',
+                'settings.security',
+                'settings.security.backend_two_factor_required',
             ],
             'social-contact' => [
                 'social_links',

@@ -127,7 +127,7 @@
                                 <a href="{{ route($routeNames['submissions'], ['id' => $form->id]) }}">{{ $form->submissions_count }}</a>
                             </div>
                             <div class="overview-item status">
-                                <span class="{{ $form->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="form" :record="$form" :value="$form->status" :active="$form->isActive()" />
                             </div>
                             <div class="overview-item options">
                                 <a href="{{ route($routeNames['edit'], ['id' => $form->id]) }}" title="{{ __('Bewerken') }}">

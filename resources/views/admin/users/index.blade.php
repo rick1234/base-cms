@@ -3,6 +3,11 @@
 @section('title', __('Users'))
 
 @section('body')
+    @php
+        $categoriesByParent = $categories->groupBy(fn ($category) => (int) ($category->parent_id ?? 0));
+        $selectedCategory = $categories->firstWhere('id', $selectedCategoryId);
+    @endphp
+
     <div class="site-wrapper-container">
         <div class="left">
             @include('admin.partials.navigation')
@@ -52,7 +57,25 @@
                                 <x-admin.material-icon name="keyboard_arrow_down" />
                             </a>
                         </div>
+                        <div class="overview-item name">
+                            {{ __('Name') }}
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'desc'])) }}">
+                                <x-admin.material-icon name="keyboard_arrow_up" />
+                            </a>
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'name', 'sorttype' => 'asc'])) }}">
+                                <x-admin.material-icon name="keyboard_arrow_down" />
+                            </a>
+                        </div>
                         <div class="overview-item category">{{ __('Categorie') }}</div>
+                        <div class="overview-item last-login">
+                            {{ __('Last login') }}
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'last_login', 'sorttype' => 'desc'])) }}">
+                                <x-admin.material-icon name="keyboard_arrow_up" />
+                            </a>
+                            <a href="{{ route($routeNames['index'], array_merge(request()->except(['sort', 'sorttype']), ['sort' => 'last_login', 'sorttype' => 'asc'])) }}">
+                                <x-admin.material-icon name="keyboard_arrow_down" />
+                            </a>
+                        </div>
                         <div class="overview-item status">{{ __('Status') }}</div>
                         <div class="overview-item options">{{ __('Opties') }}</div>
                     </div>
@@ -67,13 +90,50 @@
                                 <input name="username" type="text" value="{{ request('username') }}">
                                 <x-admin.material-icon name="search" class="search-icon" />
                             </div>
+                            <div class="overview-item name">
+                                <input name="name" type="text" value="{{ request('name') }}">
+                                <x-admin.material-icon name="search" class="search-icon" />
+                            </div>
                             <div class="overview-item category">
-                                <select name="categoryId">
-                                    <option value="0">{{ __('Selecteer') }}</option>
-                                    @foreach ($categories as $category)
-                                        <option value="{{ $category->id }}" @selected($selectedCategoryId === $category->id)>{{ $category->name }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="listing-category-picker">
+                                    <details class="listing-category-native">
+                                        <summary class="listing-category-picker-button">
+                                            <x-admin.material-icon name="folder" />
+                                            <span>{{ $selectedCategory?->name ?? __('All categories') }}</span>
+                                        </summary>
+                                        <div class="listing-category-native-panel">
+                                            <div class="listing-category-modal-header">
+                                                <h2>{{ __('Select category') }}</h2>
+                                            </div>
+                                            <div class="listing-category-modal-body">
+                                                <div class="listing-category-modal-options">
+                                                    <label class="listing-category-option {{ $selectedCategoryId === 0 ? 'is-selected' : '' }}">
+                                                        <input type="radio" name="categoryId" value="0" @checked($selectedCategoryId === 0)>
+                                                        <x-admin.material-icon name="folder_open" />
+                                                        <span>{{ __('All categories') }}</span>
+                                                    </label>
+                                                </div>
+
+                                                @include('admin.partials.category-filter-tree', [
+                                                    'categoriesByParent' => $categoriesByParent,
+                                                    'parentId' => 0,
+                                                    'selectedCategoryId' => $selectedCategoryId,
+                                                    'mode' => 'radio',
+                                                    'inputName' => 'categoryId',
+                                                ])
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    @if ($selectedCategoryId)
+                                        <a class="listing-category-clear-button" href="{{ route($routeNames['index'], request()->except(['categoryId', 'showChild'])) }}" title="{{ __('Clear category') }}">
+                                            <x-admin.material-icon name="close" />
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="overview-item last-login">
+                                <span class="overview-filter-placeholder">{{ __('Date') }}</span>
                             </div>
                             <div class="overview-item status">
                                 <select name="status">
@@ -81,6 +141,7 @@
                                     <option value="1" @selected(request('status') === '1')>{{ __('Alles') }}</option>
                                     <option value="2" @selected(request('status') === '2' || request('status') === 'active')>{{ __('Actief') }}</option>
                                     <option value="3" @selected(request('status') === '3' || request('status') === 'inactive')>{{ __('Inactief') }}</option>
+                                    <option value="4" @selected(request('status') === '4' || request('status') === 'revoked')>{{ __('Revoked') }}</option>
                                 </select>
                             </div>
                             <div class="overview-item options">
@@ -99,13 +160,30 @@
                                 {{ $listedUser->displayName() }}
                                 <small>{{ $listedUser->email }}</small>
                             </div>
+                            <div class="overview-item name">
+                                {{ $listedUser->fullName() }}
+                            </div>
                             <div class="overview-item category">
                                 {{ $listedUser->categories->pluck('name')->join(', ') ?: '-' }}
                             </div>
+                            <div class="overview-item last-login">
+                                {{ $listedUser->last_login_at?->format('d-m-Y H:i') ?? __('Never') }}
+                            </div>
                             <div class="overview-item status">
-                                <span class="{{ $listedUser->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="user" :record="$listedUser" :value="$listedUser->is_active" :active="$listedUser->isActive()" />
+                                @if ($listedUser->isRevoked())
+                                    <span class="status-note is-revoked">{{ __('Revoked') }}</span>
+                                @endif
                             </div>
                             <div class="overview-item options">
+                                @unless (auth()->user()?->is($listedUser))
+                                    <form method="post" action="{{ route($routeNames['impersonate'], $listedUser) }}">
+                                        @csrf
+                                        <button type="submit" title="{{ __('Log in as this user') }}">
+                                            <x-admin.material-icon name="login" />
+                                        </button>
+                                    </form>
+                                @endunless
                                 <a href="{{ route($routeNames['edit'], ['id' => $listedUser->id]) }}" title="{{ __('Bewerken') }}">
                                     <x-admin.material-icon name="edit" />
                                 </a>

@@ -32,7 +32,6 @@ class DashboardNavigationBuilder
         ],
         'media' => [
             ['title' => 'Banners', 'icon' => 'banner', 'screens' => ['banners', 'banner_categories']],
-            ['title' => 'Sliders', 'icon' => 'slider', 'screens' => ['sliders', 'slider_categories']],
         ],
         'users' => [
             ['title' => 'Users', 'icon' => 'users', 'screens' => ['users', 'user_categories']],
@@ -78,7 +77,7 @@ class DashboardNavigationBuilder
                 return [
                     'key' => $groupKey,
                     'title' => $groups->get($groupKey, Str::headline($groupKey)),
-                    'icon' => $this->materialIcon('module'),
+                    'icon' => $this->materialIcon($groupKey),
                     'modules' => $builtModules,
                 ];
             })
@@ -158,7 +157,7 @@ class DashboardNavigationBuilder
                 'screen_key' => $screenKey,
                 'title' => (string) data_get($screen, 'pages.index.name', $screen['name']),
                 'url' => route($screen['admin_route']),
-                'icon' => $this->materialIcon($fallbackIcon),
+                'icon' => $this->screenIcon($screenKey, $fallbackIcon),
             ];
         }
 
@@ -169,7 +168,7 @@ class DashboardNavigationBuilder
             'screen_key' => $screenKey,
             'title' => (string) data_get($screen, 'pages.index.name', $screen['name']),
             'url' => route($routeName, $path),
-            'icon' => $this->materialIcon($fallbackIcon),
+            'icon' => $this->screenIcon($screenKey, $fallbackIcon),
         ];
     }
 
@@ -213,7 +212,7 @@ class DashboardNavigationBuilder
                     $dashboardGroups->push([
                         'key' => $groupKey,
                         'title' => $groups->get($groupKey, Str::headline($groupKey)),
-                        'icon' => $this->materialIcon('module'),
+                        'icon' => $this->materialIcon($groupKey),
                         'modules' => $fallbackModules,
                     ]);
 
@@ -259,6 +258,17 @@ class DashboardNavigationBuilder
             ->toString();
 
         return (string) config("cms_icons.modules.{$key}", config('cms_icons.fallback', 'extension'));
+    }
+
+    private function screenIcon(string $screenKey, string $fallbackIcon): string
+    {
+        $key = Str::of($screenKey)
+            ->lower()
+            ->replace(['_', '/'], '-')
+            ->trim('-')
+            ->toString();
+
+        return (string) config("cms_icons.screens.{$key}", $this->materialIcon($fallbackIcon));
     }
 
     private function moduleTheme(string $name): string

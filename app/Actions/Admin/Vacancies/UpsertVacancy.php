@@ -70,7 +70,19 @@ class UpsertVacancy
     {
         $metadata = (array) ($vacancy->metadata ?? []);
 
-        foreach (['location', 'employment_type', 'hours', 'salary', 'contact_email'] as $key) {
+        foreach ([
+            'location',
+            'vacancy_type',
+            'employment_type',
+            'education_level',
+            'experience_level',
+            'work_mode',
+            'hours',
+            'salary',
+            'volunteer_commitment',
+            'volunteer_compensation',
+            'contact_email',
+        ] as $key) {
             $value = $data[$key] ?? null;
 
             if (filled($value)) {

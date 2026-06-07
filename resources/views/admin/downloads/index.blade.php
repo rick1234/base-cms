@@ -112,7 +112,7 @@
                             <div class="overview-item downloads">{{ $download->download_count }}</div>
                             <div class="overview-item file">{{ $download->original_filename ?: '-' }}</div>
                             <div class="overview-item status">
-                                <span class="{{ $download->isActive() ? 'active-item' : 'inactive-item' }}"></span>
+                                <x-admin.quick-status model="download" :record="$download" :value="$download->status" :active="$download->isActive()" />
                             </div>
                             <div class="overview-item options">
                                 @if ($download->slug && $download->hasFile())
