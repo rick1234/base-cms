@@ -59,7 +59,7 @@
             <link rel="manifest" href="{{ $manifestUrl }}">
         @endif
         @if ($maskIconUrl)
-            <link rel="mask-icon" href="{{ $maskIconUrl }}" color="{{ data_get($settings, 'primary_color', '#165f63') }}">
+            <link rel="mask-icon" href="{{ $maskIconUrl }}" color="{{ data_get($settings, 'primary_color', '#0f6f7a') }}">
         @endif
         @if ($browserConfigUrl)
             <meta name="msapplication-config" content="{{ $browserConfigUrl }}">
@@ -81,9 +81,11 @@
         'template-default',
         'has-domain-dev-toolbar' => $isDomainPreviewMode ?? false,
     ])>
+        <a class="skip-link" href="#site-main">{{ __('Skip to content') }}</a>
+
         @include('flash::message')
 
-        @include('frontend.partials.usp-bar')
+        @include('frontend.partials.usp-bar', ['location' => 'header_top'])
 
         <header @class(['header-container', 'sticky' => $stickyHeader])>
             <div class="wrapper-container">
@@ -100,7 +102,7 @@
                     @include('frontend.partials.language-switcher')
 
                     @if (filter_var(data_get($settings, 'search_enabled', false), FILTER_VALIDATE_BOOLEAN))
-                        @include('frontend.partials.search-form')
+                        @include('frontend.partials.search-form', ['searchInputId' => 'site-header-search-query'])
                     @endif
 
                     @if (($settings['social_placement'] ?? null) === 'header')
@@ -112,10 +114,11 @@
             @include('frontend.partials.navigation')
         </header>
 
-        <main class="center-container">
+        <main id="site-main" class="center-container" tabindex="-1">
             @yield('content')
         </main>
 
+        @include('frontend.partials.usp-bar', ['location' => 'footer_top'])
         @include('frontend.partials.footer')
         @include('frontend.partials.offscreen-navigation')
         @include('frontend.partials.domain-toolbar')

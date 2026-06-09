@@ -18,7 +18,7 @@ Legacy CMS modules: `D:\htdocs\basiscms\cms`
 - Navigation and SEO: `url`, `urlverwijzing`, `redirect`, and `menucategorieen`.
 - Admin and access: `users`, `role`, `permissions`, `rechten`.
 - Forms: `form`, `formblock`, `formfield`, `formmessage`, plus older `formulier` tables.
-- Commerce: `catalogusartikel`, `cataloguscategorie`, `orders`, `orderregels`, stock, discounts, reviews, brands, and media.
+- Commerce: `catalogusartikel`, `cataloguscategorie`, `orders`, `orderregels`, discounts, reviews, brands, and media.
 - Site modules: `banner`, `slider`, `faq`, `vacatures`, `vestiging`, `evenement`, and `downloads`.
 
 ## Migration decisions

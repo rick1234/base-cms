@@ -128,6 +128,7 @@ class UpsertDomain
                 'default_og_description' => $data['default_og_description'] ?? null,
                 'default_og_image' => $data['default_og_image'] ?? null,
                 'robots' => $data['robots'] ?? null,
+                'settings' => $this->settings($domain, $data),
                 'updated_by' => $user?->id,
             ]),
             'integrations' => $domain->fill([
@@ -259,13 +260,43 @@ class UpsertDomain
     {
         $settings = $domain->settings ?? [];
 
+        if (array_key_exists('settings', $data) && array_key_exists('seo', (array) ($data['settings'] ?? []))) {
+            data_set($settings, 'seo.locales', $this->localizedSeoDefaults((array) data_get($data, 'settings.seo.locales', [])));
+        }
+
         data_set(
             $settings,
             'security.backend_two_factor_required',
-            (bool) data_get($data, 'settings.security.backend_two_factor_required', false)
+            (bool) data_get($data, 'settings.security.backend_two_factor_required', data_get($settings, 'security.backend_two_factor_required', false))
         );
 
         return $settings;
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $locales
+     * @return array<string, array<string, string>>
+     */
+    private function localizedSeoDefaults(array $locales): array
+    {
+        $fields = [
+            'default_meta_title',
+            'default_meta_description',
+            'default_og_title',
+            'default_og_description',
+            'default_og_image',
+        ];
+
+        return collect($locales)
+            ->mapWithKeys(function (array $values, string $locale) use ($fields): array {
+                $defaults = collect($fields)
+                    ->mapWithKeys(fn (string $field): array => [$field => trim((string) ($values[$field] ?? ''))])
+                    ->filter(fn (string $value): bool => $value !== '')
+                    ->all();
+
+                return $defaults === [] ? [] : [$locale => $defaults];
+            })
+            ->all();
     }
 
     /**

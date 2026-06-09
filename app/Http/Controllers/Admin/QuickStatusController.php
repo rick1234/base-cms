@@ -5,16 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Cms\Banner;
 use App\Models\Cms\CatalogBrand;
-use App\Models\Cms\CatalogCoupon;
 use App\Models\Cms\CatalogProduct;
-use App\Models\Cms\CatalogPromotion;
-use App\Models\Cms\CatalogReview;
 use App\Models\Cms\CmsLanguage;
 use App\Models\Cms\CmsRedirect;
 use App\Models\Cms\CmsRole;
 use App\Models\Cms\ContentItem;
 use App\Models\Cms\Country;
 use App\Models\Cms\Download;
+use App\Models\Cms\Domain;
 use App\Models\Cms\Event;
 use App\Models\Cms\FaqItem;
 use App\Models\Cms\Form;
@@ -75,14 +73,12 @@ class QuickStatusController extends Controller
         return [
             'banner' => ['class' => Banner::class, 'field' => 'status', 'status_set' => 'publishing'],
             'catalog-brand' => ['class' => CatalogBrand::class, 'field' => 'status', 'status_set' => 'active'],
-            'catalog-coupon' => ['class' => CatalogCoupon::class, 'field' => 'is_active', 'status_set' => 'boolean_active'],
             'catalog-product' => ['class' => CatalogProduct::class, 'field' => 'status', 'status_set' => 'publishing'],
-            'catalog-promotion' => ['class' => CatalogPromotion::class, 'field' => 'status', 'status_set' => 'active'],
-            'catalog-review' => ['class' => CatalogReview::class, 'field' => 'status', 'status_set' => 'review'],
             'content' => ['class' => ContentItem::class, 'field' => 'status', 'status_set' => 'publishing'],
             'country' => ['class' => Country::class, 'field' => 'status', 'status_set' => 'active'],
             'country-enabled' => ['class' => Country::class, 'field' => 'is_enabled', 'status_set' => 'enabled'],
             'download' => ['class' => Download::class, 'field' => 'status', 'status_set' => 'active'],
+            'domain' => ['class' => Domain::class, 'field' => 'is_active', 'status_set' => 'boolean_active'],
             'event' => ['class' => Event::class, 'field' => 'status', 'status_set' => 'publishing'],
             'faq' => ['class' => FaqItem::class, 'field' => 'status', 'status_set' => 'publishing'],
             'form' => ['class' => Form::class, 'field' => 'status', 'status_set' => 'publishing'],

@@ -10,4 +10,24 @@
     white-space: nowrap;
     width: 1px;
   }
+
+  .skip-link {
+    background: var(--color-ink);
+    color: var(--color-surface);
+    font-weight: 700;
+    left: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    position: fixed;
+    top: var(--space-3);
+    transform: translateY(-150%);
+    transition: transform 160ms ease;
+    z-index: 1000;
+  }
+
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    transform: translateY(0);
+  }
 }

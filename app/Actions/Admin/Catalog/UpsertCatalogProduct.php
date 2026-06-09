@@ -28,23 +28,16 @@ class UpsertCatalogProduct
             'sku',
             'name',
             'description',
-            'price_note',
-            'is_on_sale',
-            'sale_starts_at',
-            'sale_ends_at',
-            'sale_price_note',
+            'meta_title',
             'meta_description',
             'brand_id',
-            'promotion_id',
-            'can_be_engraved',
             'status',
             'active_from',
             'active_until',
         ]);
         $attributes['price'] = $this->moneyToCents($data['price'] ?? 0);
-        $attributes['sale_price'] = blank($data['sale_price'] ?? null) ? null : $this->moneyToCents($data['sale_price']);
 
-        foreach (['brand_id', 'promotion_id'] as $nullableInteger) {
+        foreach (['brand_id'] as $nullableInteger) {
             if (blank($attributes[$nullableInteger] ?? null)) {
                 $attributes[$nullableInteger] = null;
             }

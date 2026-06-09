@@ -1,0 +1,67 @@
+name: Extended Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 1 * *'
+
+permissions:
+  contents: read
+
+jobs:
+  extended-health:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, pdo_mysql
+          ini-values: memory_limit=-1
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20.19'
+          cache: npm
+
+      - name: Install Composer dependencies
+        env:
+          COMPOSER_AUTH: '{}'
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install Node dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Prepare health database
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p storage/framework/health-checks
+          touch storage/framework/health-checks/current.sqlite
+          php artisan migrate --force
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: storage/framework/health-checks/current.sqlite
+          DB_URL: ''
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+
+      - name: Run extended health
+        run: composer health:extended
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: storage/framework/health-checks/current.sqlite
+          DB_URL: ''
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync

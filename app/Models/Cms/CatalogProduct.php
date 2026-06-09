@@ -18,12 +18,7 @@ class CatalogProduct extends CmsModel
     {
         return [
             ...parent::casts(),
-            'is_on_sale' => 'boolean',
-            'sale_starts_at' => 'date',
-            'sale_ends_at' => 'date',
-            'can_be_engraved' => 'boolean',
             'price' => 'integer',
-            'sale_price' => 'integer',
         ];
     }
 
@@ -41,11 +36,6 @@ class CatalogProduct extends CmsModel
         return $this->belongsTo(CatalogBrand::class, 'brand_id');
     }
 
-    public function promotion(): BelongsTo
-    {
-        return $this->belongsTo(CatalogPromotion::class, 'promotion_id');
-    }
-
     public function images(): HasMany
     {
         return $this->hasMany(CatalogProductImage::class, 'catalog_product_id')->orderBy('sort_order')->orderBy('id');
@@ -58,7 +48,9 @@ class CatalogProduct extends CmsModel
 
     public function options(): HasMany
     {
-        return $this->hasMany(CatalogProductOption::class, 'catalog_product_id')->orderBy('id');
+        return $this->hasMany(CatalogProductOption::class, 'catalog_product_id')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function translations(): HasMany
@@ -71,23 +63,13 @@ class CatalogProduct extends CmsModel
         return $this->hasMany(CatalogProductVideo::class, 'catalog_product_id')->orderBy('sort_order')->orderBy('id');
     }
 
-    public function stockRows(): HasMany
+    public function combinationSets(): BelongsToMany
     {
-        return $this->hasMany(CatalogStock::class, 'catalog_product_id')->orderBy('location')->orderBy('id');
-    }
-
-    public function reviews(): HasMany
-    {
-        return $this->hasMany(CatalogReview::class, 'catalog_product_id')->orderByDesc('id');
-    }
-
-    public function relatedProducts(): BelongsToMany
-    {
-        return $this->belongsToMany(self::class, 'catalog_product_combinations', 'catalog_product_id', 'related_product_id')
+        return $this->belongsToMany(CatalogCombinationSet::class, 'catalog_combination_set_products', 'catalog_product_id', 'catalog_combination_set_id')
             ->withPivot('sort_order')
             ->withTimestamps()
-            ->orderBy('catalog_product_combinations.sort_order')
-            ->orderBy('catalog_products.name');
+            ->orderBy('catalog_combination_set_products.sort_order')
+            ->orderBy('catalog_combination_sets.name');
     }
 
     public function scopePublished(Builder $query): Builder
@@ -115,10 +97,5 @@ class CatalogProduct extends CmsModel
     public function priceForInput(): string
     {
         return number_format($this->price / 100, 2, '.', '');
-    }
-
-    public function salePriceForInput(): string
-    {
-        return $this->sale_price === null ? '' : number_format($this->sale_price / 100, 2, '.', '');
     }
 }

@@ -82,4 +82,17 @@ class Event extends CmsModel
                     ->orWhereDate('active_until', '>=', now());
             });
     }
+
+    /**
+     * @param  Builder<Event>  $query
+     * @return Builder<Event>
+     */
+    public function scopeFrontendOrdered(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw('starts_at is null')
+            ->orderBy('starts_at')
+            ->orderBy('sort_order')
+            ->orderBy('title');
+    }
 }

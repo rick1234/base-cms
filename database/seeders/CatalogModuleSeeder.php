@@ -4,16 +4,14 @@ namespace Database\Seeders;
 
 use App\Models\Cms\CatalogBrand;
 use App\Models\Cms\CatalogCategory;
-use App\Models\Cms\CatalogCoupon;
+use App\Models\Cms\CatalogCombinationSet;
 use App\Models\Cms\CatalogProduct;
 use App\Models\Cms\CatalogProductAttachment;
 use App\Models\Cms\CatalogProductImage;
 use App\Models\Cms\CatalogProductOption;
+use App\Models\Cms\CatalogProductOptionValue;
 use App\Models\Cms\CatalogProductTranslation;
 use App\Models\Cms\CatalogProductVideo;
-use App\Models\Cms\CatalogPromotion;
-use App\Models\Cms\CatalogReview;
-use App\Models\Cms\CatalogStock;
 use Database\Seeders\Support\SeederFiles;
 use Illuminate\Database\Seeder;
 
@@ -47,16 +45,11 @@ class CatalogModuleSeeder extends Seeder
             [
                 'name' => 'Base Brand',
                 'description' => 'Seeded catalog brand.',
-                'status' => 'active',
-                'sort_order' => 1,
-            ],
-        );
-
-        $promotion = CatalogPromotion::query()->firstOrCreate(
-            ['slug' => 'launch-promotion'],
-            [
-                'name' => 'Launch promotion',
-                'description' => 'Seeded launch promotion.',
+                'website_url' => 'https://example.com/base-brand',
+                'intro' => 'A seeded brand profile for catalog examples.',
+                'body' => 'This brand record demonstrates extended catalog brand fields without webshop behavior.',
+                'meta_title' => 'Base Brand',
+                'meta_description' => 'Seeded brand profile for the Laravel base CMS catalog.',
                 'status' => 'active',
                 'sort_order' => 1,
             ],
@@ -68,14 +61,8 @@ class CatalogModuleSeeder extends Seeder
                 'name' => 'Seeded catalog product',
                 'description' => 'A seeded product that exercises the rebuilt catalog module.',
                 'price' => 2995,
-                'price_note' => 'Includes starter configuration.',
-                'is_on_sale' => true,
-                'sale_price' => 2495,
-                'sale_price_note' => 'Launch offer.',
                 'meta_description' => 'Seeded catalog product for the Laravel base CMS.',
                 'brand_id' => $brand->id,
-                'promotion_id' => $promotion->id,
-                'can_be_engraved' => false,
                 'status' => 'published',
                 'active_from' => now()->toDateString(),
             ],
@@ -100,8 +87,18 @@ class CatalogModuleSeeder extends Seeder
         $secondary->categories()->sync([
             $featuredCategory->id => ['sort_order' => 1],
         ]);
-        $primary->relatedProducts()->sync([
-            $secondary->id => ['sort_order' => 1],
+        $combinationSet = CatalogCombinationSet::query()->updateOrCreate(
+            ['slug' => 'seeded-catalog-combination'],
+            [
+                'name' => 'Seeded catalog combination',
+                'description' => 'A seeded combination set for catalog products.',
+                'status' => 'active',
+                'sort_order' => 1,
+            ],
+        );
+        $combinationSet->products()->sync([
+            $primary->id => ['sort_order' => 1],
+            $secondary->id => ['sort_order' => 2],
         ]);
 
         $productImagePath = SeederFiles::publicImage('seed-image-05.jpg', 'admin/uploads/catalog/images', 'seeded-catalog-product.jpg');
@@ -125,31 +122,26 @@ class CatalogModuleSeeder extends Seeder
             ],
         );
 
+        $this->seedProductOption($primary, [
+            'nl' => 'Kleur',
+            'en' => 'Color',
+        ], [
+            ['nl' => 'Zwart', 'en' => 'Black'],
+            ['nl' => 'Wit', 'en' => 'White'],
+        ]);
+
         foreach ($this->localizedProductDetails([
             'nl' => [
-                'option_label' => 'Kleur',
-                'option_value' => 'Zwart',
                 'title' => 'Voorbeeld catalogusproduct',
                 'subtitle' => 'Herbruikbare Laravel catalogusmodule',
                 'content' => 'Voorbeeldvertaling voor het catalogusproduct.',
             ],
             'en' => [
-                'option_label' => 'Color',
-                'option_value' => 'Black',
                 'title' => 'Seeded catalog product',
                 'subtitle' => 'Reusable Laravel catalog module',
                 'content' => 'Seeded translated content for the catalog product.',
             ],
         ]) as $detail) {
-            CatalogProductOption::query()->updateOrCreate(
-                [
-                    'catalog_product_id' => $primary->id,
-                    'locale' => $detail['locale'],
-                    'label' => $detail['option_label'],
-                ],
-                ['value' => $detail['option_value'], 'updated_by' => null],
-            );
-
             CatalogProductTranslation::query()->updateOrCreate(
                 ['catalog_product_id' => $primary->id, 'locale' => $detail['locale']],
                 [
@@ -160,31 +152,25 @@ class CatalogModuleSeeder extends Seeder
             );
         }
 
+        $this->seedProductOption($secondary, [
+            'nl' => 'Type',
+            'en' => 'Type',
+        ], [
+            ['nl' => 'Aanvullend product', 'en' => 'Related product'],
+        ]);
+
         foreach ($this->localizedProductDetails([
             'nl' => [
-                'option_label' => 'Type',
-                'option_value' => 'Aanvullend product',
                 'title' => 'Gerelateerd voorbeeldproduct',
                 'subtitle' => 'Combinatievoorbeeld',
                 'content' => 'Nederlandstalige vertaling voor het gerelateerde catalogusproduct.',
             ],
             'en' => [
-                'option_label' => 'Type',
-                'option_value' => 'Related product',
                 'title' => 'Seeded related product',
                 'subtitle' => 'Combination example',
                 'content' => 'English translation for the related catalog product.',
             ],
         ]) as $detail) {
-            CatalogProductOption::query()->updateOrCreate(
-                [
-                    'catalog_product_id' => $secondary->id,
-                    'locale' => $detail['locale'],
-                    'label' => $detail['option_label'],
-                ],
-                ['value' => $detail['option_value'], 'updated_by' => null],
-            );
-
             CatalogProductTranslation::query()->updateOrCreate(
                 ['catalog_product_id' => $secondary->id, 'locale' => $detail['locale']],
                 [
@@ -203,34 +189,6 @@ class CatalogModuleSeeder extends Seeder
                 'sort_order' => 1,
             ],
         );
-
-        CatalogStock::query()->updateOrCreate(
-            ['catalog_product_id' => $primary->id, 'location' => 'Default warehouse'],
-            ['quantity' => 25],
-        );
-
-        CatalogReview::query()->updateOrCreate(
-            ['catalog_product_id' => $primary->id, 'author_email' => 'reviewer@example.com'],
-            [
-                'author_name' => 'Demo reviewer',
-                'rating' => 5,
-                'status' => 'published',
-                'title' => 'Solid seeded product',
-                'content' => 'This seeded review verifies the rebuilt review screens.',
-            ],
-        );
-
-        CatalogCoupon::query()->updateOrCreate(
-            ['code' => 'BASE10'],
-            [
-                'name' => 'Base catalog discount',
-                'percentage_discount' => 10,
-                'minimum_amount' => 2500,
-                'starts_at' => now()->toDateString(),
-                'is_active' => true,
-                'usage_mode' => 'any',
-            ],
-        );
     }
 
     /**
@@ -246,5 +204,33 @@ class CatalogModuleSeeder extends Seeder
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, string>  $labelTranslations
+     * @param  list<array<string, string>>  $values
+     */
+    private function seedProductOption(CatalogProduct $product, array $labelTranslations, array $values): void
+    {
+        $option = CatalogProductOption::query()->updateOrCreate(
+            ['catalog_product_id' => $product->id, 'label' => $labelTranslations['en'] ?? reset($labelTranslations)],
+            [
+                'label_translations' => $labelTranslations,
+                'sort_order' => $product->options()->max('sort_order') + 1,
+            ],
+        );
+
+        foreach ($values as $index => $translations) {
+            CatalogProductOptionValue::query()->updateOrCreate(
+                [
+                    'catalog_product_option_id' => $option->id,
+                    'value' => $translations['en'] ?? reset($translations),
+                ],
+                [
+                    'value_translations' => $translations,
+                    'sort_order' => $index + 1,
+                ],
+            );
+        }
     }
 }

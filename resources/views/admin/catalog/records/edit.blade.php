@@ -71,6 +71,22 @@
                             </div>
                         </div>
 
+                        @foreach ($extraFields as $field)
+                            <div class="form-item">
+                                <div class="form-item-label">
+                                    <label for="{{ $field['name'] }}">{{ $field['label'] }}</label>
+                                </div>
+                                <div class="form-item-input">
+                                    @if ($field['type'] === 'textarea')
+                                        <textarea id="{{ $field['name'] }}" name="{{ $field['name'] }}">{{ old($field['name'], $record->{$field['name']}) }}</textarea>
+                                    @else
+                                        <input id="{{ $field['name'] }}" name="{{ $field['name'] }}" type="{{ $field['type'] }}" value="{{ old($field['name'], $record->{$field['name']}) }}">
+                                    @endif
+                                    @include('admin.content.partials.field-error', ['field' => $field['name']])
+                                </div>
+                            </div>
+                        @endforeach
+
                         <div class="form-item">
                             <div class="form-item-label">
                                 <label for="status">{{ __('Status') }}</label>

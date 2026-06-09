@@ -1,6 +1,8 @@
 @extends('layouts.frontend')
 
 @php
+    use App\Support\Media\HandledImage;
+
     $routeLocale = request()->route('locale');
     $eventsIndexRoute = $routeLocale
         ? route('frontend.locale.events.index', ['locale' => $routeLocale])
@@ -13,7 +15,10 @@
         return preg_match('/^https?:\/\//', $path) === 1 ? $path : asset(ltrim($path, '/'));
     };
     $primaryImage = $event->images->first();
-    $primaryImageUrl = $assetUrl($primaryImage?->image_path ?: $event->image_path);
+    $primaryImageHandle = $primaryImage?->image ?? ($event->image_path ? $event->image : null);
+    $primaryImageUrl = $primaryImageHandle instanceof HandledImage
+        ? $primaryImageHandle->handle(1200, null, false)
+        : $assetUrl($primaryImage?->image_path ?: $event->image_path);
     $hasHero = filter_var(data_get($domainTemplateSettings ?? [], 'show_hero', true), FILTER_VALIDATE_BOOLEAN);
     $structuredData = array_filter([
         '@context' => 'https://schema.org',
@@ -66,7 +71,7 @@
 
                     @if ($primaryImageUrl)
                         <figure class="event-detail-image">
-                            <img src="{{ $primaryImageUrl }}" alt="{{ $primaryImage?->is_decorative ? '' : ($primaryImage?->alt_text ?: $event->title) }}">
+                            <x-media.image :image="$primaryImageHandle" :alt="$primaryImage?->is_decorative ? '' : ($primaryImage?->alt_text ?: $event->title)" :width="1200" group="event-images" loading="eager" />
                             @if ($primaryImage?->caption)
                                 <figcaption>{{ $primaryImage->caption }}</figcaption>
                             @endif
@@ -105,10 +110,10 @@
                             <h2 id="event-gallery-title">{{ __('Images') }}</h2>
                             <div class="event-gallery-grid">
                                 @foreach ($event->images->skip(1) as $image)
-                                    @php $imageUrl = $assetUrl($image->image_path); @endphp
+                                    @php $imageUrl = $image->image->handle(520, 390, true); @endphp
                                     @if ($imageUrl)
                                         <figure class="event-gallery-item">
-                                            <img src="{{ $imageUrl }}" alt="{{ $image->is_decorative ? '' : ($image->alt_text ?: $event->title) }}">
+                                            <x-media.image :image="$image->image" :alt="$image->is_decorative ? '' : ($image->alt_text ?: $event->title)" :width="520" :height="390" crop group="event-images" />
                                             @if ($image->caption)
                                                 <figcaption>{{ $image->caption }}</figcaption>
                                             @endif

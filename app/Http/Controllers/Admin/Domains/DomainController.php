@@ -19,12 +19,7 @@ class DomainController extends Controller
 {
     public function index(): View
     {
-        return view('admin.domains.index', [
-            'domains' => Domain::query()
-                ->with(['template', 'aliases'])
-                ->ordered()
-                ->paginate(25),
-        ]);
+        return view('admin.domains.index');
     }
 
     public function create(
@@ -102,7 +97,7 @@ class DomainController extends Controller
         $requestedStep = old('_domain_step');
 
         if (! is_string($requestedStep)) {
-            $requestedStep = $request->query('step');
+            $requestedStep = $request->route('step') ?: $request->query('step');
         }
 
         $activeStep = DomainWizard::normalize(
@@ -160,7 +155,7 @@ class DomainController extends Controller
 
     private function redirectToStep(Domain $domain, string $step): RedirectResponse
     {
-        return redirect()->route('admin.domains.edit', [
+        return redirect()->route('admin.domains.edit.step', [
             'domain' => $domain,
             'step' => DomainWizard::normalize($step),
         ]);

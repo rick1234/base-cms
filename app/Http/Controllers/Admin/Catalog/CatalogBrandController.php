@@ -39,4 +39,16 @@ class CatalogBrandController extends Controller
     {
         return __('Merken overzicht');
     }
+
+    protected function extraFields(): array
+    {
+        return [
+            ['name' => 'website_url', 'label' => __('Website URL'), 'type' => 'url'],
+            ['name' => 'logo_path', 'label' => __('Logo path'), 'type' => 'text'],
+            ['name' => 'intro', 'label' => __('Intro'), 'type' => 'textarea'],
+            ['name' => 'body', 'label' => __('Content'), 'type' => 'textarea'],
+            ['name' => 'meta_title', 'label' => __('Meta title'), 'type' => 'text'],
+            ['name' => 'meta_description', 'label' => __('Meta omschrijving'), 'type' => 'textarea'],
+        ];
+    }
 }

@@ -1,4 +1,4 @@
-<section class="domain-wizard-panel" id="domain-step-identity">
+<section class="domain-tab-panel" id="domain-step-identity">
     <h2 class="title">{{ __('Domain') }}</h2>
 
     <div class="form-item">

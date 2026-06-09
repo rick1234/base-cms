@@ -24,7 +24,7 @@
                 </div>
 
                 @foreach ($modulesByGroup as $group => $modules)
-                    <h2 class="title">{{ $groups[$group] ?? ucfirst($group) }}</h2>
+                    <h2 class="title">{{ __($groups[$group] ?? ucfirst($group)) }}</h2>
 
                     <div class="overview-container">
                         <div class="overview-row header">
@@ -38,7 +38,7 @@
                         @foreach ($modules as $module)
                             <div class="overview-row">
                                 <div class="overview-item">
-                                    <a href="{{ route($routeNames['show'], $usesFolderRoutes ? $module['folder'] : $module['handle']) }}">{{ $module['name'] }}</a>
+                                    <a href="{{ route($routeNames['show'], $usesFolderRoutes ? $module['folder'] : $module['handle']) }}">{{ __($module['name']) }}</a>
                                 </div>
                                 <div class="overview-item">{{ $module['folder'] }}</div>
                                 <div class="overview-item">{{ $module['table'] }}</div>

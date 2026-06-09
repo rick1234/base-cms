@@ -1,14 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminLoginController;
+use App\Http\Controllers\Admin\BaseModuleConventionsController;
 use App\Http\Controllers\Admin\Banners\BannerCategoryController;
 use App\Http\Controllers\Admin\Banners\BannerController;
 use App\Http\Controllers\Admin\Catalog\CatalogBrandController;
 use App\Http\Controllers\Admin\Catalog\CatalogCategoryController;
-use App\Http\Controllers\Admin\Catalog\CatalogCouponController;
 use App\Http\Controllers\Admin\Catalog\CatalogProductController;
-use App\Http\Controllers\Admin\Catalog\CatalogPromotionController;
-use App\Http\Controllers\Admin\Catalog\CatalogReviewController;
 use App\Http\Controllers\Admin\CmsModuleController;
 use App\Http\Controllers\Admin\Content\ContentCategoryController;
 use App\Http\Controllers\Admin\Content\ContentItemController;
@@ -46,6 +44,17 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('dashboard.php', DashboardController::class)->name('dashboard.legacy');
         Route::patch('quick-status', QuickStatusController::class)->name('quick-status.update');
+        Route::prefix('base-module-conventions')->name('base-module-conventions.')->group(function (): void {
+            Route::get('/', [BaseModuleConventionsController::class, 'index'])->name('index');
+            Route::get('create', [BaseModuleConventionsController::class, 'create'])->name('create');
+            Route::get('categories', [BaseModuleConventionsController::class, 'categories'])->name('categories.index');
+            Route::get('{id}/edit', [BaseModuleConventionsController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [BaseModuleConventionsController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['form', 'seo'])
+                ->name('edit.tab');
+            Route::get('{id}/images', [BaseModuleConventionsController::class, 'images'])->whereNumber('id')->name('images');
+        });
         Route::match(['get', 'post'], 'delete.php', [CmsModuleController::class, 'legacyDelete'])->name('delete');
         Route::get('{page}.php', [CmsModuleController::class, 'legacyRootPage'])
             ->where('page', 'firstLogin|resetpass|token')
@@ -114,6 +123,10 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
             Route::get('index.php', [CatalogProductController::class, 'index'])->name('index');
             Route::post('index.php', [CatalogProductController::class, 'store'])->name('store');
             Route::get('edit.php', [CatalogProductController::class, 'edit'])->name('edit');
+            Route::get('{id}/edit/{tab}', [CatalogProductController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['seo'])
+                ->name('edit.tab');
             Route::post('edit.php', [CatalogProductController::class, 'save'])->name('save');
 
             Route::get('editAfbeeldingen.php', [CatalogProductController::class, 'images'])->name('images');
@@ -124,10 +137,7 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
             Route::post('editVertalingen.php', [CatalogProductController::class, 'saveTranslations'])->name('translations.save');
             Route::get('editVideo.php', [CatalogProductController::class, 'videos'])->name('videos');
             Route::post('editVideo.php', [CatalogProductController::class, 'saveVideos'])->name('videos.save');
-            Route::get('editVoorraad.php', [CatalogProductController::class, 'stock'])->name('stock');
-            Route::post('editVoorraad.php', [CatalogProductController::class, 'saveStock'])->name('stock.save');
             Route::get('editCombinaties.php', [CatalogProductController::class, 'combinations'])->name('combinations');
-            Route::post('editCombinaties.php', [CatalogProductController::class, 'saveCombinations'])->name('combinations.save');
             Route::get('resetSortIndex.php', [CatalogProductController::class, 'resetSortIndex'])->name('reset-sort');
 
             Route::post('ajax/duplicateItem.php', [CatalogProductController::class, 'duplicate'])->name('duplicate');
@@ -149,30 +159,6 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
                 Route::get('edit.php', [CatalogBrandController::class, 'edit'])->name('edit');
                 Route::post('edit.php', [CatalogBrandController::class, 'save'])->name('save');
                 Route::delete('{record}', [CatalogBrandController::class, 'destroy'])->whereNumber('record')->name('destroy');
-            });
-
-            Route::prefix('promotie')->name('promotions.')->group(function (): void {
-                Route::get('index.php', [CatalogPromotionController::class, 'index'])->name('index');
-                Route::post('index.php', [CatalogPromotionController::class, 'store'])->name('store');
-                Route::get('edit.php', [CatalogPromotionController::class, 'edit'])->name('edit');
-                Route::post('edit.php', [CatalogPromotionController::class, 'save'])->name('save');
-                Route::delete('{record}', [CatalogPromotionController::class, 'destroy'])->whereNumber('record')->name('destroy');
-            });
-
-            Route::prefix('actiecodes')->name('coupons.')->group(function (): void {
-                Route::get('index.php', [CatalogCouponController::class, 'index'])->name('index');
-                Route::post('index.php', [CatalogCouponController::class, 'store'])->name('store');
-                Route::get('edit.php', [CatalogCouponController::class, 'edit'])->name('edit');
-                Route::post('edit.php', [CatalogCouponController::class, 'save'])->name('save');
-                Route::delete('{catalogCoupon}', [CatalogCouponController::class, 'destroy'])->whereNumber('catalogCoupon')->name('destroy');
-            });
-
-            Route::prefix('review')->name('reviews.')->group(function (): void {
-                Route::get('index.php', [CatalogReviewController::class, 'index'])->name('index');
-                Route::post('index.php', [CatalogReviewController::class, 'store'])->name('store');
-                Route::get('edit.php', [CatalogReviewController::class, 'edit'])->name('edit');
-                Route::post('edit.php', [CatalogReviewController::class, 'save'])->name('save');
-                Route::delete('{catalogReview}', [CatalogReviewController::class, 'destroy'])->whereNumber('catalogReview')->name('destroy');
             });
 
             Route::delete('categorieen/{catalogCategory}', [CatalogCategoryController::class, 'destroy'])

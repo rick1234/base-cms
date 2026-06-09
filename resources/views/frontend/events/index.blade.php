@@ -1,6 +1,8 @@
 @extends('layouts.frontend')
 
 @php
+    use App\Support\Media\HandledImage;
+
     $routeLocale = request()->route('locale');
     $eventsIndexRoute = $routeLocale
         ? route('frontend.locale.events.index', ['locale' => $routeLocale])
@@ -66,7 +68,10 @@
                         @foreach ($events as $event)
                             @php
                                 $primaryImage = $event->images->first();
-                                $imageUrl = $assetUrl($primaryImage?->image_path ?: $event->image_path);
+                                $imageHandle = $primaryImage?->image ?? ($event->image_path ? $event->image : null);
+                                $imageUrl = $imageHandle instanceof HandledImage
+                                    ? $imageHandle->handle(520, 390, true)
+                                    : $assetUrl($primaryImage?->image_path ?: $event->image_path);
                             @endphp
                             <article class="event-card">
                                 @if ($imageUrl)

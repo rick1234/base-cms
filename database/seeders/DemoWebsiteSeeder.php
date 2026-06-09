@@ -7,10 +7,8 @@ use App\Models\Cms\CatalogCategory;
 use App\Models\Cms\CatalogProduct;
 use App\Models\Cms\CatalogProductImage;
 use App\Models\Cms\CatalogProductOption;
+use App\Models\Cms\CatalogProductOptionValue;
 use App\Models\Cms\CatalogProductTranslation;
-use App\Models\Cms\CatalogPromotion;
-use App\Models\Cms\CatalogReview;
-use App\Models\Cms\CatalogStock;
 use App\Models\Cms\CmsRedirect;
 use App\Models\Cms\ContentCategory;
 use App\Models\Cms\ContentItem;
@@ -833,18 +831,11 @@ class DemoWebsiteSeeder extends Seeder
             [
                 'name' => 'Acme Digital',
                 'description' => 'Demo brand for seeded catalog products.',
-                'status' => 'active',
-                'sort_order' => 1,
-                'created_by' => $this->adminId,
-                'updated_by' => $this->adminId,
-            ],
-        );
-
-        $promotion = CatalogPromotion::query()->updateOrCreate(
-            ['slug' => 'demo-launch-bundle'],
-            [
-                'name' => 'Demo launch bundle',
-                'description' => 'Seeded promotion for product and package examples.',
+                'website_url' => 'https://example.com/acme-digital',
+                'intro' => 'Demo brand used by the seeded product catalog.',
+                'body' => 'Acme Digital represents the richer brand profile fields available in the catalog module.',
+                'meta_title' => 'Acme Digital',
+                'meta_description' => 'Demo catalog brand for the Laravel base CMS.',
                 'status' => 'active',
                 'sort_order' => 1,
                 'created_by' => $this->adminId,
@@ -853,30 +844,24 @@ class DemoWebsiteSeeder extends Seeder
         );
 
         $productsToSeed = [
-            ['DEMO-CMS-STARTER', 'CMS starter package', 'A starter implementation package for small websites.', 349500, [$products, $software], true],
-            ['DEMO-CMS-PRO', 'CMS professional package', 'A larger setup with content modeling, search, and launch support.', 749500, [$products, $software, $packages], true],
-            ['DEMO-CARE-20', 'Care plan 20', 'Monthly improvement and maintenance plan for growing teams.', 199500, [$products, $packages], false],
-            ['DEMO-SEO-AUDIT', 'SEO technical audit', 'A structured audit for redirects, metadata, performance, and content hierarchy.', 225000, [$products, $packages], false],
-            ['DEMO-TRAINING-EDITOR', 'Editor training session', 'Hands-on CMS training for content editors.', 95000, [$products, $training], false],
-            ['DEMO-INTEGRATION-KIT', 'Integration planning kit', 'A planning package for CRM, catalog, and form integrations.', 175000, [$products, $software], false],
+            ['DEMO-CMS-STARTER', 'CMS starter package', 'A starter implementation package for small websites.', 349500, [$products, $software]],
+            ['DEMO-CMS-PRO', 'CMS professional package', 'A larger setup with content modeling, search, and launch support.', 749500, [$products, $software, $packages]],
+            ['DEMO-CARE-20', 'Care plan 20', 'Monthly improvement and maintenance plan for growing teams.', 199500, [$products, $packages]],
+            ['DEMO-SEO-AUDIT', 'SEO technical audit', 'A structured audit for redirects, metadata, performance, and content hierarchy.', 225000, [$products, $packages]],
+            ['DEMO-TRAINING-EDITOR', 'Editor training session', 'Hands-on CMS training for content editors.', 95000, [$products, $training]],
+            ['DEMO-INTEGRATION-KIT', 'Integration planning kit', 'A planning package for CRM, catalog, and form integrations.', 175000, [$products, $software]],
         ];
 
-        foreach ($productsToSeed as $index => [$sku, $name, $description, $price, $categories, $onSale]) {
+        foreach ($productsToSeed as $index => [$sku, $name, $description, $price, $categories]) {
             $product = CatalogProduct::query()->updateOrCreate(
                 ['sku' => $sku],
                 [
                     'name' => $name,
                     'description' => $description,
                     'price' => $price,
-                    'price_note' => 'Excludes VAT.',
-                    'is_on_sale' => $onSale,
-                    'sale_price' => $onSale ? (int) round($price * 0.9) : null,
-                    'sale_price_note' => $onSale ? 'Demo launch price.' : null,
                     'meta_title' => $name,
                     'meta_description' => $description,
                     'brand_id' => $brand->id,
-                    'promotion_id' => $onSale ? $promotion->id : null,
-                    'can_be_engraved' => false,
                     'status' => 'published',
                     'active_from' => now()->subDays(7)->toDateString(),
                     'active_until' => now()->addYear()->toDateString(),
@@ -935,29 +920,42 @@ class DemoWebsiteSeeder extends Seeder
             ],
         );
 
+        $option = CatalogProductOption::query()->updateOrCreate(
+            ['catalog_product_id' => $product->id, 'label' => 'Delivery'],
+            [
+                'label_translations' => [
+                    'nl' => 'Levering',
+                    'en' => 'Delivery',
+                ],
+                'sort_order' => 1,
+                'created_by' => $this->adminId,
+                'updated_by' => $this->adminId,
+            ],
+        );
+
+        CatalogProductOptionValue::query()->updateOrCreate(
+            ['catalog_product_option_id' => $option->id, 'value' => 'Planning call and written handover included.'],
+            [
+                'value_translations' => [
+                    'nl' => 'Planningsgesprek en schriftelijke overdracht inbegrepen.',
+                    'en' => 'Planning call and written handover included.',
+                ],
+                'sort_order' => 1,
+                'created_by' => $this->adminId,
+                'updated_by' => $this->adminId,
+            ],
+        );
+
         foreach ([
             'nl' => [
-                'option_label' => 'Levering',
-                'option_value' => 'Planningsgesprek en schriftelijke overdracht inbegrepen.',
                 'subtitle' => 'Voorbeeldproduct voor de demo catalogus',
                 'content' => $product->description,
             ],
             'en' => [
-                'option_label' => 'Delivery',
-                'option_value' => 'Planning call and written handover included.',
                 'subtitle' => 'Seeded demo catalog product',
                 'content' => $product->description,
             ],
         ] as $locale => $translation) {
-            CatalogProductOption::query()->updateOrCreate(
-                ['catalog_product_id' => $product->id, 'locale' => $locale, 'label' => $translation['option_label']],
-                [
-                    'value' => $translation['option_value'],
-                    'created_by' => $this->adminId,
-                    'updated_by' => $this->adminId,
-                ],
-            );
-
             CatalogProductTranslation::query()->updateOrCreate(
                 ['catalog_product_id' => $product->id, 'locale' => $locale],
                 [
@@ -970,27 +968,6 @@ class DemoWebsiteSeeder extends Seeder
             );
         }
 
-        CatalogStock::query()->updateOrCreate(
-            ['catalog_product_id' => $product->id, 'location' => 'Demo warehouse'],
-            [
-                'quantity' => 10 + $sortOrder,
-                'created_by' => $this->adminId,
-                'updated_by' => $this->adminId,
-            ],
-        );
-
-        CatalogReview::query()->updateOrCreate(
-            ['catalog_product_id' => $product->id, 'author_email' => 'client'.$sortOrder.'@example.com'],
-            [
-                'author_name' => 'Demo client '.$sortOrder,
-                'rating' => 4 + ($sortOrder % 2),
-                'status' => 'published',
-                'title' => 'Useful demo package',
-                'content' => 'This review gives the catalog module realistic public and admin data.',
-                'created_by' => $this->adminId,
-                'updated_by' => $this->adminId,
-            ],
-        );
     }
 
     /**

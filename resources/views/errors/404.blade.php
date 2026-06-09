@@ -50,7 +50,7 @@
                 <aside class="not-found-search" aria-labelledby="not-found-search-title">
                     <h2 id="not-found-search-title" class="title">{{ __('Search this website') }}</h2>
                     <p>{{ __('A keyword, product name, or page title usually gets you moving again.') }}</p>
-                    @include('frontend.partials.search-form')
+                    @include('frontend.partials.search-form', ['searchInputId' => 'not-found-search-query'])
                 </aside>
             </div>
         </section>

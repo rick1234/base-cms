@@ -1,9 +1,5 @@
 @extends('layouts.admin')
 
-@php
-    $linkedIds = old('related_products', $product->relatedProducts->pluck('id')->all());
-@endphp
-
 @section('title', __('Product combinations'))
 
 @section('body')
@@ -14,10 +10,10 @@
 
         <div class="main has-buttons">
             <div class="buttons-container align-right">
-                <button class="btn btn-save" form="catalog-combinations-form" type="submit">
-                    <x-admin.material-icon name="save" />
-                    {{ __('Opslaan') }}
-                </button>
+                <a class="btn btn-add" href="{{ route($routeNames['combination-sets.create']) }}">
+                    <x-admin.material-icon name="add" />
+                    {{ __('Combination set toevoegen') }}
+                </a>
                 <a href="{{ $backUrl }}" class="btn btn-cancel">
                     <x-admin.material-icon name="undo" />
                     {{ __('Terug') }}
@@ -36,40 +32,49 @@
                     'activeTab' => 'combinations',
                 ])
 
-                <form id="catalog-combinations-form" method="post" action="{{ route($routeNames['combinations.save'], ['id' => $product->id]) }}">
-                    @csrf
-                    <input type="hidden" name="id" value="{{ $product->id }}">
+                <div class="catalog-product-combination-memberships">
+                    <div class="response-mail-builder-toolbar catalog-combination-set-toolbar">
+                        <div class="response-mail-builder-title">
+                            <h2 class="title">{{ __('Combinaties') }}</h2>
+                            <span>{{ trans_choice('{0} Geen sets|{1} :count set|[2,*] :count sets', $product->combinationSets->count(), ['count' => $product->combinationSets->count()]) }}</span>
+                        </div>
+                    </div>
 
-                    <h2 class="title">{{ __('Combinaties') }}</h2>
-                    @if ($products->isNotEmpty())
-                        <div class="grid">
-                            @foreach ($products as $relatedProduct)
-                                <div class="grid-row">
-                                    <div class="col-12">
-                                        <label>
-                                            <input
-                                                name="related_products[]"
-                                                type="checkbox"
-                                                value="{{ $relatedProduct->id }}"
-                                                @checked(collect($linkedIds)->contains($relatedProduct->id))
-                                            >
-                                            <span class="checkbox"></span>
-                                            {{ $relatedProduct->name }}
-                                            @if ($relatedProduct->sku)
-                                                <small>{{ $relatedProduct->sku }}</small>
-                                            @endif
-                                        </label>
+                    <div class="response-mail-list catalog-combination-set-list">
+                        @forelse ($product->combinationSets as $set)
+                            <article class="response-mail-card catalog-combination-set-card">
+                                <header class="response-mail-card-header">
+                                    <div>
+                                        <span class="response-mail-card-kicker">{{ __('Set') }}</span>
+                                        <h3>{{ $set->name }}</h3>
                                     </div>
+                                    <div class="response-mail-card-actions">
+                                        <a class="btn btn-icon-only" href="{{ route($routeNames['combination-sets.edit'], ['id' => $set->id]) }}" title="{{ __('Bewerken') }}">
+                                            <x-admin.material-icon name="edit" />
+                                        </a>
+                                    </div>
+                                </header>
+
+                                @if ($set->description)
+                                    <p class="catalog-combination-set-description">{{ $set->description }}</p>
+                                @endif
+
+                                <div class="catalog-combination-membership-products">
+                                    @foreach ($set->products as $setProduct)
+                                        <span @class(['is-current' => $setProduct->id === $product->id])>
+                                            {{ $setProduct->name }}
+                                        </span>
+                                    @endforeach
                                 </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="attachment-message">
-                            <x-admin.material-icon name="info" />
-                            <em>{{ __('No other products found.') }}</em>
-                        </div>
-                    @endif
-                </form>
+                            </article>
+                        @empty
+                            <div class="attachment-message">
+                                <x-admin.material-icon name="info" />
+                                <em>{{ __('Dit product zit nog niet in een combination set.') }}</em>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
             </div>
         </div>
     </div>

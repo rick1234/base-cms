@@ -27,16 +27,9 @@ class CatalogProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:0'],
-            'price_note' => ['nullable', 'string'],
-            'is_on_sale' => ['boolean'],
-            'sale_starts_at' => ['nullable', 'date'],
-            'sale_ends_at' => ['nullable', 'date', 'after_or_equal:sale_starts_at'],
-            'sale_price' => ['nullable', 'numeric', 'min:0'],
-            'sale_price_note' => ['nullable', 'string'],
+            'meta_title' => ['nullable', 'string', 'max:255'],
             'meta_description' => ['nullable', 'string'],
             'brand_id' => ['nullable', 'integer', 'exists:catalog_brands,id'],
-            'promotion_id' => ['nullable', 'integer', 'exists:catalog_promotions,id'],
-            'can_be_engraved' => ['boolean'],
             'status' => ['required', 'string', 'in:published,draft,archived'],
             'active_from' => ['nullable', 'date'],
             'active_until' => ['nullable', 'date', 'after_or_equal:active_from'],
@@ -50,32 +43,35 @@ class CatalogProductRequest extends FormRequest
             'existing_attachments.*.name' => ['nullable', 'string', 'max:255'],
             'existing_attachments.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'existing_attachments.*.delete' => ['boolean'],
+            'active_tab' => ['sometimes', Rule::in(['edit', 'seo'])],
+            'saveAndStay' => ['sometimes', 'boolean'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
+        $activeTab = $this->input('active_tab', 'edit');
+        $data = [
+            'active_tab' => $activeTab,
             'sku' => $this->input('sku', $this->input('artikelnummer')),
             'name' => $this->input('name', $this->input('naam')),
             'description' => $this->input('description', $this->input('omschrijving')),
             'price' => $this->normalizedMoney('price', 'prijs'),
-            'price_note' => $this->input('price_note', $this->input('prijsopmerking')),
-            'is_on_sale' => $this->normalizedBoolean('is_on_sale', 'actie', false),
-            'sale_starts_at' => $this->normalizedDate('sale_starts_at', 'actiestartdatum'),
-            'sale_ends_at' => $this->normalizedDate('sale_ends_at', 'actieeinddatum'),
-            'sale_price' => $this->normalizedMoney('sale_price', 'actieprijs'),
-            'sale_price_note' => $this->input('sale_price_note', $this->input('actieprijsopmerking')),
+            'meta_title' => $this->input('meta_title'),
             'meta_description' => $this->input('meta_description', $this->input('metadescription')),
             'brand_id' => $this->input('brand_id', $this->input('merk_id')),
-            'promotion_id' => $this->input('promotion_id', $this->input('promotie_id')),
-            'can_be_engraved' => $this->normalizedBoolean('can_be_engraved', 'graveren', false),
             'status' => $this->normalizedStatus($this->input('status', 'published')),
             'active_from' => $this->normalizedDate('active_from', 'startdatum'),
             'active_until' => $this->normalizedDate('active_until', 'einddatum'),
             'categories' => $this->input('categories', $this->input('categorie', [])),
             'attachment_names' => $this->input('attachment_names', $this->input('attachmentNaam', [])),
-        ]);
+        ];
+
+        if ($product = $this->product()) {
+            $data = $this->preserveExistingTabValues($data, $product, $activeTab);
+        }
+
+        $this->merge($data);
     }
 
     public function product(): ?CatalogProduct
@@ -121,16 +117,42 @@ class CatalogProductRequest extends FormRequest
         return str_replace(',', '.', (string) $value);
     }
 
-    private function normalizedBoolean(string $key, ?string $legacyKey, bool $default): bool
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function preserveExistingTabValues(array $data, CatalogProduct $product, string $activeTab): array
     {
-        if ($this->has($key)) {
-            return $this->boolean($key);
+        $preserved = [
+            'sku' => $product->sku,
+            'name' => $product->name,
+            'description' => $product->description,
+            'price' => $product->priceForInput(),
+            'meta_title' => $product->meta_title,
+            'meta_description' => $product->meta_description,
+            'brand_id' => $product->brand_id,
+            'status' => $product->status,
+            'active_from' => optional($product->active_from)->format('Y-m-d'),
+            'active_until' => optional($product->active_until)->format('Y-m-d'),
+            'categories' => $product->categories()->pluck('catalog_categories.id')->all(),
+        ];
+
+        foreach ($preserved as $field => $value) {
+            if ($this->shouldPreserveField($field, $activeTab)) {
+                $data[$field] = $value;
+            }
         }
 
-        if ($legacyKey && $this->has($legacyKey)) {
-            return $this->boolean($legacyKey);
-        }
+        return $data;
+    }
 
-        return $default;
+    private function shouldPreserveField(string $field, string $activeTab): bool
+    {
+        $seoFields = ['meta_title', 'meta_description'];
+
+        return match ($activeTab) {
+            'seo' => ! in_array($field, $seoFields, true),
+            default => in_array($field, $seoFields, true),
+        };
     }
 }

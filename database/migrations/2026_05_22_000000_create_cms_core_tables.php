@@ -58,15 +58,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('cms_redirect_rules', function (Blueprint $table): void {
-            $table->id();
-            $table->string('source_path')->unique();
-            $table->string('target_url');
-            $table->unsignedSmallInteger('status_code')->default(301);
-            $table->boolean('preserve_query')->default(false);
-            $table->boolean('enabled')->default(true)->index();
-            $table->timestamps();
-        });
     }
 
     /**
@@ -74,7 +65,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cms_redirect_rules');
         Schema::dropIfExists('cms_page_modules');
         Schema::dropIfExists('cms_modules');
         Schema::dropIfExists('cms_pages');

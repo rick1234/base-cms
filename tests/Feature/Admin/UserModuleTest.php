@@ -275,14 +275,26 @@ class UserModuleTest extends TestCase
         $this->post('/admin/login', [
             'email' => $admin->email,
             'password' => 'password',
+        ])
+            ->assertRedirect('/admin/login/two-factor');
+
+        $this->assertGuest();
+
+        $this->get('/admin')
+            ->assertRedirect('/admin/login');
+
+        $this->get('/admin/login/two-factor')
+            ->assertOk()
+            ->assertSee('Authenticator verification')
+            ->assertSee('name="two_factor_code"', false);
+
+        $this->post('/admin/login/two-factor', [
             'two_factor_code' => '000000',
         ])
-            ->assertRedirect()
+            ->assertRedirect('/admin/login/two-factor')
             ->assertSessionHasErrors('two_factor_code');
 
-        $this->post('/admin/login', [
-            'email' => $admin->email,
-            'password' => 'password',
+        $this->post('/admin/login/two-factor', [
             'two_factor_code' => $twoFactor->code($secret),
         ])
             ->assertRedirect('/admin');

@@ -16,7 +16,7 @@ class WebsiteTemplateController extends Controller
     /**
      * @var list<string>
      */
-    private const EDIT_TABS = ['settings', 'sections', 'paths', 'preview'];
+    private const EDIT_TABS = ['settings', 'sections', 'usp-sets', 'paths', 'preview'];
 
     public function index(): View
     {

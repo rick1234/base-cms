@@ -49,12 +49,12 @@ class CmsModuleTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/modules')
             ->assertOk()
-            ->assertSee('Admin Modules')
-            ->assertSee('Pages')
-            ->assertSee('Events')
+            ->assertSee('Admin modules')
+            ->assertSee('Pagina\'s')
+            ->assertSee('Evenementen')
             ->assertSee('Vestigingen')
-            ->assertSee('Catalog')
-            ->assertSee('Roles and Permissions')
+            ->assertSee('Catalogus')
+            ->assertSee('Rollen en rechten')
             ->assertDontSee('Website setup')
             ->assertDontSee('Open direct het overzicht van een module.');
     }
@@ -109,7 +109,7 @@ class CmsModuleTest extends TestCase
                 $this->actingAs($admin)
                     ->get("/admin/{$path}/{$page}")
                     ->assertOk()
-                    ->assertSee($definition['name'] ?? $screen['name']);
+                    ->assertSee(__($definition['name'] ?? $screen['name']));
             }
         }
     }
@@ -121,7 +121,7 @@ class CmsModuleTest extends TestCase
         $this->actingAs($admin)
             ->get('/cms/content/index.php')
             ->assertOk()
-            ->assertSee('Pages');
+            ->assertSee(__('Pages'));
     }
 
     public function test_removed_slider_legacy_cms_screens_are_not_registered(): void
@@ -198,7 +198,7 @@ class CmsModuleTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/content')
             ->assertOk()
-            ->assertSee('Pages');
+            ->assertSee(__('Pages'));
 
         $event = Event::query()->create([
             'title' => 'Folder edit event',

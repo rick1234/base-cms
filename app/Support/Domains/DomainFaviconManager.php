@@ -243,7 +243,7 @@ class DomainFaviconManager
             'name' => $domain->siteTitle(),
             'short_name' => $domain->company_name ?: $domain->siteTitle(),
             'icons' => $icons,
-            'theme_color' => data_get($domain->effectiveTemplateSettings(), 'primary_color', '#165f63'),
+            'theme_color' => data_get($domain->effectiveTemplateSettings(), 'primary_color', '#0f6f7a'),
             'background_color' => data_get($domain->effectiveTemplateSettings(), 'surface_color', '#ffffff'),
             'display' => 'standalone',
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));

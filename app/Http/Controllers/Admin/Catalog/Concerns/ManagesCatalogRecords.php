@@ -68,6 +68,7 @@ trait ManagesCatalogRecords
             'section' => __('Edit :record', ['record' => $this->titleSingular()]),
             'backUrl' => route($this->routeName('index')),
             'deleteAction' => $record->exists ? route($this->routeName('destroy'), $record->id) : null,
+            'extraFields' => $this->extraFields(),
         ]);
     }
 
@@ -103,6 +104,14 @@ trait ManagesCatalogRecords
     protected function sectionTitle(): string
     {
         return __('Overview');
+    }
+
+    /**
+     * @return list<array{name: string, label: string, type: string}>
+     */
+    protected function extraFields(): array
+    {
+        return [];
     }
 
     private function recordFromRequest(Request $request): ?CmsModel

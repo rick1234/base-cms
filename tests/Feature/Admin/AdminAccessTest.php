@@ -81,6 +81,16 @@ class AdminAccessTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    public function test_admin_login_page_only_asks_for_primary_credentials(): void
+    {
+        $this->get('/admin/login')
+            ->assertOk()
+            ->assertSee('Admin login')
+            ->assertSee('Email')
+            ->assertSee('Password')
+            ->assertDontSee('Authenticator code');
+    }
+
     public function test_dashboard_shows_recently_viewed_admin_items(): void
     {
         $admin = User::factory()->admin()->create();

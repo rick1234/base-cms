@@ -1,4 +1,4 @@
-<section class="domain-wizard-panel" id="domain-step-favicon">
+<section class="domain-tab-panel" id="domain-step-favicon">
     <h2 class="title">{{ __('Favicon') }}</h2>
 
     @php

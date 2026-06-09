@@ -18,6 +18,7 @@ class WebsiteTemplate extends CmsModel
             ...parent::casts(),
             'default_settings' => 'array',
             'defined_sections' => 'array',
+            'usp_sets' => 'array',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
@@ -89,5 +90,28 @@ class WebsiteTemplate extends CmsModel
             ['handle' => 'content_sidebar', 'label' => __('Content sidebar'), 'type' => 'mixed'],
             ['handle' => 'footer_banner', 'label' => __('Footer banner'), 'type' => 'banner'],
         ];
+    }
+
+    /**
+     * @return list<array{name: string, location: string, items: list<array{label: string, icon: string}>}>
+     */
+    public function uspSetsForLocation(string $location): array
+    {
+        return collect($this->usp_sets ?? [])
+            ->map(fn (array $set): array => [
+                'name' => trim((string) ($set['name'] ?? '')),
+                'location' => trim((string) ($set['location'] ?? 'header_top')),
+                'items' => collect($set['items'] ?? [])
+                    ->map(fn (array $item): array => [
+                        'label' => trim((string) ($item['label'] ?? '')),
+                        'icon' => trim((string) ($item['icon'] ?? 'done')) ?: 'done',
+                    ])
+                    ->filter(fn (array $item): bool => $item['label'] !== '')
+                    ->values()
+                    ->all(),
+            ])
+            ->filter(fn (array $set): bool => $set['location'] === $location && $set['items'] !== [])
+            ->values()
+            ->all();
     }
 }

@@ -7,10 +7,8 @@ use App\Models\Cms\CatalogCategory;
 use App\Models\Cms\CatalogProduct;
 use App\Models\Cms\CatalogProductImage;
 use App\Models\Cms\CatalogProductOption;
+use App\Models\Cms\CatalogProductOptionValue;
 use App\Models\Cms\CatalogProductTranslation;
-use App\Models\Cms\CatalogPromotion;
-use App\Models\Cms\CatalogReview;
-use App\Models\Cms\CatalogStock;
 use App\Models\Cms\ContentAttachment;
 use App\Models\Cms\ContentCategory;
 use App\Models\Cms\ContentImage;
@@ -85,9 +83,9 @@ class PlatformDemoSeeder extends Seeder
                 'name' => 'Acme Nederland',
                 'company' => 'Acme Digital Works BV',
                 'description' => 'Een complete Nederlandse demo website voor het Laravel CMS platform.',
-                'primary_color' => '#ffa300',
-                'secondary_color' => '#272720',
-                'accent_color' => '#0f766e',
+                'primary_color' => '#0f6f7a',
+                'secondary_color' => '#1b1b1b',
+                'accent_color' => '#d86445',
                 'sort_order' => 0,
                 'is_development' => true,
             ],
@@ -282,7 +280,7 @@ class PlatformDemoSeeder extends Seeder
             [
                 'name' => $this->copy($site, 'Interne melding', 'Internal notification', 'Notification interne'),
                 'subject' => $this->copy($site, 'Nieuwe inzending: {form_name}', 'New submission: {form_name}', 'Nouvel envoi: {form_name}'),
-                'body' => "{{summary}}",
+                'body' => '{{summary}}',
                 'is_active' => true,
                 'sort_order' => 2,
                 'settings' => ['layout' => 'default'],
@@ -605,18 +603,11 @@ class PlatformDemoSeeder extends Seeder
             [
                 'name' => $site['name'],
                 'description' => $site['company'],
-                'status' => 'active',
-                'sort_order' => 1,
-                'created_by' => $this->adminId,
-                'updated_by' => $this->adminId,
-            ],
-        );
-
-        $promotion = CatalogPromotion::query()->updateOrCreate(
-            ['slug' => 'platform-'.$site['key'].'-launch'],
-            [
-                'name' => $this->copy($site, 'Launch promotie', 'Launch promotion', 'Promotion lancement'),
-                'description' => $this->copy($site, 'Voorbeeldpromotie voor de webshop module.', 'Sample promotion for the webshop module.', 'Promotion exemple pour le module boutique.'),
+                'website_url' => 'https://'.$site['host'],
+                'intro' => $this->copy($site, 'Demo merkprofiel voor de catalogus.', 'Demo brand profile for the catalog.', 'Profil de marque demo pour le catalogue.'),
+                'body' => $this->copy($site, 'Dit merk demonstreert extra catalogusvelden zonder webshopfunctionaliteit.', 'This brand demonstrates extended catalog fields without webshop functionality.', 'Cette marque montre les champs de catalogue etendus sans fonctionnalite boutique.'),
+                'meta_title' => $site['name'],
+                'meta_description' => $site['company'],
                 'status' => 'active',
                 'sort_order' => 1,
                 'created_by' => $this->adminId,
@@ -628,18 +619,10 @@ class PlatformDemoSeeder extends Seeder
             ['domain_id' => $domain->id, 'sku' => strtoupper($site['key']).'-CMS-CARE'],
             [
                 'name' => $this->copy($site, 'CMS care pakket', 'CMS care package', 'Forfait support CMS'),
-                'description' => $this->copy($site, 'Een seeded product met afbeeldingen, voorraad, opties, vertalingen en reviews.', 'A seeded product with images, stock, options, translations and reviews.', 'Un produit demo avec images, stock, options, traductions et avis.'),
+                'description' => $this->copy($site, 'Een seeded product met afbeeldingen, opties en vertalingen.', 'A seeded product with images, options and translations.', 'Un produit demo avec images, options et traductions.'),
                 'price' => 249500,
-                'price_note' => $this->copy($site, 'Per maand', 'Per month', 'Par mois'),
-                'is_on_sale' => true,
-                'sale_price' => 199500,
-                'sale_starts_at' => now()->subDay()->toDateString(),
-                'sale_ends_at' => now()->addMonth()->toDateString(),
-                'sale_price_note' => $this->copy($site, 'Introductieprijs', 'Introductory price', 'Prix de lancement'),
                 'meta_description' => $this->copy($site, 'Demo product voor het CMS catalogusbeheer.', 'Demo product for CMS catalog management.', 'Produit demo pour la gestion du catalogue CMS.'),
                 'brand_id' => $brand->id,
-                'promotion_id' => $promotion->id,
-                'can_be_engraved' => false,
                 'status' => 'published',
                 'active_from' => now()->subDay()->toDateString(),
                 'active_until' => now()->addYear()->toDateString(),
@@ -662,10 +645,25 @@ class PlatformDemoSeeder extends Seeder
             ],
         );
 
-        CatalogProductOption::query()->updateOrCreate(
-            ['catalog_product_id' => $product->id, 'locale' => $site['locale'], 'label' => $this->copy($site, 'Inbegrepen', 'Included', 'Inclus')],
+        $option = CatalogProductOption::query()->updateOrCreate(
+            ['catalog_product_id' => $product->id, 'label' => $this->copy($site, 'Inbegrepen', 'Included', 'Inclus')],
             [
-                'value' => $this->copy($site, 'Updates, monitoring, support en contentadvies.', 'Updates, monitoring, support and content advice.', 'Mises a jour, surveillance, support et conseil contenu.'),
+                'label_translations' => [
+                    $site['locale'] => $this->copy($site, 'Inbegrepen', 'Included', 'Inclus'),
+                ],
+                'sort_order' => 1,
+                'created_by' => $this->adminId,
+                'updated_by' => $this->adminId,
+            ],
+        );
+
+        CatalogProductOptionValue::query()->updateOrCreate(
+            ['catalog_product_option_id' => $option->id, 'value' => $this->copy($site, 'Updates, monitoring, support en contentadvies.', 'Updates, monitoring, support and content advice.', 'Mises a jour, surveillance, support et conseil contenu.')],
+            [
+                'value_translations' => [
+                    $site['locale'] => $this->copy($site, 'Updates, monitoring, support en contentadvies.', 'Updates, monitoring, support and content advice.', 'Mises a jour, surveillance, support et conseil contenu.'),
+                ],
+                'sort_order' => 1,
                 'created_by' => $this->adminId,
                 'updated_by' => $this->adminId,
             ],
@@ -675,28 +673,10 @@ class PlatformDemoSeeder extends Seeder
             ['catalog_product_id' => $product->id, 'locale' => $site['locale']],
             [
                 'title' => $product->name,
-                'subtitle' => $product->price_note,
+                'subtitle' => $this->copy($site, 'Catalogusproduct', 'Catalog product', 'Produit catalogue'),
                 'content' => $product->description,
                 'button_text' => $this->copy($site, 'Meer informatie', 'More information', 'Plus d informations'),
                 'link_url' => '/services',
-                'created_by' => $this->adminId,
-                'updated_by' => $this->adminId,
-            ],
-        );
-
-        CatalogStock::query()->updateOrCreate(
-            ['catalog_product_id' => $product->id, 'location' => $site['country_code'].' warehouse'],
-            ['quantity' => 25, 'created_by' => $this->adminId, 'updated_by' => $this->adminId],
-        );
-
-        CatalogReview::query()->updateOrCreate(
-            ['catalog_product_id' => $product->id, 'author_email' => 'review-'.$site['key'].'@example.com'],
-            [
-                'author_name' => $this->copy($site, 'Demo klant', 'Demo client', 'Client demo'),
-                'rating' => 5,
-                'status' => 'approved',
-                'title' => $this->copy($site, 'Helder pakket', 'Clear package', 'Forfait clair'),
-                'content' => $this->copy($site, 'Deze seeded review vult het review overzicht.', 'This seeded review fills the review overview.', 'Cet avis demo remplit la liste des avis.'),
                 'created_by' => $this->adminId,
                 'updated_by' => $this->adminId,
             ],

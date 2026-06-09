@@ -43,6 +43,7 @@
         'country' => 'active',
         'country-enabled' => 'enabled',
         'download' => 'active',
+        'domain' => 'boolean_active',
         'event' => 'publishing',
         'faq' => 'publishing',
         'form' => 'publishing',
@@ -67,11 +68,17 @@
     <summary class="quick-status-trigger" aria-label="{{ __('Change status for :item', ['item' => $currentLabel]) }}" title="{{ __('Change status') }}">
         <span class="{{ $active ? 'active-item' : 'inactive-item' }}" aria-hidden="true"></span>
     </summary>
+    <button class="quick-status-backdrop" type="button" aria-label="{{ __('Close') }}" data-quick-status-close></button>
     <div class="quick-status-modal" role="dialog" aria-modal="true" aria-labelledby="{{ $dialogId }}-title">
         <div class="quick-status-modal-panel">
             <div class="quick-status-modal-header">
-                <h2 id="{{ $dialogId }}-title">{{ __('Change status') }}</h2>
-                <span>{{ __('Available statuses') }}</span>
+                <div class="quick-status-modal-title">
+                    <h2 id="{{ $dialogId }}-title">{{ __('Change status') }}</h2>
+                    <span>{{ __('Available statuses') }}</span>
+                </div>
+                <button class="quick-status-modal-close" type="button" aria-label="{{ __('Close') }}" data-quick-status-close>
+                    <x-admin.material-icon name="close" />
+                </button>
             </div>
             <form class="quick-status-options" method="post" action="{{ route($routeName) }}">
                 @csrf

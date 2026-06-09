@@ -1,14 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminLoginController;
+use App\Http\Controllers\Admin\BaseModuleConventionsController;
 use App\Http\Controllers\Admin\Banners\BannerCategoryController;
 use App\Http\Controllers\Admin\Banners\BannerController;
 use App\Http\Controllers\Admin\Catalog\CatalogBrandController;
 use App\Http\Controllers\Admin\Catalog\CatalogCategoryController;
-use App\Http\Controllers\Admin\Catalog\CatalogCouponController;
+use App\Http\Controllers\Admin\Catalog\CatalogCombinationSetController;
 use App\Http\Controllers\Admin\Catalog\CatalogProductController;
-use App\Http\Controllers\Admin\Catalog\CatalogPromotionController;
-use App\Http\Controllers\Admin\Catalog\CatalogReviewController;
 use App\Http\Controllers\Admin\CmsModuleController;
 use App\Http\Controllers\Admin\Content\ContentCategoryController;
 use App\Http\Controllers\Admin\Content\ContentItemController;
@@ -55,12 +54,28 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
     Route::middleware('guest')->group(function (): void {
         Route::get('login', [AdminLoginController::class, 'create'])->name('login');
         Route::post('login', [AdminLoginController::class, 'store'])->name('login.store');
+        Route::get('login/two-factor', [AdminLoginController::class, 'challenge'])->name('login.two-factor');
+        Route::post('login/two-factor', [AdminLoginController::class, 'verify'])->name('login.two-factor.store');
     });
 
     Route::middleware(['auth', 'can:access-admin'])->group(function () use ($screenGroup, $screenRoutes): void {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::post('logout', [AdminLoginController::class, 'destroy'])->name('logout');
         Route::patch('quick-status', QuickStatusController::class)->name('quick-status.update');
+
+        $screenRoutes('base_module_conventions', function (): void {
+            Route::prefix('base-module-conventions')->name('base-module-conventions.')->group(function (): void {
+                Route::get('/', [BaseModuleConventionsController::class, 'index'])->name('index');
+                Route::get('create', [BaseModuleConventionsController::class, 'create'])->name('create');
+                Route::get('categories', [BaseModuleConventionsController::class, 'categories'])->name('categories.index');
+                Route::get('{id}/edit', [BaseModuleConventionsController::class, 'edit'])->whereNumber('id')->name('edit');
+                Route::get('{id}/edit/{tab}', [BaseModuleConventionsController::class, 'edit'])
+                    ->whereNumber('id')
+                    ->whereIn('tab', ['form', 'seo'])
+                    ->name('edit.tab');
+                Route::get('{id}/images', [BaseModuleConventionsController::class, 'images'])->whereNumber('id')->name('images');
+            });
+        });
 
         $screenRoutes('content_items', function (): void {
             Route::resource('pages', PageController::class)
@@ -69,6 +84,20 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
         });
 
         $screenRoutes('domains', function (): void {
+            Route::get('domains/{domain}/edit/{step}', [DomainController::class, 'edit'])
+                ->whereNumber('domain')
+                ->whereIn('step', [
+                    'identity',
+                    'languages',
+                    'template',
+                    'seo',
+                    'integrations',
+                    'security',
+                    'social-contact',
+                    'favicon',
+                    'review',
+                ])
+                ->name('domains.edit.step');
             Route::resource('domains', DomainController::class)
                 ->except(['show'])
                 ->parameters(['domains' => 'domain']);
@@ -77,7 +106,7 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
         $screenRoutes('website_templates', function (): void {
             Route::get('templates/{websiteTemplate}/edit/{tab}', [WebsiteTemplateController::class, 'edit'])
                 ->whereNumber('websiteTemplate')
-                ->whereIn('tab', ['settings', 'sections', 'paths', 'preview'])
+                ->whereIn('tab', ['settings', 'sections', 'usp-sets', 'paths', 'preview'])
                 ->name('templates.edit.tab');
             Route::resource('templates', WebsiteTemplateController::class)
                 ->except(['show'])
@@ -216,6 +245,10 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
 
             Route::get('create', [CatalogProductController::class, 'create'])->name('create');
             Route::get('{id}/edit', [CatalogProductController::class, 'edit'])->whereNumber('id')->name('edit');
+            Route::get('{id}/edit/{tab}', [CatalogProductController::class, 'edit'])
+                ->whereNumber('id')
+                ->whereIn('tab', ['seo'])
+                ->name('edit.tab');
             Route::post('{id?}', [CatalogProductController::class, 'save'])->whereNumber('id')->name('save');
             Route::get('edit', [CatalogProductController::class, 'edit'])->name('legacy-edit-clean');
             Route::post('edit', [CatalogProductController::class, 'save'])->name('legacy-save-clean');
@@ -250,19 +283,16 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
             Route::get('editVideo.php', [CatalogProductController::class, 'videos'])->name('legacy-videos');
             Route::post('editVideo.php', [CatalogProductController::class, 'saveVideos'])->name('legacy-videos.save');
 
-            Route::get('{id}/stock', [CatalogProductController::class, 'stock'])->whereNumber('id')->name('stock');
-            Route::post('{id}/stock', [CatalogProductController::class, 'saveStock'])->whereNumber('id')->name('stock.save');
-            Route::get('editVoorraad', [CatalogProductController::class, 'stock'])->name('legacy-stock-clean');
-            Route::post('editVoorraad', [CatalogProductController::class, 'saveStock'])->name('legacy-stock.save-clean');
-            Route::get('editVoorraad.php', [CatalogProductController::class, 'stock'])->name('legacy-stock');
-            Route::post('editVoorraad.php', [CatalogProductController::class, 'saveStock'])->name('legacy-stock.save');
+            Route::group(['prefix' => 'combinaties', 'as' => 'combination-sets.', 'admin_screen' => 'catalog_combination_sets'], function (): void {
+                Route::get('/', [CatalogCombinationSetController::class, 'index'])->name('index');
+                Route::get('create', [CatalogCombinationSetController::class, 'create'])->name('create');
+                Route::get('{id}/edit', [CatalogCombinationSetController::class, 'edit'])->whereNumber('id')->name('edit');
+                Route::delete('{id}', [CatalogCombinationSetController::class, 'destroy'])->whereNumber('id')->name('destroy');
+            });
 
             Route::get('{id}/combinations', [CatalogProductController::class, 'combinations'])->whereNumber('id')->name('combinations');
-            Route::post('{id}/combinations', [CatalogProductController::class, 'saveCombinations'])->whereNumber('id')->name('combinations.save');
             Route::get('editCombinaties', [CatalogProductController::class, 'combinations'])->name('legacy-combinations-clean');
-            Route::post('editCombinaties', [CatalogProductController::class, 'saveCombinations'])->name('legacy-combinations.save-clean');
             Route::get('editCombinaties.php', [CatalogProductController::class, 'combinations'])->name('legacy-combinations');
-            Route::post('editCombinaties.php', [CatalogProductController::class, 'saveCombinations'])->name('legacy-combinations.save');
 
             Route::get('resetSortIndex', [CatalogProductController::class, 'resetSortIndex'])->name('reset-sort');
             Route::get('resetSortIndex.php', [CatalogProductController::class, 'resetSortIndex'])->name('legacy-reset-sort');
@@ -305,51 +335,6 @@ Route::prefix('admin')->name('admin.')->group(function () use ($screenGroup, $sc
                 Route::get('edit.php', [CatalogBrandController::class, 'edit'])->name('legacy-edit');
                 Route::post('edit.php', [CatalogBrandController::class, 'save'])->name('legacy-save');
                 Route::delete('{record}', [CatalogBrandController::class, 'destroy'])->whereNumber('record')->name('destroy');
-            });
-
-            $screenGroup('catalog_promotions', 'promotie', 'promotions.', function (): void {
-                Route::get('/', [CatalogPromotionController::class, 'index'])->name('index');
-                Route::get('index.php', [CatalogPromotionController::class, 'index'])->name('legacy-index');
-                Route::post('/', [CatalogPromotionController::class, 'store'])->name('store');
-                Route::post('index.php', [CatalogPromotionController::class, 'store'])->name('legacy-store');
-                Route::get('create', [CatalogPromotionController::class, 'create'])->name('create');
-                Route::get('{id}/edit', [CatalogPromotionController::class, 'edit'])->whereNumber('id')->name('edit');
-                Route::post('{id?}', [CatalogPromotionController::class, 'save'])->whereNumber('id')->name('save');
-                Route::get('edit', [CatalogPromotionController::class, 'edit'])->name('legacy-edit-clean');
-                Route::post('edit', [CatalogPromotionController::class, 'save'])->name('legacy-save-clean');
-                Route::get('edit.php', [CatalogPromotionController::class, 'edit'])->name('legacy-edit');
-                Route::post('edit.php', [CatalogPromotionController::class, 'save'])->name('legacy-save');
-                Route::delete('{record}', [CatalogPromotionController::class, 'destroy'])->whereNumber('record')->name('destroy');
-            });
-
-            $screenGroup('catalog_coupons', 'actiecodes', 'coupons.', function (): void {
-                Route::get('/', [CatalogCouponController::class, 'index'])->name('index');
-                Route::get('index.php', [CatalogCouponController::class, 'index'])->name('legacy-index');
-                Route::post('/', [CatalogCouponController::class, 'store'])->name('store');
-                Route::post('index.php', [CatalogCouponController::class, 'store'])->name('legacy-store');
-                Route::get('create', [CatalogCouponController::class, 'create'])->name('create');
-                Route::get('{id}/edit', [CatalogCouponController::class, 'edit'])->whereNumber('id')->name('edit');
-                Route::post('{id?}', [CatalogCouponController::class, 'save'])->whereNumber('id')->name('save');
-                Route::get('edit', [CatalogCouponController::class, 'edit'])->name('legacy-edit-clean');
-                Route::post('edit', [CatalogCouponController::class, 'save'])->name('legacy-save-clean');
-                Route::get('edit.php', [CatalogCouponController::class, 'edit'])->name('legacy-edit');
-                Route::post('edit.php', [CatalogCouponController::class, 'save'])->name('legacy-save');
-                Route::delete('{catalogCoupon}', [CatalogCouponController::class, 'destroy'])->whereNumber('catalogCoupon')->name('destroy');
-            });
-
-            $screenGroup('catalog_reviews', 'review', 'reviews.', function (): void {
-                Route::get('/', [CatalogReviewController::class, 'index'])->name('index');
-                Route::get('index.php', [CatalogReviewController::class, 'index'])->name('legacy-index');
-                Route::post('/', [CatalogReviewController::class, 'store'])->name('store');
-                Route::post('index.php', [CatalogReviewController::class, 'store'])->name('legacy-store');
-                Route::get('create', [CatalogReviewController::class, 'create'])->name('create');
-                Route::get('{id}/edit', [CatalogReviewController::class, 'edit'])->whereNumber('id')->name('edit');
-                Route::post('{id?}', [CatalogReviewController::class, 'save'])->whereNumber('id')->name('save');
-                Route::get('edit', [CatalogReviewController::class, 'edit'])->name('legacy-edit-clean');
-                Route::post('edit', [CatalogReviewController::class, 'save'])->name('legacy-save-clean');
-                Route::get('edit.php', [CatalogReviewController::class, 'edit'])->name('legacy-edit');
-                Route::post('edit.php', [CatalogReviewController::class, 'save'])->name('legacy-save');
-                Route::delete('{catalogReview}', [CatalogReviewController::class, 'destroy'])->whereNumber('catalogReview')->name('destroy');
             });
 
             Route::delete('categorieen/{catalogCategory}', [CatalogCategoryController::class, 'destroy'])

@@ -19,7 +19,6 @@ class AdminLoginRequest extends FormRequest
         return [
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
-            'two_factor_code' => ['nullable', 'string', 'max:16'],
             'remember' => ['sometimes', 'boolean'],
         ];
     }

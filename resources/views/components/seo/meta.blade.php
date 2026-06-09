@@ -8,33 +8,74 @@
 
 @php
     $domain = $activeDomain ?? null;
-    $pageTitle = $title
-        ?? data_get($page, 'meta_title')
-        ?? data_get($page, 'title')
-        ?? data_get($page, 'name')
-        ?? data_get($page, 'question')
-        ?? $domain?->default_meta_title
-        ?? config('app.name');
+    $locale = str_replace('-', '_', app()->getLocale());
+    $localeCode = str_replace('_', '-', app()->getLocale());
+    $firstFilled = static function (mixed ...$values): ?string {
+        foreach ($values as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
+    };
+    $pageTitle = $firstFilled(
+        $title,
+        data_get($page, 'meta_title'),
+        data_get($page, 'title'),
+        data_get($page, 'name'),
+        data_get($page, 'question'),
+        $domain?->fallbackTitle($localeCode),
+        config('app.name'),
+    );
     $resolvedTitle = $domain?->seoTitle($pageTitle) ?? $pageTitle;
-    $resolvedDescription = $description
-        ?? data_get($page, 'meta_description')
-        ?? $domain?->fallbackDescription()
-        ?? config('cms.default_meta_description');
-    $resolvedCanonical = $canonical
-        ?? data_get($page, 'canonical_url')
-        ?? $domain?->canonicalUrlFor(url()->current(), request()->path())
-        ?? url()->current();
+    $resolvedDescription = $firstFilled($description, data_get($page, 'meta_description'), $domain?->fallbackDescription(), config('cms.default_meta_description'));
+    $resolvedCanonical = $firstFilled($canonical, data_get($page, 'canonical_url'), $domain?->canonicalUrlFor(url()->current(), request()->path()), url()->current());
     $resolvedRobots = $robots ?? data_get($page, 'robots') ?? $domain?->robots;
-    $resolvedOgTitle = data_get($page, 'og_title') ?? $domain?->default_og_title ?? $resolvedTitle;
-    $resolvedOgDescription = data_get($page, 'og_description') ?? $domain?->default_og_description ?? $resolvedDescription;
-    $resolvedOgImage = data_get($page, 'og_image') ?? $domain?->default_og_image;
+    $resolvedOgTitle = $firstFilled(data_get($page, 'og_title'), $domain?->fallbackOgTitle($localeCode), $resolvedTitle);
+    $resolvedOgDescription = $firstFilled(data_get($page, 'og_description'), $domain?->fallbackOgDescription($localeCode), $resolvedDescription);
+    $resolvedOgImage = $firstFilled(data_get($page, 'og_image'), $domain?->fallbackOgImage($localeCode));
     $siteName = $domain?->siteTitle() ?? config('app.name');
     $companyName = $domain?->company_name ?: $siteName;
-    $locale = str_replace('-', '_', app()->getLocale());
-    $themeColor = data_get($domain?->effectiveTemplateSettings() ?? [], 'primary_color', '#ffa300');
+    $themeColor = data_get($domain?->effectiveTemplateSettings() ?? [], 'primary_color', '#0f6f7a');
     $themeColor = is_string($themeColor) && preg_match('/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i', $themeColor) === 1
         ? $themeColor
-        : '#ffa300';
+        : '#0f6f7a';
+    $absoluteUrl = static function (?string $url): ?string {
+        if (! is_string($url) || trim($url) === '') {
+            return null;
+        }
+
+        $url = trim($url);
+
+        return preg_match('/^https?:\/\//i', $url) === 1 ? $url : asset(ltrim($url, '/'));
+    };
+    $resolvedOgImage = $absoluteUrl($resolvedOgImage);
+    $resolvedCanonical = $absoluteUrl($resolvedCanonical) ?? url()->current();
+    $alternateUrls = $domain?->localizedCanonicalUrls(url()->current(), request()->path()) ?? [];
+    $xDefaultUrl = $alternateUrls[$domain?->defaultLocaleCode()] ?? (count($alternateUrls) > 0 ? reset($alternateUrls) : null);
+    $structuredData = array_values(array_filter([
+        [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => $siteName,
+            'url' => $domain?->canonicalUrlFor(url('/'), '') ?? url('/'),
+            'inLanguage' => $localeCode,
+            'description' => $resolvedDescription,
+            'publisher' => [
+                '@type' => 'Organization',
+                'name' => $companyName,
+                'url' => $domain?->canonicalUrlFor(url('/'), '') ?? url('/'),
+            ],
+        ],
+        $companyName ? [
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            'name' => $companyName,
+            'url' => $domain?->canonicalUrlFor(url('/'), '') ?? url('/'),
+            'logo' => $absoluteUrl(data_get($domain?->effectiveTemplateSettings() ?? [], 'logo_path')),
+        ] : null,
+    ]));
 @endphp
 
 <title>{{ $resolvedTitle }}</title>
@@ -45,18 +86,21 @@
     <meta name="robots" content="{{ $resolvedRobots }}">
 @endif
 <link rel="canonical" href="{{ $resolvedCanonical }}">
-@if ($domain?->faviconUrl('svg'))
-    <link rel="icon" type="image/svg+xml" href="{{ $domain->faviconUrl('svg') }}">
-    <link rel="icon" type="image/svg+xml" sizes="16x16" href="{{ $domain->faviconUrl('icon_16') }}">
-    <link rel="icon" type="image/svg+xml" sizes="32x32" href="{{ $domain->faviconUrl('icon_32') }}">
-    <link rel="apple-touch-icon" href="{{ $domain->faviconUrl('apple_touch_icon') }}">
-    <link rel="mask-icon" href="{{ $domain->faviconUrl('mask_icon') }}" color="{{ data_get($domain->effectiveTemplateSettings(), 'primary_color', '#165f63') }}">
-    <link rel="manifest" href="{{ $domain->faviconUrl('manifest') }}">
+@foreach ($alternateUrls as $alternateLocale => $alternateUrl)
+    <link rel="alternate" hreflang="{{ $alternateLocale }}" href="{{ $alternateUrl }}">
+@endforeach
+@if ($xDefaultUrl)
+    <link rel="alternate" hreflang="x-default" href="{{ $xDefaultUrl }}">
 @endif
 <meta property="og:title" content="{{ $resolvedOgTitle }}">
 <meta property="og:description" content="{{ $resolvedOgDescription }}">
 <meta property="og:site_name" content="{{ $siteName }}">
 <meta property="og:locale" content="{{ $locale }}">
+@foreach (array_keys($alternateUrls) as $alternateLocale)
+    @if (str_replace('-', '_', $alternateLocale) !== $locale)
+        <meta property="og:locale:alternate" content="{{ str_replace('-', '_', $alternateLocale) }}">
+    @endif
+@endforeach
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ $resolvedCanonical }}">
 @if ($resolvedOgImage)
@@ -68,3 +112,6 @@
 @if ($resolvedOgImage)
     <meta name="twitter:image" content="{{ $resolvedOgImage }}">
 @endif
+@foreach ($structuredData as $schema)
+    <script type="application/ld+json">@json($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>
+@endforeach

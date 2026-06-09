@@ -25,10 +25,8 @@ class DashboardNavigationBuilder
             ['title' => 'Downloads', 'icon' => 'download', 'screens' => ['downloads', 'download_categories']],
             ['title' => 'Locations', 'icon' => 'vestigingen', 'screens' => ['locations', 'location_categories']],
         ],
-        'commerce' => [
-            ['title' => 'Catalog', 'icon' => 'catalogus', 'screens' => ['catalog_products', 'catalog_categories', 'catalog_brands']],
-            ['title' => 'Promotion', 'icon' => 'promotie', 'screens' => ['catalog_reviews', 'catalog_coupons', 'catalog_promotions']],
-            ['title' => 'Orders', 'icon' => 'orders', 'screens' => ['orders', 'order_exports', 'order_delivery_dates', 'order_payment_methods']],
+            'commerce' => [
+                ['title' => 'Catalog', 'icon' => 'catalogus', 'screens' => ['catalog_products', 'catalog_categories', 'catalog_brands', 'catalog_combination_sets']],
         ],
         'media' => [
             ['title' => 'Banners', 'icon' => 'banner', 'screens' => ['banners', 'banner_categories']],
@@ -46,9 +44,6 @@ class DashboardNavigationBuilder
         ],
         'configuration' => [
             ['title' => 'Configuration', 'icon' => 'settings', 'screens' => ['domains', 'website_templates']],
-        ],
-        'website' => [
-            ['title' => 'Website', 'icon' => 'website', 'screens' => ['guestbook']],
         ],
     ];
 
@@ -238,9 +233,6 @@ class DashboardNavigationBuilder
     private function materialIcon(string $name): string
     {
         $icon = match ($name) {
-            'actiecodes' => 'actiecodes',
-            'afleverdata' => 'afleverdata',
-            'betaalmethoden' => 'betaalmethoden',
             'catalogus' => 'catalogus',
             'domein' => 'domein',
             'evenementen' => 'evenementen',
@@ -278,7 +270,6 @@ class DashboardNavigationBuilder
             'catalogus' => 'catalog',
             'evenementen' => 'events',
             'form' => 'forms',
-            'promotie' => 'promotion',
             'redirect' => 'seo',
             'settings' => 'configuration',
             'vacatures' => 'vacancies',

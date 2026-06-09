@@ -156,11 +156,11 @@
 @if (app()->environment('local'))
     <div class="db-name-container">
         <div class="db-name">
-            <span class="db-name-label">Database host:</span>
+            <span class="db-name-label">{{ __('Database host') }}:</span>
             <span class="bd-name-title">{{ config('database.connections.'.config('database.default').'.host', 'local') }}</span>
         </div>
         <div class="db-name">
-            <span class="db-name-label">Database:</span>
+            <span class="db-name-label">{{ __('Database') }}:</span>
             <span class="bd-name-title">{{ config('database.connections.'.config('database.default').'.database') }}</span>
         </div>
     </div>

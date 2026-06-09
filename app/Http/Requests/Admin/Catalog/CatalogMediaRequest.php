@@ -21,10 +21,17 @@ class CatalogMediaRequest extends FormRequest
             'uploadId' => ['nullable', 'integer'],
             'catalog_product_id' => ['nullable', 'integer', 'exists:catalog_products,id'],
             'caption' => ['nullable', 'string', 'max:255'],
+            'alt_text' => ['nullable', 'string', 'max:255'],
+            'title_text' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'credit' => ['nullable', 'string', 'max:255'],
+            'is_decorative' => ['boolean'],
             'uploadName' => ['nullable', 'string', 'max:255'],
             'sort_index' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'max:8192'],
             'file' => ['nullable', 'image', 'max:8192'],
+            'images' => ['nullable', 'array'],
+            'images.*' => ['image', 'max:8192'],
         ];
     }
 }

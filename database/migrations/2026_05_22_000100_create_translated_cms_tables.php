@@ -19,7 +19,6 @@ return new class extends Migration
 
         $this->createContentTables();
         $this->createBannerTables();
-        $this->createSliderTables();
         $this->createFormTables();
         $this->createEventTables();
         $this->createFaqTables();
@@ -28,10 +27,8 @@ return new class extends Migration
         $this->createVacancyTables();
         $this->createCatalogTables();
         $this->createOrderTables();
-        $this->createNewsletterTables();
         $this->createPlatformTables();
         $this->createLocalizationTables();
-        $this->createUtilityTables();
     }
 
     /**
@@ -92,9 +89,6 @@ return new class extends Migration
             'banners',
             'banner_category_banner',
             'banner_translations',
-            'slider_categories',
-            'sliders',
-            'slider_category_slider',
             'form_categories',
             'forms',
             'form_category_form',
@@ -133,70 +127,33 @@ return new class extends Migration
             'vacancy_attachments',
             'catalog_categories',
             'catalog_brands',
-            'catalog_promotions',
             'catalog_products',
             'catalog_category_product',
             'catalog_product_images',
             'catalog_product_attachments',
             'catalog_product_options',
+            'catalog_product_option_values',
             'catalog_product_translations',
-            'catalog_product_combinations',
-            'catalog_discounts',
-            'catalog_reviews',
-            'catalog_review_criteria',
-            'catalog_review_scores',
+            'catalog_combination_set_products',
+            'catalog_combination_sets',
             'catalog_product_videos',
-            'catalog_stock',
-            'catalog_coupons',
-            'shipping_costs',
-            'delivery_settings',
-            'delivery_days',
-            'delivery_dates',
-            'orders',
-            'order_items',
-            'newsletter_categories',
-            'newsletters',
-            'newsletter_category_newsletter',
-            'newsletter_base_templates',
-            'newsletter_template_blocks',
             'redirects',
             'urls',
             'url_references',
-            'menu_categories',
             'domains',
-            'domain_roles',
             'user_categories',
-            'user_category_roles',
             'user_logins',
-            'user_rights',
-            'user_sessions',
             'user_category_user',
-            'login_cookies',
-            'password_reset_records',
-            'user_tokens',
             'roles',
             'permissions',
             'role_permissions',
-            'rights',
-            'category_right_specifications',
-            'role_categories',
-            'role_content',
-            'role_languages',
-            'role_category_role',
-            'page_permissions',
-            'module_categories',
-            'module_category_module',
             'languages',
             'iso_languages',
             'countries',
             'country_codes',
-            'country_payment_methods',
             'translation_keys',
             'translation_values',
             'translations',
-            'guestbook_entries',
-            'geo_locations',
-            'short_links',
         ];
     }
 
@@ -282,13 +239,6 @@ return new class extends Migration
         $this->createSimpleMediaEntityTable('banners');
         $this->createPivotTable('banner_category_banner', 'banner_category_id', 'banner_id');
         $this->createTranslationTable('banner_translations', 'banner_id');
-    }
-
-    private function createSliderTables(): void
-    {
-        $this->createCategoryTable('slider_categories');
-        $this->createSimpleMediaEntityTable('sliders');
-        $this->createPivotTable('slider_category_slider', 'slider_category_id', 'slider_id');
     }
 
     private function createFormTables(): void
@@ -503,7 +453,15 @@ return new class extends Migration
     {
         $this->createCategoryTable('catalog_categories');
         $this->createSimpleNamedTable('catalog_brands');
-        $this->createSimpleNamedTable('catalog_promotions');
+
+        Schema::table('catalog_brands', function (Blueprint $table): void {
+            $table->string('website_url')->nullable()->after('description');
+            $table->string('logo_path')->nullable()->after('website_url');
+            $table->text('intro')->nullable()->after('logo_path');
+            $table->longText('body')->nullable()->after('intro');
+            $table->string('meta_title')->nullable()->after('body');
+            $table->text('meta_description')->nullable()->after('meta_title');
+        });
 
         Schema::create('catalog_products', function (Blueprint $table): void {
             $this->baseColumns($table);
@@ -511,16 +469,8 @@ return new class extends Migration
             $table->string('name')->index();
             $table->longText('description')->nullable();
             $table->integer('price')->default(0);
-            $table->text('price_note')->nullable();
-            $table->boolean('is_on_sale')->default(false)->index();
-            $table->date('sale_starts_at')->nullable();
-            $table->date('sale_ends_at')->nullable();
-            $table->integer('sale_price')->nullable();
-            $table->text('sale_price_note')->nullable();
             $table->text('meta_description')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable()->index();
-            $table->unsignedBigInteger('promotion_id')->nullable()->index();
-            $table->boolean('can_be_engraved')->default(false);
             $table->string('status')->default('draft')->index();
             $table->date('active_from')->nullable();
             $table->date('active_until')->nullable();
@@ -536,140 +486,50 @@ return new class extends Migration
         Schema::create('catalog_product_options', function (Blueprint $table): void {
             $this->baseColumns($table);
             $table->unsignedBigInteger('catalog_product_id')->index();
-            $table->string('locale', 8)->default('nl')->index();
             $table->string('label');
-            $table->longText('value')->nullable();
+            $table->json('label_translations')->nullable();
+            $table->unsignedInteger('sort_order')->default(0)->index();
             $this->timestamps($table);
+            $table->softDeletes();
+        });
+
+        Schema::create('catalog_product_option_values', function (Blueprint $table): void {
+            $this->baseColumns($table);
+            $table->unsignedBigInteger('catalog_product_option_id')->index();
+            $table->string('value')->nullable();
+            $table->json('value_translations')->nullable();
+            $table->unsignedInteger('sort_order')->default(0)->index();
+            $this->timestamps($table);
+            $table->softDeletes();
         });
 
         $this->createTranslationTable('catalog_product_translations', 'catalog_product_id');
-        $this->createSimpleRelationshipTable('catalog_product_combinations', 'catalog_product_id', 'related_product_id');
-        $this->createSimpleNamedTable('catalog_discounts');
-
-        Schema::create('catalog_reviews', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger('catalog_product_id')->index();
-            $table->string('author_name')->nullable();
-            $table->string('author_email')->nullable();
-            $table->unsignedTinyInteger('rating')->nullable();
-            $table->string('status')->default('pending')->index();
-            $table->text('title')->nullable();
-            $table->longText('content')->nullable();
-            $this->timestamps($table);
-            $table->softDeletes();
-        });
-
-        $this->createSimpleNamedTable('catalog_review_criteria');
-        $this->createSimpleRelationshipTable('catalog_review_scores', 'catalog_review_id', 'catalog_review_criterion_id');
         $this->createVideoTable('catalog_product_videos', 'catalog_product_id');
 
-        Schema::create('catalog_stock', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger('catalog_product_id')->index();
-            $table->integer('quantity')->default(0);
-            $table->string('location')->nullable();
-            $this->timestamps($table);
-        });
-
-        Schema::create('catalog_coupons', function (Blueprint $table): void {
+        Schema::create('catalog_combination_sets', function (Blueprint $table): void {
             $this->baseColumns($table);
             $table->string('name');
-            $table->string('code')->unique();
-            $table->unsignedTinyInteger('percentage_discount')->default(0);
-            $table->integer('minimum_amount')->default(0);
-            $table->date('starts_at')->nullable();
-            $table->date('ends_at')->nullable();
-            $table->boolean('is_active')->default(true)->index();
-            $table->string('usage_mode')->default('any');
-            $this->timestamps($table);
-        });
-
-        Schema::create('shipping_costs', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->string('country_code')->unique();
+            $table->string('slug')->nullable()->index();
             $table->text('description')->nullable();
-            $table->integer('shipping_cost')->nullable();
-            $this->timestamps($table);
-        });
-    }
-
-    private function createOrderTables(): void
-    {
-        Schema::create('delivery_settings', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->string('name')->nullable();
-            $table->json('settings')->nullable();
-            $this->timestamps($table);
-        });
-
-        Schema::create('delivery_days', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger('delivery_setting_id')->nullable()->index();
-            $table->string('day')->index();
-            $table->boolean('is_available')->default(true);
-            $this->timestamps($table);
-        });
-
-        Schema::create('delivery_dates', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger('delivery_setting_id')->nullable()->index();
-            $table->date('date')->index();
-            $table->boolean('is_available')->default(true);
-            $table->text('note')->nullable();
-            $this->timestamps($table);
-        });
-
-        Schema::create('orders', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->string('order_number')->unique();
-            $table->string('status')->default('new')->index();
-            $table->string('payment_status')->nullable()->index();
-            $table->string('delivery_status')->nullable()->index();
-            $table->string('customer_email')->nullable()->index();
-            $table->string('customer_name')->nullable();
-            $table->integer('subtotal')->default(0);
-            $table->integer('tax_total')->default(0);
-            $table->integer('shipping_total')->default(0);
-            $table->integer('discount_total')->default(0);
-            $table->integer('grand_total')->default(0);
-            $table->json('billing_address')->nullable();
-            $table->json('shipping_address')->nullable();
-            $table->json('metadata')->nullable();
+            $table->string('status')->default('active')->index();
+            $table->unsignedInteger('sort_order')->default(0)->index();
             $this->timestamps($table);
             $table->softDeletes();
         });
 
-        Schema::create('order_items', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger('order_id')->index();
-            $table->unsignedBigInteger('catalog_product_id')->nullable()->index();
-            $table->string('sku')->nullable();
-            $table->string('name');
-            $table->integer('unit_price')->default(0);
-            $table->integer('quantity')->default(1);
-            $table->integer('line_total')->default(0);
-            $table->json('metadata')->nullable();
-            $this->timestamps($table);
-        });
-    }
-
-    private function createNewsletterTables(): void
-    {
-        $this->createCategoryTable('newsletter_categories');
-        $this->createSimpleNamedTable('newsletters');
-        $this->createPivotTable('newsletter_category_newsletter', 'newsletter_category_id', 'newsletter_id');
-        $this->createSimpleNamedTable('newsletter_base_templates');
-
-        Schema::create('newsletter_template_blocks', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger('newsletter_base_template_id')->nullable()->index();
-            $table->string('title')->nullable();
-            $table->longText('content')->nullable();
+        Schema::create('catalog_combination_set_products', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('catalog_combination_set_id');
+            $table->unsignedBigInteger('catalog_product_id');
             $table->unsignedInteger('sort_order')->default(0);
-            $table->json('metadata')->nullable();
-            $this->timestamps($table);
+            $table->timestamps();
+            $table->index('catalog_combination_set_id', 'catalog_set_products_set_idx');
+            $table->index('catalog_product_id', 'catalog_set_products_product_idx');
+            $table->unique(['catalog_combination_set_id', 'catalog_product_id'], 'catalog_set_product_unique');
         });
     }
+
+    private function createOrderTables(): void {}
 
     private function createPlatformTables(): void
     {
@@ -706,8 +566,6 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        $this->createCategoryTable('menu_categories');
-
         Schema::create('domains', function (Blueprint $table): void {
             $this->baseColumns($table);
             $table->string('host')->unique();
@@ -717,10 +575,7 @@ return new class extends Migration
             $this->timestamps($table);
         });
 
-        $this->createSimpleRelationshipTable('domain_roles', 'domain_id', 'role_id');
         $this->createCategoryTable('user_categories');
-        $this->createSimpleRelationshipTable('user_category_roles', 'user_category_id', 'role_id');
-
         Schema::create('user_logins', function (Blueprint $table): void {
             $this->baseColumns($table);
             $table->unsignedBigInteger('user_id')->nullable()->index();
@@ -731,49 +586,10 @@ return new class extends Migration
             $this->timestamps($table);
         });
 
-        Schema::create('user_rights', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger('user_category_id')->nullable()->index();
-            $table->unsignedBigInteger('user_id')->nullable()->index();
-            $table->string('object_type')->nullable()->index();
-            $table->unsignedBigInteger('object_id')->nullable()->index();
-            $table->boolean('can_read')->default(false);
-            $table->boolean('can_write')->default(false);
-            $table->boolean('can_edit')->default(false);
-            $table->boolean('can_delete')->default(false);
-        });
-
-        Schema::create('user_sessions', function (Blueprint $table): void {
-            $table->string('session_id')->primary();
-            $table->unsignedBigInteger('user_id')->nullable()->index();
-            $table->unsignedInteger('last_activity')->nullable();
-            $table->boolean('is_idle')->default(false);
-            $this->timestamps($table);
-        });
-
         $this->createSimpleRelationshipTable('user_category_user', 'user_id', 'user_category_id');
-        $this->createTokenTable('login_cookies', 'user_id');
-        $this->createTokenTable('password_reset_records', 'user_id');
-        $this->createTokenTable('user_tokens', 'user_id');
         $this->createSimpleNamedTable('roles');
         $this->createSimpleNamedTable('permissions');
         $this->createSimpleRelationshipTable('role_permissions', 'role_id', 'permission_id');
-        $this->createSimpleNamedTable('rights');
-        $this->createSimpleRelationshipTable('category_right_specifications', 'right_id', 'category_id');
-        $this->createCategoryTable('role_categories');
-        $this->createSimpleRelationshipTable('role_content', 'role_id', 'content_item_id');
-        $this->createSimpleRelationshipTable('role_languages', 'role_id', 'language_id');
-        $this->createSimpleRelationshipTable('role_category_role', 'role_id', 'role_category_id');
-
-        Schema::create('page_permissions', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger('role_id')->index();
-            $table->string('page')->index();
-            $this->timestamps($table);
-        });
-
-        $this->createCategoryTable('module_categories');
-        $this->createSimpleRelationshipTable('module_category_module', 'module_category_id', 'module_id');
 
     }
 
@@ -791,8 +607,6 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $this->timestamps($table);
         });
-
-        $this->createSimpleRelationshipTable('country_payment_methods', 'country_id', 'payment_method_id');
 
         Schema::create('translation_keys', function (Blueprint $table): void {
             $this->baseColumns($table);
@@ -816,35 +630,6 @@ return new class extends Migration
             $table->string('key')->index();
             $table->longText('value')->nullable();
             $table->json('metadata')->nullable();
-            $this->timestamps($table);
-        });
-    }
-
-    private function createUtilityTables(): void
-    {
-        Schema::create('guestbook_entries', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->string('author_name')->nullable();
-            $table->string('author_email')->nullable();
-            $table->longText('message')->nullable();
-            $table->string('status')->default('pending')->index();
-            $this->timestamps($table);
-            $table->softDeletes();
-        });
-
-        Schema::create('geo_locations', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->string('name')->nullable();
-            $table->string('latitude')->nullable();
-            $table->string('longitude')->nullable();
-            $table->json('metadata')->nullable();
-            $this->timestamps($table);
-        });
-
-        Schema::create('short_links', function (Blueprint $table): void {
-            $this->baseColumns($table);
-            $table->string('real_url');
-            $table->string('short_url')->unique();
             $this->timestamps($table);
         });
     }
@@ -1019,19 +804,6 @@ return new class extends Migration
             .substr($columnName, 0, 16).'_'
             .substr(md5($name), 0, 8)
             .'_index';
-    }
-
-    private function createTokenTable(string $tableName, string $ownerColumn): void
-    {
-        Schema::create($tableName, function (Blueprint $table) use ($ownerColumn): void {
-            $this->baseColumns($table);
-            $table->unsignedBigInteger($ownerColumn)->nullable()->index();
-            $table->string('token')->unique();
-            $table->string('type')->nullable()->index();
-            $table->timestamp('expires_at')->nullable();
-            $table->json('metadata')->nullable();
-            $this->timestamps($table);
-        });
     }
 
     private function baseColumns(Blueprint $table): void

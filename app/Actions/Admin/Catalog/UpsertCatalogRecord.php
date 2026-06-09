@@ -20,6 +20,12 @@ class UpsertCatalogRecord
             'name',
             'slug',
             'description',
+            'website_url',
+            'logo_path',
+            'intro',
+            'body',
+            'meta_title',
+            'meta_description',
             'status',
             'sort_order',
         ]);

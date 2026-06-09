@@ -8,8 +8,8 @@ return [
         'content' => ['contentitems', 'contentcategorieen', 'contentitemblock', 'contentitemblockpart'],
         'navigation' => ['url', 'urlverwijzing', 'redirect', 'menucategorieen'],
         'forms' => ['form', 'formblock', 'formfield', 'formmessage'],
-        'commerce' => ['catalogusartikel', 'cataloguscategorie', 'orders', 'orderregels'],
-    'users' => ['users', 'role', 'permissions'],
+        'commerce' => ['catalogusartikel', 'cataloguscategorie', 'catalogusmerk'],
+        'users' => ['users', 'role', 'permissions'],
         'site_modules' => ['banner', 'faq', 'vacatures', 'vestiging', 'evenement'],
     ],
 ];

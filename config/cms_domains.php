@@ -12,17 +12,17 @@ return [
     ],
 
     'default_template_settings' => [
-        'primary_color' => '#ffa300',
-        'secondary_color' => '#272720',
-        'tertiary_color' => '#00a287',
-        'accent_color' => '#ffa300',
+        'primary_color' => '#0f6f7a',
+        'secondary_color' => '#1b1b1b',
+        'tertiary_color' => '#2d7fc5',
+        'accent_color' => '#d86445',
         'surface_color' => '#ffffff',
-        'canvas_color' => '#ffffff',
-        'light_color' => '#f0f0f0',
-        'grey_color' => '#e0e0e0',
-        'dark_color' => '#2d2d29',
-        'ink_color' => '#2d2d29',
-        'muted_ink_color' => '#6f6f68',
+        'canvas_color' => '#f5f7fa',
+        'light_color' => '#eef3f7',
+        'grey_color' => '#d8dee8',
+        'dark_color' => '#1b1b1b',
+        'ink_color' => '#1f242b',
+        'muted_ink_color' => '#667085',
         'base_font_family' => '"Open Sans", Arial, sans-serif',
         'heading_font_family' => '"Open Sans", Arial, sans-serif',
         'base_font_google_url' => '',
@@ -67,6 +67,11 @@ return [
         'none' => 'Not shown',
         'header' => 'Header',
         'footer' => 'Footer',
+    ],
+
+    'usp_template_locations' => [
+        'header_top' => 'Above header',
+        'footer_top' => 'Above footer',
     ],
 
     'social_platforms' => [

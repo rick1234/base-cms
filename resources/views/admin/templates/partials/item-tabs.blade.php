@@ -3,6 +3,7 @@
         'identity' => __('Template'),
         'settings' => __('Settings'),
         'sections' => __('Defined sections'),
+        'usp-sets' => __('USP sets'),
         'paths' => __('Paths'),
         'preview' => __('Preview'),
     ];

@@ -1,4 +1,4 @@
-<section class="domain-wizard-panel" id="domain-step-template">
+<section class="domain-tab-panel" id="domain-step-template">
     <h2 class="title">{{ __('Template') }}</h2>
 
     <div class="form-item">

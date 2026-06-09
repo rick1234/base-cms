@@ -31,10 +31,7 @@ class EventController extends Controller
             ->when($activeCategory instanceof EventCategory, function (Builder $query) use ($activeCategory): void {
                 $query->whereHas('categories', fn (Builder $query): Builder => $query->whereKey($activeCategory->id));
             })
-            ->orderByRaw('starts_at is null')
-            ->orderBy('starts_at')
-            ->orderBy('sort_order')
-            ->orderBy('title')
+            ->frontendOrdered()
             ->paginate(12)
             ->withQueryString();
 

@@ -1,5 +1,6 @@
 @php
     use App\Cms\PageBlocks\Support\PageBlockRenderer;
+    use App\Support\Media\HandledImage;
 
     $images = collect(data_get($data, 'images', []))->filter()->values();
     $captions = PageBlockRenderer::captions(data_get($data, 'caption_notes'));
@@ -10,14 +11,15 @@
     <div class="page-block-gallery page-block-gallery--{{ $layout }}">
         @foreach ($images as $image)
             @php
-                $imageUrl = PageBlockRenderer::mediaUrl($image);
                 $caption = $captions[$loop->index] ?? '';
+                $handledImage = HandledImage::fromPath(is_string($image) ? $image : null, $caption);
+                $imageUrl = $handledImage->handle(520, 390, true);
             @endphp
 
             @continue(! $imageUrl)
 
             <figure class="page-block-gallery-item">
-                <img src="{{ $imageUrl }}" alt="{{ $caption }}">
+                <x-media.image :image="$handledImage" :alt="$caption" :width="520" :height="390" crop group="page-block-gallery" />
                 @if ($caption !== '')
                     <figcaption>{{ $caption }}</figcaption>
                 @endif

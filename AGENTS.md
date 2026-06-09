@@ -94,6 +94,7 @@ The following are strictly forbidden:
 - Use Eloquent, query builders, migrations, seeders, factories, and repositories only where they improve clarity.
 - Use explicit route names.
 - Backend/admin tabbed screens must use named routes with path segments, such as `/admin/form/{id}/edit/response`, instead of query-string tab state such as `?tab=response`; reserve query strings for filters, search, pagination, and legacy compatibility redirects.
+- Removing CMS fields must also remove or clear their database storage through migrations and related seed/import cleanup; do not only hide fields in views, validation, or controllers.
 - Keep rendered website routes, backend/admin routes, and API routes clearly separated.
 - Use versioned API routes.
 - API behavior must not depend on Blade rendering.
@@ -167,6 +168,18 @@ The backend/admin area must:
 - avoid leaking admin UI concerns into public frontend code
 - be reusable across forked websites
 
+### Admin layout set rules
+
+When a prompt asks to build a backend/admin function "like the defined set layout", use the base admin layout sets documented in `docs/architecture/admin-layout-sets.md`.
+
+- The visible admin reference for these conventions is `/admin/base-module-conventions`; style and compare new module screens against that fake model before treating the pattern as final.
+- New admin listing screens must start from the `admin.index.content` set unless a documented module-specific set is a closer match.
+- New admin create/edit screens must start from the `admin.edit.content` set: shared admin shell, top action bar, page header, named route tabs where needed, semantic form sections, translated labels, shared field errors, category tree picker, attachments/media managers, and author metadata where applicable.
+- Page/block builder behavior for content-like records must use the `admin.block-builder.content-events` set and the existing `livewire:admin.content.content-block-editor` ownership pattern.
+- Form builder, response message, and submission inbox screens must use the `admin.builder.forms` set, including named path-segment tab routes such as `/admin/form/{form}/submissions`.
+- Do not invent one-off admin styling for module screens. Put default shared admin layout styling in the base admin SCSS/components, then add only small semantic module classes when the shared set cannot express the screen.
+- If a screen genuinely needs a new layout set, document it in `docs/architecture/admin-layout-sets.md` before or in the same change that introduces it.
+
 ## Website-specific extension rules
 
 Website-specific modules, templates, fields, and behavior must be isolated from the shared base as much as possible.
@@ -226,6 +239,10 @@ It is not a source of code to blindly copy.
 - Prefer feature tests for route-level behavior.
 - Prefer unit tests for isolated domain behavior.
 - Run relevant tests and checks before finalizing work.
+- Run `composer health` before finishing normal CMS, backend, frontend, route, migration, seeder, localization, or model work.
+- Run `composer health:extended` before finishing major features, large refactors, schema cleanups, release branches, or any work that changes multiple modules or shared behavior.
+- The extended health check must also be run at least once per month; the scheduled GitHub workflow exists for that monthly safety pass.
+- When adding a new module or feature, tests must cover the reachable admin/menu path, validation, authorization-sensitive behavior, migrations, seed/default translation coverage, and public/API behavior when applicable.
 - If a check cannot be run, state why.
 
 ## Documentation rules

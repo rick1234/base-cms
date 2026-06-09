@@ -1,7 +1,11 @@
 @php
     use App\Cms\PageBlocks\Support\PageBlockRenderer;
+    use App\Support\Media\HandledImage;
 
-    $imageUrl = PageBlockRenderer::mediaUrl(data_get($data, 'image'));
+    $imagePath = data_get($data, 'image');
+    $imageAlt = data_get($data, 'alt');
+    $image = HandledImage::fromPath(is_string($imagePath) ? $imagePath : null, is_string($imageAlt) ? $imageAlt : null);
+    $imageUrl = $image->handle(1200, null, false);
     $linkUrl = PageBlockRenderer::safeUrl(data_get($data, 'link_url'));
     $alt = (string) data_get($data, 'alt', '');
     $caption = (string) data_get($data, 'caption', '');
@@ -13,10 +17,10 @@
     <figure class="page-block-image page-block-image--{{ $imageLayout }} page-block-image--aspect-{{ $aspect }}">
         @if ($linkUrl)
             <a href="{{ $linkUrl }}">
-                <img src="{{ $imageUrl }}" alt="{{ $alt }}">
+                <img src="{{ $imageUrl }}" alt="{{ $alt }}" loading="lazy" decoding="async">
             </a>
         @else
-            <img src="{{ $imageUrl }}" alt="{{ $alt }}">
+            <x-media.image :image="$image" :alt="$alt" :width="1200" :lightbox="true" group="page-block-images" />
         @endif
 
         @if ($caption !== '')

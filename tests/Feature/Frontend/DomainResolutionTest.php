@@ -3,6 +3,7 @@
 namespace Tests\Feature\Frontend;
 
 use App\Models\Cms\Domain;
+use App\Models\Cms\CmsLanguage;
 use App\Models\Cms\Page;
 use App\Models\Cms\WebsiteTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -170,5 +171,72 @@ class DomainResolutionTest extends TestCase
             ->from('/')
             ->post('/locale/en')
             ->assertSessionHasErrors('locale');
+    }
+
+    public function test_domain_seo_fallbacks_are_localized_and_emit_alternate_metadata(): void
+    {
+        CmsLanguage::query()->create([
+            'code' => 'nl',
+            'name' => 'Dutch',
+            'slug' => 'dutch',
+            'native_name' => 'Nederlands',
+            'direction' => 'ltr',
+            'status' => 'active',
+            'is_enabled' => true,
+            'is_default' => true,
+        ]);
+        CmsLanguage::query()->create([
+            'code' => 'fr',
+            'name' => 'French',
+            'slug' => 'french',
+            'native_name' => 'Francais',
+            'direction' => 'ltr',
+            'status' => 'active',
+            'is_enabled' => true,
+            'is_default' => false,
+        ]);
+
+        Domain::query()->create([
+            'host' => 'seo.test',
+            'name' => 'SEO Site',
+            'company_name' => 'SEO Company',
+            'default_locale' => 'nl',
+            'active_frontend_locales' => ['nl', 'fr'],
+            'active_backend_locales' => ['nl'],
+            'canonical_base_url' => 'https://www.example.test',
+            'title_separator' => '|',
+            'default_meta_description' => 'Global fallback description.',
+            'settings' => [
+                'seo' => [
+                    'locales' => [
+                        'fr' => [
+                            'default_meta_title' => 'Titre de secours',
+                            'default_meta_description' => 'Description francaise de secours.',
+                            'default_og_title' => 'Titre social',
+                            'default_og_description' => 'Description sociale francaise.',
+                            'default_og_image' => 'images/social-fr.jpg',
+                        ],
+                    ],
+                ],
+            ],
+            'is_active' => true,
+        ]);
+
+        $this->withHeader('Host', 'seo.test')
+            ->get('/fr')
+            ->assertOk()
+            ->assertSee('<title>Titre de secours | SEO Site</title>', false)
+            ->assertSee('<meta name="description" content="Description francaise de secours.">', false)
+            ->assertSee('<link rel="canonical" href="https://www.example.test/fr">', false)
+            ->assertSee('<link rel="alternate" hreflang="nl" href="https://www.example.test/">', false)
+            ->assertSee('<link rel="alternate" hreflang="fr" href="https://www.example.test/fr">', false)
+            ->assertSee('<link rel="alternate" hreflang="x-default" href="https://www.example.test/">', false)
+            ->assertSee('<meta property="og:locale" content="fr">', false)
+            ->assertSee('<meta property="og:locale:alternate" content="nl">', false)
+            ->assertSee('<meta property="og:title" content="Titre social">', false)
+            ->assertSee(asset('images/social-fr.jpg'), false)
+            ->assertSee('application/ld+json', false)
+            ->assertSee('"@type":"WebSite"', false)
+            ->assertSee('"@type":"Organization"', false);
     }
 }

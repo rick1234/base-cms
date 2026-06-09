@@ -38,14 +38,6 @@
     </div>
 @endforeach
 
-<div class="form-item">
-    <div class="form-item-label"><label for="{{ $fieldIdPrefix }}_usp_items">{{ __('USP items') }}</label></div>
-    <div class="form-item-input">
-        <textarea id="{{ $fieldIdPrefix }}_usp_items" name="{{ $settingPrefix }}[usp_items]">{{ old($settingPrefix.'.usp_items', is_array($settings['usp_items'] ?? null) ? implode("\n", $settings['usp_items']) : ($settings['usp_items'] ?? '')) }}</textarea>
-        @error($settingPrefix.'.usp_items')<span class="error">{{ $message }}</span>@enderror
-    </div>
-</div>
-
 <h3 class="sub-title">{{ __('Default footer') }}</h3>
 
 @foreach ([

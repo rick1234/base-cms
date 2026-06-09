@@ -5,7 +5,7 @@
     'nextStep',
 ])
 
-<div class="domain-wizard-submit">
+<div class="domain-tab-actions">
     @if ($domain->exists && $previousStep !== $activeStep)
         <button class="btn btn-save" name="_next_step" type="submit" value="{{ $previousStep }}">
             <x-admin.material-icon name="arrow_back" />

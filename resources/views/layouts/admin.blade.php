@@ -6,7 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>@yield('title', __('Admin')) | {{ config('app.name', 'Base CMS') }}</title>
         <meta name="robots" content="noindex,nofollow">
-        <meta name="theme-color" content="#2488b8">
+        <meta name="theme-color" content="#2d7fc5">
         <link rel="icon" href="{{ asset('admin/cms/img/favicons/favicon.svg') }}" type="image/svg+xml" sizes="any">
         <link rel="icon" href="{{ asset('admin/cms/img/favicons/favicon.ico') }}" sizes="any">
         <link rel="icon" href="{{ asset('admin/cms/img/favicons/favicon-32x32.png') }}" type="image/png" sizes="32x32">
@@ -38,9 +38,6 @@
             'catalog_products' => __('product'),
             'catalog_categories' => __('productcategorie'),
             'catalog_brands' => __('merk'),
-            'catalog_promotions' => __('promotie'),
-            'catalog_coupons' => __('actiecode'),
-            'catalog_reviews' => __('review'),
             'faq_items' => __('FAQ'),
             'faq_categories' => __('FAQ-categorie'),
             'downloads' => __('download'),

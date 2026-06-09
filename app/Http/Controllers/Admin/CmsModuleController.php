@@ -222,7 +222,6 @@ class CmsModuleController extends Controller
         return match ($definition['table'] ?? null) {
             'catalog_products' => 'Products',
             'faq_items' => 'FAQ items',
-            'guestbook_entries' => 'Guestbook entries',
             'navigation_menus' => 'Navigation menus',
             'redirects' => 'Redirects',
             'translation_keys' => 'Translations',

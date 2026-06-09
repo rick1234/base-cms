@@ -25,7 +25,7 @@
 
         <div class="main has-buttons">
             <div class="buttons-container align-right">
-                @if (! in_array($activeTab, ['sections', 'preview'], true))
+                @if (! in_array($activeTab, ['sections', 'usp-sets', 'preview'], true))
                     <button class="btn btn-save" form="template-form" type="submit">
                         <x-admin.material-icon name="save" />
                         {{ __('Opslaan') }}
@@ -61,7 +61,7 @@
                 'template' => $template,
             ])
 
-            @if (! in_array($activeTab, ['sections', 'preview'], true))
+            @if (! in_array($activeTab, ['sections', 'usp-sets', 'preview'], true))
                 <form id="template-form" class="edit-form" method="post" action="{{ $action }}">
                     @csrf
                     @if ($method !== 'post')
@@ -310,6 +310,19 @@
                     </div>
 
                     <livewire:admin.templates.template-section-editor :template="$template" :key="'template-section-editor-'.$template->id" />
+                </div>
+            @elseif ($activeTab === 'usp-sets')
+                <div class="main-section">
+                    <div class="page-header">
+                        <div class="page-header-title-container">
+                            <div class="page-header-title-image-container">
+                                <x-admin.material-icon class="is-large" name="checklist" />
+                            </div>
+                            <strong>{{ __('USP sets') }}</strong>
+                        </div>
+                    </div>
+
+                    <livewire:admin.templates.template-usp-set-editor :template="$template" :key="'template-usp-set-editor-'.$template->id" />
                 </div>
             @else
                 <div class="main-section">

@@ -23,57 +23,13 @@
             </div>
 
             <div class="main-section">
-                <div class="page-header">
-                    <div class="page-header-title-container">
-                        <div class="page-header-title-image-container">
-                            <x-admin.material-icon class="is-large" name="domain" />
-                        </div>
-                        <strong>{{ __('Domains') }}</strong>
-                    </div>
-                </div>
+                @include('admin.content.partials.page-header', [
+                    'title' => __('Domains'),
+                    'section' => __('Domain overview'),
+                    'icon' => 'domain',
+                ])
 
-                <div class="overview-container">
-                    <div class="overview-row header">
-                        <div class="overview-item">{{ __('Host') }}</div>
-                        <div class="overview-item">{{ __('Website title') }}</div>
-                        <div class="overview-item">{{ __('Template') }}</div>
-                        <div class="overview-item">{{ __('Locale') }}</div>
-                        <div class="overview-item">{{ __('Status') }}</div>
-                        <div class="overview-item options">{{ __('Options') }}</div>
-                    </div>
-
-                    @forelse ($domains as $domain)
-                        <div class="overview-row">
-                            <div class="overview-item">
-                                <a href="{{ route('admin.domains.edit', $domain) }}">{{ $domain->host }}</a>
-                            </div>
-                            <div class="overview-item">{{ $domain->name }}</div>
-                            <div class="overview-item">{{ $domain->template?->name ?? __('None') }}</div>
-                            <div class="overview-item">
-                                <x-admin.language-flag :locale="$domain->default_locale ?: config('app.locale')" />
-                            </div>
-                            <div class="overview-item">{{ $domain->is_active ? __('Active') : __('Inactive') }}</div>
-                            <div class="overview-item options">
-                                <a href="{{ route('admin.domains.edit', $domain) }}" title="{{ __('Edit') }}">
-                                    <x-admin.material-icon name="edit" />
-                                </a>
-                                <form method="post" action="{{ route('admin.domains.destroy', $domain) }}">
-                                    @csrf
-                                    @method('delete')
-                                    <button class="button-link" type="submit" title="{{ __('Delete') }}">
-                                        <x-admin.material-icon name="delete" />
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="overview-row">
-                            <div class="overview-item">{{ __('No domains found.') }}</div>
-                        </div>
-                    @endforelse
-                </div>
-
-                {{ $domains->links('admin.partials.pagination') }}
+                <livewire:admin.domains.domain-overview />
             </div>
         </div>
     </div>

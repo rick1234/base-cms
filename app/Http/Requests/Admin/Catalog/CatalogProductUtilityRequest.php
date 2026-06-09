@@ -29,6 +29,8 @@ class CatalogProductUtilityRequest extends FormRequest
             'translations.*.locale' => ['required_with:translations', 'string', 'max:8'],
             'translations.*.title' => ['nullable', 'string', 'max:255'],
             'translations.*.subtitle' => ['nullable', 'string', 'max:255'],
+            'translations.*.button_text' => ['nullable', 'string', 'max:255'],
+            'translations.*.link_url' => ['nullable', 'string', 'max:255'],
             'translations.*.content' => ['nullable', 'string'],
             'translations.*.delete' => ['boolean'],
             'videos' => ['array'],
@@ -37,13 +39,6 @@ class CatalogProductUtilityRequest extends FormRequest
             'videos.*.url' => ['nullable', 'url', 'max:255'],
             'videos.*.provider' => ['nullable', 'string', 'max:255'],
             'videos.*.delete' => ['boolean'],
-            'stock' => ['array'],
-            'stock.*.id' => ['nullable', 'integer', 'exists:catalog_stock,id'],
-            'stock.*.location' => ['nullable', 'string', 'max:255'],
-            'stock.*.quantity' => ['nullable', 'integer', 'min:0'],
-            'stock.*.delete' => ['boolean'],
-            'related_products' => ['array'],
-            'related_products.*' => ['integer', 'exists:catalog_products,id'],
         ];
     }
 }

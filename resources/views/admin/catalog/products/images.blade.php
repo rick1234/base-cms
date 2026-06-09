@@ -1,6 +1,10 @@
 @extends('layouts.admin')
 
-@section('title', __('Product images'))
+@php
+    $title = $product ? __('Fotoalbum: :title', ['title' => $product->name]) : __('Product images');
+@endphp
+
+@section('title', $title)
 
 @section('body')
     <div class="site-wrapper-container">
@@ -10,48 +14,34 @@
 
         <div class="main has-buttons">
             <div class="buttons-container align-right">
-                <a href="{{ $backUrl }}" class="btn btn-cancel">
+                <a href="{{ $product ? route($routeNames['edit'], ['id' => $product->id]) : $backUrl }}" class="btn btn-cancel">
                     <x-admin.material-icon name="undo" />
                     {{ __('Terug') }}
                 </a>
             </div>
 
+            @include('admin.catalog.products.partials.tabs', [
+                'product' => $product,
+                'routeNames' => $routeNames,
+                'activeTab' => 'images',
+            ])
+
             <div class="main-section">
                 @include('admin.catalog.partials.page-header', [
-                    'title' => $product->name,
+                    'title' => $title,
                     'section' => $pageName,
                 ])
 
-                @include('admin.catalog.products.partials.tabs', [
-                    'product' => $product,
-                    'routeNames' => $routeNames,
-                    'activeTab' => 'images',
-                ])
+                <span class="content-admin-screen-label">{{ $pageName }}</span>
 
-                <h2 class="title">{{ __('Afbeeldingen') }}</h2>
-                <form enctype="multipart/form-data" method="post" action="{{ route($routeNames['image.upload'], ['id' => $product->id]) }}">
-                    @csrf
-                    <div class="form-item">
-                        <div class="form-item-label">
-                            <label for="catalog_image">{{ __('Afbeelding') }}</label>
-                        </div>
-                        <div class="form-item-input">
-                            <input id="catalog_image" name="image" type="file" accept="image/*" required>
-                            <input name="caption" type="text" placeholder="{{ __('Titel') }}">
-                            <button class="btn btn-add" type="submit">
-                                <x-admin.material-icon name="add" />
-                                {{ __('Uploaden') }}
-                            </button>
-                        </div>
+                @if (! $product)
+                    <div class="attachment-message">
+                        <x-admin.material-icon name="info" />
+                        <em>{{ __('Save the product before adding images.') }}</em>
                     </div>
-                </form>
-
-                <h3 class="sub-title">{{ __('Reeds gekoppelde fotos') }}</h3>
-                @include('admin.content.partials.media-items', [
-                    'images' => $product->images,
-                    'deleteRoute' => $routeNames['image.delete'],
-                    'updateNameRoute' => $routeNames['image.update-name'],
-                ])
+                @else
+                    <livewire:admin.catalog.catalog-product-image-album :product="$product" />
+                @endif
             </div>
         </div>
     </div>

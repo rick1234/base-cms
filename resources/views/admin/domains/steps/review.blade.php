@@ -1,4 +1,4 @@
-<section class="domain-wizard-panel" id="domain-step-review">
+<section class="domain-tab-panel" id="domain-step-review">
     <h2 class="title">{{ __('Review') }}</h2>
 
     <dl class="domain-review-list">

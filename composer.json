@@ -11,6 +11,7 @@
         "commerceguys/addressing": "^2.2",
         "commerceguys/intl": "^2.0",
         "filament/filament": "^5.6",
+        "intervention/image": "^4.1",
         "laracasts/flash": "^3.2",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
@@ -53,6 +54,18 @@
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
+        ],
+        "health": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php scripts/health-check.php basic"
+        ],
+        "health:basic": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php scripts/health-check.php basic"
+        ],
+        "health:extended": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php scripts/health-check.php extended"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

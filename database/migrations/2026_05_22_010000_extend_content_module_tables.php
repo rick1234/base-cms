@@ -17,9 +17,6 @@ return new class extends Migration
                 $table->unsignedBigInteger('form_id')->nullable()->index()->after('meta_description');
             }
 
-            if (! Schema::hasColumn('content_items', 'slider_category_id')) {
-                $table->unsignedBigInteger('slider_category_id')->nullable()->index()->after('form_id');
-            }
         });
 
         Schema::table('content_categories', function (Blueprint $table): void {
@@ -31,9 +28,6 @@ return new class extends Migration
                 $table->text('meta_description')->nullable()->after('description');
             }
 
-            if (! Schema::hasColumn('content_categories', 'slider_category_id')) {
-                $table->unsignedBigInteger('slider_category_id')->nullable()->index()->after('image_path');
-            }
         });
 
         if (! Schema::hasTable('content_category_images')) {
@@ -62,7 +56,6 @@ return new class extends Migration
             $columns = array_values(array_filter([
                 Schema::hasColumn('content_categories', 'custom_url') ? 'custom_url' : null,
                 Schema::hasColumn('content_categories', 'meta_description') ? 'meta_description' : null,
-                Schema::hasColumn('content_categories', 'slider_category_id') ? 'slider_category_id' : null,
             ]));
 
             if ($columns !== []) {
@@ -74,7 +67,6 @@ return new class extends Migration
             $columns = array_values(array_filter([
                 Schema::hasColumn('content_items', 'subtitle') ? 'subtitle' : null,
                 Schema::hasColumn('content_items', 'form_id') ? 'form_id' : null,
-                Schema::hasColumn('content_items', 'slider_category_id') ? 'slider_category_id' : null,
             ]));
 
             if ($columns !== []) {

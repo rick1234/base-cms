@@ -138,6 +138,11 @@ class Domain extends CmsModel
         return (string) ($this->name ?: config('app.name', 'Base CMS'));
     }
 
+    public function defaultLocaleCode(): string
+    {
+        return $this->defaultLocale();
+    }
+
     public function seoTitle(?string $pageTitle = null): string
     {
         $siteTitle = $this->siteTitle();
@@ -152,9 +157,50 @@ class Domain extends CmsModel
         return "{$pageTitle} {$separator} {$siteTitle}";
     }
 
+    public function fallbackTitle(?string $locale = null): ?string
+    {
+        return $this->localizedSeoValue('default_meta_title', $locale) ?: $this->default_meta_title;
+    }
+
     public function fallbackDescription(): string
     {
-        return (string) ($this->default_meta_description ?: config('cms.default_meta_description'));
+        return (string) (
+            $this->localizedSeoValue('default_meta_description')
+            ?: $this->default_meta_description
+            ?: config('cms.default_meta_description')
+        );
+    }
+
+    public function fallbackOgTitle(?string $locale = null): ?string
+    {
+        return $this->localizedSeoValue('default_og_title', $locale) ?: $this->default_og_title;
+    }
+
+    public function fallbackOgDescription(?string $locale = null): ?string
+    {
+        return $this->localizedSeoValue('default_og_description', $locale) ?: $this->default_og_description;
+    }
+
+    public function fallbackOgImage(?string $locale = null): ?string
+    {
+        return $this->localizedSeoValue('default_og_image', $locale) ?: $this->default_og_image;
+    }
+
+    public function localizedSeoValue(string $field, ?string $locale = null): ?string
+    {
+        $locale = Str::of((string) ($locale ?: app()->getLocale()))
+            ->replace('_', '-')
+            ->lower()
+            ->trim()
+            ->toString();
+
+        $value = data_get($this->settings ?? [], "seo.locales.{$locale}.{$field}");
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return trim($value);
     }
 
     public function faviconUrl(string $key): ?string
@@ -171,10 +217,52 @@ class Domain extends CmsModel
     public function canonicalUrlFor(string $currentUrl, string $path): string
     {
         if (! $this->canonical_base_url) {
-            return $currentUrl;
+            $path = trim($path, '/');
+
+            return $path === '' ? url('/') : url($path);
         }
 
         return rtrim($this->canonical_base_url, '/').'/'.ltrim($path, '/');
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function localizedCanonicalUrls(string $currentUrl, string $path): array
+    {
+        $urls = [];
+
+        foreach ($this->activeFrontendLocales() as $locale) {
+            $localizedPath = $this->localizedPathFor($path, $locale);
+            $urls[$locale] = $this->canonicalUrlFor($currentUrl, $localizedPath);
+        }
+
+        return $urls;
+    }
+
+    public function localizedPathFor(string $path, string $locale): string
+    {
+        $locale = Str::of($locale)->replace('_', '-')->lower()->trim()->toString();
+        $segments = collect(explode('/', trim($path, '/')))
+            ->filter(fn (string $segment): bool => $segment !== '')
+            ->values();
+
+        if ($segments->isNotEmpty() && $this->isFrontendLocale((string) $segments->first())) {
+            $segments = $segments->slice(1)->values();
+        }
+
+        if ($locale !== $this->defaultLocale()) {
+            $segments->prepend($locale);
+        }
+
+        return $segments->implode('/');
+    }
+
+    private function isFrontendLocale(string $locale): bool
+    {
+        $locale = Str::of($locale)->replace('_', '-')->lower()->trim()->toString();
+
+        return in_array($locale, $this->activeFrontendLocales(), true);
     }
 
     public function requiresTwoFactorForBackend(): bool

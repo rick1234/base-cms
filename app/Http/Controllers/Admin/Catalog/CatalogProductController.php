@@ -14,10 +14,9 @@ use App\Models\Cms\CatalogCategory;
 use App\Models\Cms\CatalogProduct;
 use App\Models\Cms\CatalogProductImage;
 use App\Models\Cms\CatalogProductOption;
+use App\Models\Cms\CatalogProductOptionValue;
 use App\Models\Cms\CatalogProductTranslation;
 use App\Models\Cms\CatalogProductVideo;
-use App\Models\Cms\CatalogPromotion;
-use App\Models\Cms\CatalogStock;
 use App\Support\Admin\Catalog\CatalogMediaManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -42,8 +41,8 @@ class CatalogProductController extends Controller
         $categories = $this->categories();
         $categoryId = $request->integer('categoryId');
         $query = CatalogProduct::query()
-            ->with(['brand', 'categories', 'promotion'])
-            ->withCount(['attachments', 'images', 'options', 'reviews', 'stockRows', 'translations', 'videos']);
+            ->with(['brand', 'categories'])
+            ->withCount(['attachments', 'images', 'options', 'translations', 'videos']);
 
         if ($request->filled('id')) {
             $query->whereKey($request->integer('id'));
@@ -103,7 +102,7 @@ class CatalogProductController extends Controller
     public function edit(Request $request): View
     {
         $product = $this->productFromRequest($request);
-        $product?->load(['attachments', 'brand', 'categories', 'images', 'options', 'promotion', 'relatedProducts', 'stockRows', 'translations', 'videos']);
+        $product?->load(['attachments', 'brand', 'categories', 'images', 'options', 'combinationSets.products', 'translations', 'videos']);
 
         return view('admin.catalog.products.edit', [
             'product' => $product ?? new CatalogProduct([
@@ -113,7 +112,6 @@ class CatalogProductController extends Controller
             ]),
             'brands' => CatalogBrand::query()->orderBy('name')->get(),
             'categories' => $this->categories(),
-            'promotions' => CatalogPromotion::query()->orderBy('name')->get(),
             'routeNames' => $this->routeNames(),
             'pageName' => __('Edit catalog product'),
             'backUrl' => route($this->routeName('index')),
@@ -132,7 +130,7 @@ class CatalogProductController extends Controller
 
         flash(__('Product saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $product->id]);
+        return $this->redirectToProductEdit($product, $request);
     }
 
     public function update(CatalogProduct $catalogProduct, CatalogProductRequest $request, UpsertCatalogProduct $upsert): RedirectResponse
@@ -146,7 +144,7 @@ class CatalogProductController extends Controller
 
         flash(__('Product saved.'))->success();
 
-        return redirect()->route($this->routeName('edit'), ['id' => $product->id]);
+        return $this->redirectToProductEdit($product, $request);
     }
 
     public function destroy(CatalogProduct $catalogProduct): RedirectResponse
@@ -162,7 +160,7 @@ class CatalogProductController extends Controller
     {
         $id = $request->integer('itemId') ?: $request->integer('item_id') ?: $request->integer('id');
         $product = CatalogProduct::query()
-            ->with(['attachments', 'categories', 'images', 'options', 'relatedProducts', 'stockRows', 'translations', 'videos'])
+            ->with(['attachments', 'categories', 'images', 'options', 'combinationSets', 'translations', 'videos'])
             ->findOrFail($id);
 
         $copy = $duplicate->handle($product, $request->user());
@@ -200,24 +198,40 @@ class CatalogProductController extends Controller
 
     public function uploadImage(CatalogMediaRequest $request, CatalogMediaManager $mediaManager): JsonResponse|RedirectResponse
     {
-        $product = CatalogProduct::query()->findOrFail($request->integer('id') ?: $request->integer('catalog_product_id'));
-        $file = $request->file('file') ?: $request->file('image');
+        $product = CatalogProduct::query()->findOrFail((int) ($request->route('id') ?: $request->integer('id') ?: $request->integer('catalog_product_id')));
+        $files = collect([$request->file('file'), $request->file('image')])
+            ->filter()
+            ->merge($request->file('images', []))
+            ->values();
 
-        abort_unless($file instanceof UploadedFile, 422);
+        abort_unless($files->isNotEmpty(), 422);
 
-        $image = $mediaManager->storeImage($product, $file, $request->string('caption')->toString() ?: null, $request->user());
+        $images = $files->map(function ($file) use ($request, $product, $mediaManager): CatalogProductImage {
+            $caption = $request->string('caption')->toString() ?: $this->defaultCaptionForUpload($file);
+
+            return $mediaManager->storeImage($product, $file, $caption, $request->user(), [
+                'alt_text' => $request->string('alt_text')->toString() ?: $caption,
+                'title_text' => $request->string('title_text')->toString() ?: $caption,
+                'description' => $request->string('description')->toString() ?: null,
+                'credit' => $request->string('credit')->toString() ?: null,
+                'is_decorative' => $request->boolean('is_decorative'),
+            ]);
+        });
 
         if (! $request->expectsJson()) {
-            flash(__('Image uploaded.'))->success();
+            flash(trans_choice('{1} Image uploaded.|[2,*] Images uploaded.', $images->count()))->success();
 
             return back();
         }
+
+        $image = $images->first();
 
         return response()->json([
             'jsonrpc' => '2.0',
             'status' => 'success',
             'result' => $image->id,
             'id' => $image->id,
+            'count' => $images->count(),
         ]);
     }
 
@@ -282,7 +296,7 @@ class CatalogProductController extends Controller
             return $this->utilityPlaceholder(__('Product options'));
         }
 
-        $product->load('options');
+        $product->load('options.values');
 
         return view('admin.catalog.products.options', [
             'product' => $product,
@@ -310,12 +324,31 @@ class CatalogProductController extends Controller
             }
 
             $option ??= new CatalogProductOption(['catalog_product_id' => $product->id, 'created_by' => $request->user()?->id]);
+            $locale = ($row['locale'] ?? null) ?: app()->getLocale();
+            $label = ($row['label'] ?? null) ?: __('Option label');
+            $value = $row['value'] ?? null;
+
             $option->fill([
-                'locale' => ($row['locale'] ?? null) ?: app()->getLocale(),
-                'label' => ($row['label'] ?? null) ?: __('Option'),
-                'value' => $row['value'] ?? null,
+                'label' => $label,
+                'label_translations' => [$locale => $label],
+                'sort_order' => $product->options()->max('sort_order') + 1,
                 'updated_by' => $request->user()?->id,
             ])->save();
+
+            if (filled($value)) {
+                CatalogProductOptionValue::query()->updateOrCreate(
+                    [
+                        'catalog_product_option_id' => $option->id,
+                        'value' => $value,
+                    ],
+                    [
+                        'value_translations' => [$locale => $value],
+                        'sort_order' => $option->values()->max('sort_order') + 1,
+                        'created_by' => $request->user()?->id,
+                        'updated_by' => $request->user()?->id,
+                    ],
+                );
+            }
         }
 
         flash(__('Product options saved.'))->success();
@@ -367,6 +400,8 @@ class CatalogProductController extends Controller
                 'locale' => $row['locale'],
                 'title' => $row['title'] ?? null,
                 'subtitle' => $row['subtitle'] ?? null,
+                'button_text' => $row['button_text'] ?? null,
+                'link_url' => $row['link_url'] ?? null,
                 'content' => $row['content'] ?? null,
                 'updated_by' => $request->user()?->id,
             ])->save();
@@ -427,54 +462,6 @@ class CatalogProductController extends Controller
         return redirect()->route($this->routeName('videos'), ['id' => $product->id]);
     }
 
-    public function stock(Request $request): View
-    {
-        $product = $this->productForUtility($request);
-
-        if (! $product) {
-            return $this->utilityPlaceholder(__('Product stock'));
-        }
-
-        $product->load('stockRows');
-
-        return view('admin.catalog.products.stock', [
-            'product' => $product,
-            'routeNames' => $this->routeNames(),
-            'pageName' => __('Product stock'),
-            'backUrl' => route($this->routeName('edit'), ['id' => $product->id]),
-        ]);
-    }
-
-    public function saveStock(CatalogProductUtilityRequest $request): RedirectResponse
-    {
-        $product = CatalogProduct::query()->findOrFail($request->integer('id'));
-
-        foreach ((array) $request->validated('stock', []) as $row) {
-            $stock = $this->existingChild($product->stockRows(), (int) ($row['id'] ?? 0));
-
-            if (! empty($row['delete'])) {
-                $stock?->delete();
-
-                continue;
-            }
-
-            if (blank($row['location'] ?? null) && blank($row['quantity'] ?? null)) {
-                continue;
-            }
-
-            $stock ??= new CatalogStock(['catalog_product_id' => $product->id, 'created_by' => $request->user()?->id]);
-            $stock->fill([
-                'location' => $row['location'] ?? null,
-                'quantity' => (int) ($row['quantity'] ?? 0),
-                'updated_by' => $request->user()?->id,
-            ])->save();
-        }
-
-        flash(__('Product stock saved.'))->success();
-
-        return redirect()->route($this->routeName('stock'), ['id' => $product->id]);
-    }
-
     public function combinations(Request $request): View
     {
         $product = $this->productForUtility($request);
@@ -483,33 +470,14 @@ class CatalogProductController extends Controller
             return $this->utilityPlaceholder(__('Product combinations'));
         }
 
-        $product->load('relatedProducts');
+        $product->load('combinationSets.products');
 
         return view('admin.catalog.products.combinations', [
             'product' => $product,
-            'products' => CatalogProduct::query()->whereKeyNot($product->id)->orderBy('name')->get(),
             'routeNames' => $this->routeNames(),
             'pageName' => __('Product combinations'),
             'backUrl' => route($this->routeName('edit'), ['id' => $product->id]),
         ]);
-    }
-
-    public function saveCombinations(CatalogProductUtilityRequest $request): RedirectResponse
-    {
-        $product = CatalogProduct::query()->findOrFail($request->integer('id'));
-        $ids = collect($request->validated('related_products', []))
-            ->map(fn (mixed $id): int => (int) $id)
-            ->filter(fn (int $id): bool => $id > 0 && $id !== $product->id)
-            ->unique()
-            ->values();
-
-        $product->relatedProducts()->sync(
-            $ids->mapWithKeys(fn (int $id, int $index): array => [$id => ['sort_order' => $index + 1]])->all()
-        );
-
-        flash(__('Product combinations saved.'))->success();
-
-        return redirect()->route($this->routeName('combinations'), ['id' => $product->id]);
     }
 
     public function resetSortIndex(): View
@@ -641,6 +609,7 @@ class CatalogProductController extends Controller
             'store' => $this->routeName('store'),
             'create' => request()->routeIs('cms.*') ? $this->routeName('edit') : $this->routeName('create'),
             'edit' => $this->routeName('edit'),
+            'edit.tab' => $this->routeName('edit.tab'),
             'save' => $this->routeName('save'),
             'destroy' => $this->routeName('destroy'),
             'duplicate' => $this->routeName('duplicate'),
@@ -655,16 +624,24 @@ class CatalogProductController extends Controller
             'translations.save' => $this->routeName('translations.save'),
             'videos' => $this->routeName('videos'),
             'videos.save' => $this->routeName('videos.save'),
-            'stock' => $this->routeName('stock'),
-            'stock.save' => $this->routeName('stock.save'),
             'combinations' => $this->routeName('combinations'),
-            'combinations.save' => $this->routeName('combinations.save'),
+            'combination-sets.create' => 'admin.catalog.combination-sets.create',
+            'combination-sets.edit' => 'admin.catalog.combination-sets.edit',
         ];
     }
 
     private function routeName(string $name): string
     {
         return (request()->routeIs('cms.*') ? 'cms.catalog.' : 'admin.catalog.').$name;
+    }
+
+    private function redirectToProductEdit(CatalogProduct $product, Request $request): RedirectResponse
+    {
+        if ($request->string('active_tab')->toString() === 'seo' && ! request()->routeIs('cms.*')) {
+            return redirect()->route($this->routeName('edit.tab'), ['id' => $product->id, 'tab' => 'seo']);
+        }
+
+        return redirect()->route($this->routeName('edit'), ['id' => $product->id]);
     }
 
     /**
@@ -686,5 +663,14 @@ class CatalogProductController extends Controller
     private function existingChild(mixed $relation, int $id): mixed
     {
         return $id > 0 ? $relation->whereKey($id)->first() : null;
+    }
+
+    private function defaultCaptionForUpload(UploadedFile $file): string
+    {
+        return str(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
+            ->replace(['-', '_'], ' ')
+            ->squish()
+            ->title()
+            ->toString();
     }
 }

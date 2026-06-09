@@ -50,6 +50,12 @@
                 </div>
             </div>
 
+            @include('admin.domains.partials.item-tabs', [
+                'active' => $activeStep,
+                'domain' => $domain,
+                'steps' => $steps,
+            ])
+
             <div class="main-section">
                 <div class="page-header">
                     <div class="page-header-title-container">
@@ -59,14 +65,6 @@
                         <strong>{{ $pageTitle }}</strong>
                     </div>
                 </div>
-
-                @include('admin.domains.partials.wizard-steps', [
-                    'domain' => $domain,
-                    'steps' => $steps,
-                    'stepCompletion' => $stepCompletion,
-                    'activeStep' => $activeStep,
-                    'formId' => 'domain-form',
-                ])
 
                 <form id="domain-form" class="edit-form" method="post" action="{{ $action }}" enctype="multipart/form-data">
                     @csrf

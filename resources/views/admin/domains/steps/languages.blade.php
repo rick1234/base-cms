@@ -1,4 +1,4 @@
-<section class="domain-wizard-panel" id="domain-step-languages">
+<section class="domain-tab-panel" id="domain-step-languages">
     <h2 class="title">{{ __('Languages') }}</h2>
 
     <div class="form-item">

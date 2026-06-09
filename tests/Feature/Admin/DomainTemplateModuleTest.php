@@ -5,8 +5,10 @@ namespace Tests\Feature\Admin;
 use App\Models\Cms\CmsLanguage;
 use App\Models\Cms\Domain;
 use App\Models\Cms\WebsiteTemplate;
+use App\Livewire\Admin\Domains\DomainOverview;
 use App\Livewire\Admin\Templates\TemplateOverview;
 use App\Livewire\Admin\Templates\TemplateSectionEditor;
+use App\Livewire\Admin\Templates\TemplateUspSetEditor;
 use App\Models\User;
 use Database\Seeders\CountryLanguageSeeder;
 use Database\Seeders\DomainTemplateSeeder;
@@ -104,7 +106,7 @@ class DomainTemplateModuleTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/templates')
             ->assertOk()
-            ->assertSee('Template overview')
+            ->assertSee('Template overzicht')
             ->assertSeeLivewire(TemplateOverview::class)
             ->assertSee('template-overview-container', false)
             ->assertSee('Corporate Template')
@@ -165,6 +167,7 @@ class DomainTemplateModuleTest extends TestCase
             ->assertSee('Template')
             ->assertSee('Instellingen')
             ->assertSee('Gedefinieerde secties')
+            ->assertSee('USP-sets')
             ->assertSee('Paden')
             ->assertSee('Voorbeeld')
             ->assertDontSee('Base Google font link')
@@ -195,6 +198,7 @@ class DomainTemplateModuleTest extends TestCase
             ->assertSee('Template')
             ->assertSee('Instellingen')
             ->assertSee('Gedefinieerde secties')
+            ->assertSee('USP-sets')
             ->assertDontSee('template-wireframe', false);
 
         $this->actingAs($admin)
@@ -214,6 +218,13 @@ class DomainTemplateModuleTest extends TestCase
             ->assertSee('Footer banner');
 
         $this->actingAs($admin)
+            ->get(route('admin.templates.edit.tab', ['websiteTemplate' => $template, 'tab' => 'usp-sets']))
+            ->assertOk()
+            ->assertSee('template-usp-set-editor', false)
+            ->assertSee('USP-sets')
+            ->assertSee('Template locatie');
+
+        $this->actingAs($admin)
             ->get(route('admin.templates.edit.tab', ['websiteTemplate' => $template, 'tab' => 'preview']))
             ->assertOk()
             ->assertSee('template-wireframe', false)
@@ -223,10 +234,11 @@ class DomainTemplateModuleTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/domains/create')
             ->assertOk()
-            ->assertSee('Domain setup steps')
+            ->assertSee('tabmenu', false)
+            ->assertDontSee('domain-wizard', false)
             ->assertSee('base-cms.test')
             ->assertSee('Primary host')
-            ->assertSee('Domain')
+            ->assertSee('Domein')
             ->assertSee('Languages')
             ->assertSee('Template')
             ->assertSee('SEO')
@@ -247,31 +259,111 @@ class DomainTemplateModuleTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.domains.edit', ['domain' => $domain, 'step' => 'template']))
+            ->get(route('admin.domains.edit.step', ['domain' => $domain, 'step' => 'template']))
             ->assertOk()
+            ->assertSee('tabmenu', false)
+            ->assertDontSee('domain-wizard', false)
             ->assertSee('Website template')
             ->assertSee('template_settings[primary_color]', false)
             ->assertDontSee('Primary host');
 
         $this->actingAs($admin)
-            ->get(route('admin.domains.edit', ['domain' => $domain, 'step' => 'social-contact']))
+            ->get(route('admin.domains.edit.step', ['domain' => $domain, 'step' => 'social-contact']))
             ->assertOk()
             ->assertSee('data-domain-social-sortable-list', false)
             ->assertSee('data-domain-social-handle', false)
             ->assertSee('Contact form');
 
         $this->actingAs($admin)
-            ->get(route('admin.domains.edit', ['domain' => $domain, 'step' => 'favicon']))
+            ->get(route('admin.domains.edit.step', ['domain' => $domain, 'step' => 'favicon']))
             ->assertOk()
             ->assertSee('Logo for favicon')
             ->assertSee('image/svg+xml,image/png,image/jpeg,image/webp', false);
 
         $this->actingAs($admin)
-            ->get(route('admin.domains.edit', ['domain' => $domain, 'step' => 'review']))
+            ->get(route('admin.domains.edit.step', ['domain' => $domain, 'step' => 'review']))
             ->assertOk()
             ->assertSee('Frontend languages')
             ->assertSee('NL')
             ->assertDontSee('All enabled languages');
+    }
+
+    public function test_admin_can_filter_domain_overview_and_update_status(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $corporate = WebsiteTemplate::query()->create([
+            'handle' => 'corporate',
+            'name' => 'Corporate Template',
+            'is_active' => true,
+            'sort_order' => 10,
+        ]);
+        $campaign = WebsiteTemplate::query()->create([
+            'handle' => 'campaign',
+            'name' => 'Campaign Template',
+            'is_active' => true,
+            'sort_order' => 20,
+        ]);
+
+        $primary = Domain::query()->create([
+            'host' => 'www.example.test',
+            'name' => 'Example',
+            'website_template_id' => $corporate->id,
+            'default_locale' => 'nl',
+            'is_active' => true,
+            'sort_order' => 10,
+        ]);
+        $inactive = Domain::query()->create([
+            'host' => 'campaign.example.test',
+            'name' => 'Campaign',
+            'website_template_id' => $campaign->id,
+            'default_locale' => 'en',
+            'is_active' => false,
+            'sort_order' => 20,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/domains')
+            ->assertOk()
+            ->assertSee('Domein overzicht')
+            ->assertSeeLivewire(DomainOverview::class)
+            ->assertSee('domains-overview-container', false)
+            ->assertSee('www.example.test')
+            ->assertSee('campaign.example.test')
+            ->assertSee('quick-status', false);
+
+        Livewire::actingAs($admin)
+            ->test(DomainOverview::class)
+            ->assertSee('www.example.test')
+            ->assertSee('campaign.example.test')
+            ->set('draftHost', 'campaign')
+            ->call('applyFilters')
+            ->assertSee('campaign.example.test')
+            ->assertDontSee('www.example.test')
+            ->set('draftHost', '')
+            ->set('draftTemplateId', (string) $corporate->id)
+            ->call('applyFilters')
+            ->assertSee('www.example.test')
+            ->assertDontSee('campaign.example.test')
+            ->set('draftTemplateId', '')
+            ->set('draftStatus', 'inactive')
+            ->call('applyFilters')
+            ->assertSee('campaign.example.test')
+            ->assertDontSee('www.example.test')
+            ->call('sortBy', 'host', 'desc')
+            ->assertSet('sort', 'host')
+            ->assertSet('direction', 'desc');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.quick-status.update'), [
+                'model' => 'domain',
+                'id' => $inactive->id,
+                'status' => 'active',
+            ])
+            ->assertRedirect();
+
+        $this->assertTrue($inactive->refresh()->is_active);
+        $this->assertTrue($primary->refresh()->is_active);
     }
 
     public function test_dashboard_uses_module_index_without_setup_panel(): void
@@ -395,6 +487,21 @@ class DomainTemplateModuleTest extends TestCase
                 '_next_step' => 'integrations',
                 'title_separator' => '|',
                 'default_meta_description' => 'Default description.',
+                'settings' => [
+                    'seo' => [
+                        'locales' => [
+                            'nl' => [
+                                'default_meta_title' => 'Nederlandse fallback titel',
+                                'default_meta_description' => 'Nederlandse fallback description.',
+                            ],
+                            'fr' => [
+                                'default_meta_title' => 'French fallback title',
+                                'default_meta_description' => 'French fallback description.',
+                                'default_og_title' => 'French social title',
+                            ],
+                        ],
+                    ],
+                ],
             ])
             ->assertRedirect();
 
@@ -434,6 +541,8 @@ class DomainTemplateModuleTest extends TestCase
         $this->assertSame($template->id, $domain->website_template_id);
         $this->assertSame('#112233', $domain->template_settings['primary_color']);
         $this->assertSame('Default description.', $domain->default_meta_description);
+        $this->assertSame('Nederlandse fallback titel', $domain->settings['seo']['locales']['nl']['default_meta_title']);
+        $this->assertSame('French social title', $domain->settings['seo']['locales']['fr']['default_og_title']);
         $this->assertSame('G-1234567890', $domain->public_integrations['google_analytics_measurement_id']);
         $this->assertSame('https://linkedin.com/company/example', $domain->social_links[0]['url']);
         $this->assertSame('https://youtube.com/@example', $domain->social_links[1]['url']);
@@ -465,7 +574,7 @@ class DomainTemplateModuleTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.domains.edit', ['domain' => $domain, 'step' => 'languages']))
+            ->get(route('admin.domains.edit.step', ['domain' => $domain, 'step' => 'languages']))
             ->assertOk()
             ->assertSee('Add website language')
             ->assertSee('German');
@@ -480,7 +589,7 @@ class DomainTemplateModuleTest extends TestCase
                 'language_add_to_frontend' => '1',
                 'language_add_to_backend' => '1',
             ])
-            ->assertRedirect(route('admin.domains.edit', ['domain' => $domain, 'step' => 'template']));
+            ->assertRedirect(route('admin.domains.edit.step', ['domain' => $domain, 'step' => 'template']));
 
         $german = CmsLanguage::query()->where('code', 'de')->firstOrFail();
         $domain->refresh();
@@ -504,7 +613,7 @@ class DomainTemplateModuleTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.domains.edit', ['domain' => $domain, 'step' => 'security']))
+            ->get(route('admin.domains.edit.step', ['domain' => $domain, 'step' => 'security']))
             ->assertOk()
             ->assertSee('Tweefactorauthenticatie')
             ->assertSee('2FA verplichten voor CMS-login');
@@ -519,7 +628,7 @@ class DomainTemplateModuleTest extends TestCase
                     ],
                 ],
             ])
-            ->assertRedirect(route('admin.domains.edit', ['domain' => $domain, 'step' => 'social-contact']));
+            ->assertRedirect(route('admin.domains.edit.step', ['domain' => $domain, 'step' => 'social-contact']));
 
         $this->assertTrue($domain->refresh()->requiresTwoFactorForBackend());
     }
@@ -546,6 +655,9 @@ class DomainTemplateModuleTest extends TestCase
         $this->assertFalse($template->default_settings['show_footer_credit']);
         $this->assertArrayNotHasKey('footer_credit_label', $template->default_settings);
         $this->assertArrayNotHasKey('footer_credit_url', $template->default_settings);
+        $this->assertSame('header_top', $template->usp_sets[0]['location']);
+        $this->assertSame('done', $template->usp_sets[0]['items'][0]['icon']);
+        $this->assertSame('footer_top', $template->usp_sets[1]['location']);
     }
 
     public function test_template_section_editor_saves_sections_interactively(): void
@@ -575,6 +687,43 @@ class DomainTemplateModuleTest extends TestCase
         $this->assertSame('homepage_hero', $template->defined_sections[0]['handle']);
         $this->assertSame('footer_banner', $template->defined_sections[1]['handle']);
         $this->assertSame('mixed', $template->defined_sections[1]['type']);
+        $this->assertSame($admin->id, $template->updated_by);
+    }
+
+    public function test_template_usp_set_editor_saves_sets_interactively(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $template = WebsiteTemplate::query()->create([
+            'handle' => 'usps',
+            'name' => 'USP Template',
+            'is_active' => true,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(TemplateUspSetEditor::class, ['template' => $template])
+            ->set('sets.0.name', 'Header benefits')
+            ->set('sets.0.location', 'header_top')
+            ->set('sets.0.items.0.label', 'SEO vriendelijke basis')
+            ->set('sets.0.items.0.icon', '')
+            ->call('addItem', 0)
+            ->set('sets.0.items.1.label', 'Veilig beheer')
+            ->set('sets.0.items.1.icon', 'verified_user')
+            ->call('addSet')
+            ->set('sets.1.name', 'Footer benefits')
+            ->set('sets.1.location', 'footer_top')
+            ->set('sets.1.items.0.label', 'Meertalige content')
+            ->set('sets.1.items.0.icon', 'translate')
+            ->call('moveItem', 0, 1, 'up')
+            ->call('save')
+            ->assertSet('message', 'USP sets opgeslagen.');
+
+        $template->refresh();
+
+        $this->assertSame('Header benefits', $template->usp_sets[0]['name']);
+        $this->assertSame('Veilig beheer', $template->usp_sets[0]['items'][0]['label']);
+        $this->assertSame('verified_user', $template->usp_sets[0]['items'][0]['icon']);
+        $this->assertSame('done', $template->usp_sets[0]['items'][1]['icon']);
+        $this->assertSame('footer_top', $template->usp_sets[1]['location']);
         $this->assertSame($admin->id, $template->updated_by);
     }
 }

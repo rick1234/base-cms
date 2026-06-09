@@ -21,6 +21,12 @@ class CatalogRecordRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'website_url' => ['nullable', 'url', 'max:255'],
+            'logo_path' => ['nullable', 'string', 'max:255'],
+            'intro' => ['nullable', 'string'],
+            'body' => ['nullable', 'string'],
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string'],
             'status' => ['required', 'string', 'in:active,inactive'],
         ];
     }

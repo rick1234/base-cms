@@ -26,14 +26,6 @@
                     @enderror
                 </div>
 
-                <div class="field">
-                    <label class="field-label" for="two_factor_code">{{ __('Authenticator code') }}</label>
-                    <input class="field-input" id="two_factor_code" name="two_factor_code" type="text" inputmode="numeric" autocomplete="one-time-code" value="{{ old('two_factor_code') }}">
-                    @error('two_factor_code')
-                        <p class="field-error">{{ $message }}</p>
-                    @enderror
-                </div>
-
                 <label>
                     <input name="remember" type="checkbox" value="1">
                     {{ __('Remember me') }}

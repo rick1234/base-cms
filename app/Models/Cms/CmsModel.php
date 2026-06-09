@@ -3,7 +3,9 @@
 namespace App\Models\Cms;
 
 use App\Models\User;
+use App\Support\Media\HandledImage;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
@@ -38,5 +40,13 @@ abstract class CmsModel extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /**
+     * @return Attribute<HandledImage, never>
+     */
+    protected function image(): Attribute
+    {
+        return Attribute::get(fn (): HandledImage => new HandledImage($this));
     }
 }

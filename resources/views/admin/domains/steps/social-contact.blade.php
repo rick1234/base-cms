@@ -1,4 +1,4 @@
-<section class="domain-wizard-panel" id="domain-step-social-contact">
+<section class="domain-tab-panel" id="domain-step-social-contact">
     <h2 class="title">{{ __('Social and contact') }}</h2>
 
     <div class="domain-social-grid" data-domain-social-sortable-list data-drag-container data-drag-layout="grid" aria-label="{{ __('Social links order') }}">

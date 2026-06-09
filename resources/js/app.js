@@ -1,5 +1,7 @@
 import '@melloware/coloris/dist/coloris.css';
 import Coloris from '@melloware/coloris';
+import { Fancybox } from '@fancyapps/ui';
+import '@fancyapps/ui/dist/fancybox/fancybox.css';
 
 const adminMenuButton = document.querySelector('[data-admin-menu-button]');
 const adminNavigation = document.querySelector('[data-admin-navigation]');
@@ -8,6 +10,16 @@ const siteMenuButton = document.querySelector('[data-site-menu-toggle]');
 const siteMenuPanel = document.querySelector('[data-site-menu-panel]');
 const siteMenuOverlay = document.querySelector('[data-site-menu-overlay]');
 const siteMenuCloseButton = document.querySelector('[data-site-menu-close]');
+
+Fancybox.bind('[data-fancybox]', {
+    animated: true,
+    dragToClose: true,
+    Images: {
+        Panzoom: {
+            maxScale: 2,
+        },
+    },
+});
 
 const setSiteMenuOpen = (isOpen) => {
     if (! (siteMenuButton instanceof HTMLButtonElement) || ! (siteMenuPanel instanceof HTMLElement)) {
@@ -131,6 +143,41 @@ document.querySelectorAll('[data-language-modal]').forEach((widget) => {
     });
 });
 
+const closeQuickStatus = (quickStatus) => {
+    if (! (quickStatus instanceof HTMLDetailsElement)) {
+        return;
+    }
+
+    quickStatus.open = false;
+
+    const trigger = quickStatus.querySelector('.quick-status-trigger');
+
+    if (trigger instanceof HTMLElement) {
+        trigger.focus();
+    }
+};
+
+document.addEventListener('click', (event) => {
+    const closeTarget = event.target instanceof Element ? event.target.closest('[data-quick-status-close]') : null;
+
+    if (! closeTarget) {
+        return;
+    }
+
+    event.preventDefault();
+    closeQuickStatus(closeTarget.closest('.quick-status'));
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') {
+        return;
+    }
+
+    document.querySelectorAll('.quick-status[open]').forEach((quickStatus) => {
+        closeQuickStatus(quickStatus);
+    });
+});
+
 if (document.querySelector('[data-coloris]')) {
     Coloris.init();
     Coloris({
@@ -145,16 +192,16 @@ if (document.querySelector('[data-coloris]')) {
         formatToggle: false,
         selectInput: true,
         swatches: [
-            '#ffa300',
-            '#272720',
-            '#00a287',
-            '#104ba9',
+            '#0f6f7a',
+            '#1b1b1b',
+            '#2d7fc5',
+            '#d86445',
             '#ffffff',
-            '#f0f0f0',
-            '#e0e0e0',
-            '#2d2d29',
-            '#d30231',
-            '#20b340',
+            '#f5f7fa',
+            '#eef3f7',
+            '#d8dee8',
+            '#b4232d',
+            '#1f7a4d',
         ],
         wrap: true,
     });

@@ -12,7 +12,10 @@ use Illuminate\Support\Str;
 
 class CatalogMediaManager
 {
-    public function storeImage(CatalogProduct $product, UploadedFile $file, ?string $caption = null, ?Authenticatable $actor = null): CatalogProductImage
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function storeImage(CatalogProduct $product, UploadedFile $file, ?string $caption = null, ?Authenticatable $actor = null, array $attributes = []): CatalogProductImage
     {
         $path = $file->storeAs(
             'admin/uploads/catalog/images',
@@ -25,6 +28,14 @@ class CatalogMediaManager
             'folder' => 'storage/admin/uploads/catalog/images',
             'image_path' => 'storage/'.$path,
             'caption' => $caption ?: $file->getClientOriginalName(),
+            'alt_text' => $attributes['alt_text'] ?? null,
+            'title_text' => $attributes['title_text'] ?? null,
+            'description' => $attributes['description'] ?? null,
+            'credit' => $attributes['credit'] ?? null,
+            'is_decorative' => (bool) ($attributes['is_decorative'] ?? false),
+            'original_filename' => $file->getClientOriginalName(),
+            'mime_type' => $file->getClientMimeType(),
+            'file_size' => $file->getSize() ?: null,
             'sort_order' => ($product->images()->max('sort_order') ?? 0) + 1,
             'created_by' => $actor?->getAuthIdentifier(),
             'updated_by' => $actor?->getAuthIdentifier(),

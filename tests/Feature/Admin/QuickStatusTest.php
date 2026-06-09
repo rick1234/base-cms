@@ -105,6 +105,8 @@ class QuickStatusTest extends TestCase
             ->get('/admin/content')
             ->assertOk()
             ->assertSee('quick-status-trigger', false)
+            ->assertSee('quick-status-backdrop', false)
+            ->assertSee('data-quick-status-close', false)
             ->assertSee('Beschikbare statussen')
             ->assertSee('name="model" value="content"', false);
     }

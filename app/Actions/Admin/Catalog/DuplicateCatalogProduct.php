@@ -26,16 +26,10 @@ class DuplicateCatalogProduct
 
         $this->copyChildren($product->images, $copy);
         $this->copyChildren($product->attachments, $copy);
-        $this->copyChildren($product->options, $copy);
+        $this->copyOptions($product, $copy);
         $this->copyChildren($product->translations, $copy);
         $this->copyChildren($product->videos, $copy);
-        $this->copyChildren($product->stockRows, $copy);
-
-        $copy->relatedProducts()->sync(
-            $product->relatedProducts
-                ->mapWithKeys(fn (CatalogProduct $related): array => [$related->id => ['sort_order' => $related->pivot->sort_order]])
-                ->all()
-        );
+        $this->copyCombinationSetMemberships($product, $copy);
 
         return $copy->refresh();
     }
@@ -50,5 +44,41 @@ class DuplicateCatalogProduct
             $duplicate->catalog_product_id = $copy->id;
             $duplicate->save();
         }
+    }
+
+    private function copyOptions(CatalogProduct $product, CatalogProduct $copy): void
+    {
+        $product->loadMissing('options.values');
+
+        foreach ($product->options as $option) {
+            $duplicate = $option->replicate(['uuid', 'created_by', 'updated_by']);
+            $duplicate->catalog_product_id = $copy->id;
+            $duplicate->save();
+
+            $this->copyOptionValues($option->values, $duplicate->id);
+        }
+    }
+
+    /**
+     * @param  iterable<int, object>  $values
+     */
+    private function copyOptionValues(iterable $values, int $optionId): void
+    {
+        foreach ($values as $value) {
+            $duplicate = $value->replicate(['uuid', 'created_by', 'updated_by']);
+            $duplicate->catalog_product_option_id = $optionId;
+            $duplicate->save();
+        }
+    }
+
+    private function copyCombinationSetMemberships(CatalogProduct $product, CatalogProduct $copy): void
+    {
+        $product->loadMissing('combinationSets');
+
+        $copy->combinationSets()->sync(
+            $product->combinationSets
+                ->mapWithKeys(fn ($set): array => [$set->id => ['sort_order' => $set->pivot->sort_order]])
+                ->all()
+        );
     }
 }

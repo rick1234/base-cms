@@ -1,4 +1,4 @@
-<section class="domain-wizard-panel" id="domain-step-integrations">
+<section class="domain-tab-panel" id="domain-step-integrations">
     <h2 class="title">{{ __('Integrations') }}</h2>
 
     @foreach (config('cms_domains.public_integrations') as $field => $label)
